@@ -41,7 +41,7 @@
       "dist",
       "build",
       "coverage",
-      "apps/api/src/db/migrations/**"
+      "**/db/migrations/**"
     ]
   }
 }
