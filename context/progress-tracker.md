@@ -58,12 +58,25 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   - `packages/shared/src/index.ts` (barrel vazio)
   - `README.md` com setup local
   - **Verificado:** `pnpm install`, `turbo run build`, `type-check`, `lint`, `test` rodam sem erros
+- [x] **0.2 — Tooling** — spec `02-tooling-spec.md`
+  - `@biomejs/biome@1.9.4`, `husky@9`, `lint-staged@17` instalados na raiz (`-w`)
+  - `biome.json` na raiz (linter + formatter; `noExplicitAny`/`noUnused*` error, `noNonNullAssertion` warn)
+  - Scripts `lint` (`biome check .`) em `@elos/api`, `@elos/web`, `@elos/shared`
+  - `package.json` raiz: `prepare: "husky"` + config `lint-staged`
+  - Hooks Husky: `pre-commit` → `pnpm lint-staged`; `pre-push` → `pnpm type-check`
+  - `.env.example` em `apps/api` (8 vars) e `apps/web` (4 vars)
+  - `apps/api/Dockerfile` e `apps/web/Dockerfile` (multi-stage, `node:22-alpine`)
+  - `apps/web/next.config.ts` com `output: 'standalone'`
+  - `docker-compose.yml` (dev: api + web + postgres, hot reload) e `docker-compose.prod.yml`
+  - `.dockerignore` na raiz
+  - **Verificado:** `biome check .` limpo, `pnpm lint` e `pnpm type-check` verdes nos 3 workspaces,
+    pre-commit dispara `lint-staged`. Docker (`compose up`/`build`) não executado neste ambiente.
 
 ---
 
 ## Em Progresso
 
-- Nada ativo. Próximo: **0.2 — Tooling** (spec `02-tooling-spec.md`).
+- Nada ativo. Próximo: **0.3 — Schema Drizzle e Banco (Supabase)**.
 
 ---
 
@@ -79,10 +92,10 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 - [x] `.nvmrc` na raiz apontando para Node.js LTS
 - [x] `README.md` na raiz: o que é o projeto, pré-requisitos, como rodar localmente
 
-### 0.2 — Tooling ⬅ próximo (spec `02-tooling-spec.md`)
-- [ ] Biome configurado na raiz do monorepo (`biome.json`) — linter + formatter
-- [ ] Husky + lint-staged: pre-commit (`biome check --write`), pre-push (type-check)
-- [ ] `.env.example` em `apps/api` com todos os vars:
+### 0.2 — Tooling ✅ Concluído (spec `02-tooling-spec.md`)
+- [x] Biome configurado na raiz do monorepo (`biome.json`) — linter + formatter
+- [x] Husky + lint-staged: pre-commit (`biome check --write`), pre-push (type-check)
+- [x] `.env.example` em `apps/api` com todos os vars:
   ```
   DATABASE_URL="postgresql://user:password@pooler.supabase.com:6543/postgres?pgbouncer=true"
   DIRECT_URL="postgresql://user:password@db.supabase.com:5432/postgres"
@@ -101,13 +114,14 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
   NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
   ```
-- [ ] `apps/api/Dockerfile` — multi-stage (deps → builder → runner alpine)
-- [ ] `apps/web/Dockerfile` — multi-stage com Next.js standalone output
-- [ ] `docker-compose.yml` na raiz — serviços `api`, `web`, `postgres` (dev)
-- [ ] `docker-compose.prod.yml` — override de produção (sem postgres local)
-- [ ] `.dockerignore` na raiz
+- [x] `apps/api/Dockerfile` — multi-stage (deps-prod → builder → runner alpine)
+- [x] `apps/web/Dockerfile` — multi-stage com Next.js standalone output + ARGs `NEXT_PUBLIC_*`
+- [x] `docker-compose.yml` na raiz — serviços `api`, `web`, `postgres` (dev)
+- [x] `docker-compose.prod.yml` — override de produção (sem postgres local)
+- [x] `.dockerignore` na raiz
+- [x] `apps/web/next.config.ts` com `output: 'standalone'`
 
-### 0.3 — Schema Drizzle e Banco (Supabase)
+### 0.3 — Schema Drizzle e Banco (Supabase) ⬅ próximo
 - [ ] Configurar projeto Supabase (ou Supabase CLI local para dev)
 - [ ] `drizzle.config.ts` em `apps/api/` apontando para `DATABASE_URL`
 - [ ] Definir tabelas em `apps/api/src/db/schema/`:
@@ -217,6 +231,8 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | `packageManager` no `package.json` raiz (0.1) | Turborepo v2.9 recusa resolver workspaces sem o campo (`pnpm@11.1.3`). Necessário para `turbo run build` completar |
 | Placeholder `src/index.ts` em `apps/api` e `apps/web` (0.1) | Scripts `tsc --noEmit` apontam para `src/**/*`; sem arquivos o TS falha com TS18003. Barrel vazio (`export {}`), substituído pelo código real nas specs 0.4/0.5 |
 | Commit sem escopo / push manual           | Convenção em `context/git-workflow.md`: Conventional Commits sem parênteses, mensagem em inglês de uma linha, PR em 4 seções, push sempre manual |
+| Biome fixado em `1.9.4` (0.2)             | O schema/config da spec é 1.9.x (`organizeImports`, `files.ignore`); Biome 2.x mudou o formato e quebraria a config. Pin garante fidelidade à spec |
+| `.turbo` adicionado ao `files.ignore` do Biome (0.2) | Biome não lê `.gitignore` por padrão; sem ignorar `.turbo`, o cache do Turborepo (JSONs) falhava o `biome check .`. Mesmo padrão de `dist`/`.next`/`coverage` |
 
 ---
 
@@ -238,4 +254,7 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   scaffold com os 3 workspaces; `install`/`build`/`type-check`/`lint`/`test` verdes
 - Stack passou a incluir **Docker + Docker Compose** (seção em `architecture.md`)
 - Convenção de git formalizada em `context/git-workflow.md`
-- Próximo passo: Fase 0.2 — Tooling (Biome, Husky/lint-staged, `.env.example`, Docker)
+- **0.2 concluída**: Biome 1.9.4 + Husky 9 + lint-staged 17, `.env.example` (api/web),
+  Dockerfiles multi-stage, docker-compose dev/prod, `.dockerignore`, `next.config.ts` standalone.
+  `biome check .`/`lint`/`type-check` verdes; Docker runtime não validado neste ambiente
+- Próximo passo: Fase 0.3 — Schema Drizzle e Banco (Supabase)

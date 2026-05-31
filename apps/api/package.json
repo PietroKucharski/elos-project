@@ -5,7 +5,7 @@
   "scripts": {
     "build": "tsc --noEmit",
     "dev": "echo 'NestJS dev server (a configurar em spec 0.4)'",
-    "lint": "echo 'Biome lint (a configurar em spec 0.2)'",
+    "lint": "biome check .",
     "test": "echo 'Vitest (a configurar em spec 0.4)'",
     "type-check": "tsc --noEmit"
   }

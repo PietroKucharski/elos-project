@@ -1,0 +1,27 @@
+services:
+  postgres:
+    profiles: ["disabled"]   # desativa o postgres local
+
+  api:
+    image: ""             # remove referência ao node:22-alpine do dev
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      DATABASE_URL: ""    # sobrescrito pelo ambiente real do servidor
+    volumes: []           # remove volume mounts
+    command: ""           # usa o CMD do Dockerfile (node dist/main.js)
+    restart: always
+
+  web:
+    image: ""
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    volumes: []
+    command: ""
+    restart: always
