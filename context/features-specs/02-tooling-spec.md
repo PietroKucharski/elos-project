@@ -4,6 +4,7 @@
 > Ele define sua persona, as invariantes inegociáveis e a ordem de leitura dos
 > context files que você deve seguir antes de implementar.
 
+
 **Fase:** 0 — Fundação  
 **Unidade:** 0.2  
 **Pré-requisito:** 0.1 (scaffold do monorepo concluído — `apps/api`, `apps/web`,
@@ -160,7 +161,6 @@ Adicionar (ou garantir que existe) a task `lint` no pipeline:
 Script `lint` no `package.json` de cada workspace:
 
 **`package.json` raiz** — aciona o Turborepo e registra o `prepare` do Husky:
-
 ```json
 {
   "scripts": {
@@ -171,7 +171,6 @@ Script `lint` no `package.json` de cada workspace:
 ```
 
 **`apps/api/package.json`**, **`apps/web/package.json`** e **`packages/shared/package.json`**:
-
 ```json
 {
   "scripts": {
@@ -187,7 +186,9 @@ Script `lint` no `package.json` de cada workspace:
 ```json
 {
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,json}": ["biome check --write --no-errors-on-unmatched"]
+    "*.{ts,tsx,js,jsx,json}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
   }
 }
 ```
@@ -202,14 +203,12 @@ Script `lint` no `package.json` de cada workspace:
 Após `pnpm install` (que executa `prepare` → `husky`), criar os hooks:
 
 **`.husky/pre-commit`**
-
 ```sh
 #!/usr/bin/env sh
 pnpm lint-staged
 ```
 
 **`.husky/pre-push`**
-
 ```sh
 #!/usr/bin/env sh
 pnpm type-check
@@ -219,7 +218,6 @@ pnpm type-check
 > O hook não faz `pnpm install` — apenas executa o que o Turborepo já tem cacheado.
 
 Tornar os hooks executáveis:
-
 ```bash
 chmod +x .husky/pre-commit .husky/pre-push
 ```
@@ -388,12 +386,11 @@ CMD ["node", "apps/web/server.js"]
 ```
 
 > **Requer** `output: 'standalone'` em `apps/web/next.config.ts`:
->
 > ```typescript
 > const nextConfig = {
->   output: "standalone",
-> };
-> export default nextConfig;
+>   output: 'standalone',
+> }
+> export default nextConfig
 > ```
 
 ---
@@ -434,7 +431,7 @@ services:
       - "3333:3333"
     volumes:
       - .:/app
-      - /app/node_modules # evita que o volume sobrescreva node_modules do host
+      - /app/node_modules      # evita que o volume sobrescreva node_modules do host
     depends_on:
       postgres:
         condition: service_healthy
@@ -470,17 +467,17 @@ Em produção, usamos as imagens buildadas. O postgres local é removido — o
 ```yaml
 services:
   postgres:
-    profiles: ["disabled"] # desativa o postgres local
+    profiles: ["disabled"]   # desativa o postgres local
 
   api:
-    image: "" # remove referência ao node:22-alpine do dev
+    image: ""             # remove referência ao node:22-alpine do dev
     build:
       context: .
       dockerfile: apps/api/Dockerfile
     environment:
-      DATABASE_URL: "" # sobrescrito pelo ambiente real do servidor
-    volumes: [] # remove volume mounts
-    command: "" # usa o CMD do Dockerfile (node dist/main.js)
+      DATABASE_URL: ""    # sobrescrito pelo ambiente real do servidor
+    volumes: []           # remove volume mounts
+    command: ""           # usa o CMD do Dockerfile (node dist/main.js)
     restart: always
 
   web:
@@ -498,7 +495,6 @@ services:
 ```
 
 Uso local para simular produção:
-
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build
 ```
@@ -545,14 +541,14 @@ Antes de marcar 0.2 como concluído, verificar:
 
 ## Invariantes Verificadas
 
-| Invariante (`CLAUDE.md` / `architecture.md`)  | Como esta unidade cumpre                                                                     |
-| --------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `DATABASE_URL` e credenciais nunca commitadas | `.env.example` com placeholders; `.env` no `.gitignore` e `.dockerignore`                    |
-| `BETTER_AUTH_SECRET` sempre via `process.env` | `.env.example` documenta o placeholder + comentário de comprimento mínimo                    |
-| `SUPABASE_SERVICE_ROLE_KEY` nunca no frontend | Ausente de `apps/web/.env.example`; presente apenas na API com comentário                    |
-| `SUPABASE_ANON_KEY` pode ir ao frontend       | Presente em `apps/web/.env.example` como `NEXT_PUBLIC_SUPABASE_ANON_KEY`                     |
-| Biome: linter + formatter na raiz             | `biome.json` na raiz; integrado ao Turborepo                                                 |
-| Credenciais nunca na imagem Docker            | `.dockerignore` exclui `.env`; secrets injetados em runtime via `env_file` / env do servidor |
+| Invariante (`CLAUDE.md` / `architecture.md`)    | Como esta unidade cumpre |
+| ----------------------------------------------- | ------------------------ |
+| `DATABASE_URL` e credenciais nunca commitadas   | `.env.example` com placeholders; `.env` no `.gitignore` e `.dockerignore` |
+| `BETTER_AUTH_SECRET` sempre via `process.env`   | `.env.example` documenta o placeholder + comentário de comprimento mínimo |
+| `SUPABASE_SERVICE_ROLE_KEY` nunca no frontend   | Ausente de `apps/web/.env.example`; presente apenas na API com comentário |
+| `SUPABASE_ANON_KEY` pode ir ao frontend         | Presente em `apps/web/.env.example` como `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
+| Biome: linter + formatter na raiz               | `biome.json` na raiz; integrado ao Turborepo |
+| Credenciais nunca na imagem Docker              | `.dockerignore` exclui `.env`; secrets injetados em runtime via `env_file` / env do servidor |
 
 ---
 
