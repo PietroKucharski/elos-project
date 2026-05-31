@@ -542,7 +542,7 @@ pnpm drizzle-kit generate
 # Aplicar migration no banco
 pnpm drizzle-kit migrate
 
-# Inspecionar banco (similar ao Prisma Studio)
+# Inspecionar banco via UI
 pnpm drizzle-kit studio
 ```
 
@@ -569,10 +569,27 @@ Regras de migrations:
 
 - **Todo Controller e Service tem testes Vitest.** Mínimo: happy path + 403 +
   404 + 400.
-- **Prisma mock** com `jest-mock-extended` ou `vitest-mock-extended`:
+- **Drizzle mock** — injete uma instância fake via símbolo `DRIZZLE` no `TestingModule`:
   ```typescript
-  const prismaMock = mockDeep<PrismaClient>()
-  vi.mock('../prisma/prisma.service', () => ({ PrismaService: prismaMock }))
+  const mockDb = {
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockReturnThis(),
+    values: vi.fn().mockReturnThis(),
+    returning: vi.fn().mockResolvedValue([mockSupplier]),
+    update: vi.fn().mockReturnThis(),
+    set: vi.fn().mockReturnThis(),
+    transaction: vi.fn((cb) => cb(mockDb)),
+  }
+
+  const module = await Test.createTestingModule({
+    providers: [
+      SuppliersService,
+      { provide: DRIZZLE, useValue: mockDb },
+      { provide: AbilityFactory, useValue: { createForUser: vi.fn() } },
+    ],
+  }).compile()
   ```
 - **React Testing Library** para componentes de formulário críticos.
 - **Playwright** para fluxos E2E: sign-in, criar cotação, aprovar pedido.
@@ -638,7 +655,7 @@ pnpm add @nestjs/swagger @scalar/nestjs-api-reference --filter api
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 import { apiReference } from '@scalar/nestjs-api-reference'
 
-// Após criar o app NestJS + Fastify:
+// Após criar o app NestJS:
 
 const config = new DocumentBuilder()
   .setTitle('Elos API')
