@@ -40,7 +40,7 @@ Cada feature deve seguir este fluxo:
 
 ```
 1. Definir o schema Zod em packages/shared (se ainda não existir)
-2. Escrever o route handler no backend (Fastify)
+2. Escrever o route handler no backend (NestJS)
 3. Escrever o teste Vitest do handler (happy path + erros comuns)
 4. Implementar o Server Component / Server Action no frontend
 5. Implementar o Client Component se necessário
@@ -81,7 +81,7 @@ Antes de concluir qualquer route handler ou Server Action, verifique:
 - [ ] A rota verifica autenticação via middleware antes de qualquer lógica
 - [ ] A rota verifica permissão CASL antes de qualquer mutação
 - [ ] Input validado via schema Zod (ZodTypeProvider faz isso automaticamente)
-- [ ] Query Prisma inclui filtro por `companyId` (isolamento de tenant)
+- [ ] Query Drizzle inclui filtro por `companyId` (isolamento de tenant)
 - [ ] Rotas de auth têm rate limiting configurado
 - [ ] Nenhum dado sensível nos logs (senhas, tokens, PII em query params)
 
@@ -134,8 +134,8 @@ implementação mudar:
 ## Arquivos Protegidos (nunca modificar sem instrução explícita)
 
 - `apps/web/src/components/ui/*` — Primitivos shadcn, gerenciados via CLI
-- `apps/*/prisma/migrations/*` — Migrations históricas nunca são editadas; sempre
-  criar uma nova migration
+- `apps/api/src/db/migrations/*` — Migrations históricas nunca são editadas; sempre
+  criar uma nova migration via `drizzle-kit generate`
 - `packages/shared/src/enums.ts` — Mudanças de enum têm impacto cascata; sempre
   avaliar impacto antes de alterar
 
@@ -169,12 +169,12 @@ Siga a ordem abaixo. Não pule fases — cada fase é pré-requisito da próxima
 - Configuração de TypeScript, Biome, Husky, lint-staged
 - `.nvmrc`, `.env.example` em cada app
 - GitHub Actions: lint + type check + test em PR
-- Schema Prisma completo (35 modelos) com primeira migration
-- Bootstrap do servidor Fastify com error handler global e CORS correto
+- Schema Drizzle completo com primeira migration
+- Bootstrap do servidor NestJS com error handler global e CORS correto
 
 ### Fase 1 — Auth e Empresas
 - Registro de usuário + login (JWT via env, bcrypt ≥10, rate limiting)
-- Middleware de autenticação Fastify
+- AuthGuard de autenticação (NestJS)
 - CASL ability factory com os 6 papéis
 - Criação e listagem de empresas
 - Convite e gestão de usuários por empresa

@@ -24,6 +24,7 @@
 | Testes E2E     | Playwright                          | Fluxos críticos end-to-end                                   |
 | CI             | GitHub Actions                      | Lint + testes + build em todo PR                             |
 | Documentação   | `@nestjs/swagger` + Scalar          | Geração de OpenAPI spec + UI de referência em `/reference`   |
+| Containers     | Docker + Docker Compose             | Build e execução dos apps em container; dev local sem instalar Node globalmente |
 
 ---
 
@@ -35,6 +36,9 @@ elos/
   package.json                      ← Scripts raiz (turbo run dev, build, lint, test)
   pnpm-workspace.yaml
   .nvmrc                            ← Node.js LTS version
+  docker-compose.yml                ← Dev local: api + web + postgres
+  docker-compose.prod.yml           ← Override de produção (sem postgres local)
+  .dockerignore                     ← node_modules, .next, dist, .env
   apps/
     api/                            ← NestJS backend
       src/
@@ -96,6 +100,7 @@ elos/
         main.ts
       drizzle.config.ts             ← Configuração do Drizzle Kit
       .env.example
+      Dockerfile                    ← Multi-stage: build → runner (node:22-alpine)
     web/                            ← Next.js frontend
       src/
         app/
@@ -124,6 +129,7 @@ elos/
           auth-client.ts            ← Better-Auth client (createAuthClient)
           api-client.ts             ← ky com session token automático
       .env.example
+      Dockerfile                    ← Multi-stage: build → runner (node:22-alpine)
   packages/
     shared/                         ← @elos/shared
       src/
@@ -441,6 +447,173 @@ BETTER_AUTH_URL="http://localhost:3000"
 # Supabase (apenas se usar Supabase JS client para uploads diretos)
 NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
+```
+
+---
+
+## Docker
+
+### Estratégia
+
+- **Dev local**: `docker-compose.yml` sobe `api`, `web` e um serviço `postgres`
+  local (alternativa ao Supabase cloud quando se trabalha offline ou sem conta).
+- **Produção / staging**: `docker-compose.prod.yml` override — sem `postgres`
+  local; `DATABASE_URL` aponta para Supabase.
+- **Builds**: cada app tem seu próprio `Dockerfile` multi-stage para imagens
+  enxutas (~150 MB com `node:22-alpine`).
+
+### `apps/api/Dockerfile`
+
+```dockerfile
+# ─── Estágio 1: dependências ──────────────────────────────────────────────
+FROM node:22-alpine AS deps
+RUN corepack enable
+WORKDIR /app
+COPY package.json pnpm-workspace.yaml ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/shared/package.json ./packages/shared/
+RUN pnpm install --frozen-lockfile
+
+# ─── Estágio 2: build ─────────────────────────────────────────────────────
+FROM node:22-alpine AS builder
+RUN corepack enable
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN pnpm --filter api build
+
+# ─── Estágio 3: runner ────────────────────────────────────────────────────
+FROM node:22-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/apps/api/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+EXPOSE 3333
+CMD ["node", "dist/main.js"]
+```
+
+### `apps/web/Dockerfile`
+
+```dockerfile
+# ─── Estágio 1: dependências ──────────────────────────────────────────────
+FROM node:22-alpine AS deps
+RUN corepack enable
+WORKDIR /app
+COPY package.json pnpm-workspace.yaml ./
+COPY apps/web/package.json ./apps/web/
+COPY packages/shared/package.json ./packages/shared/
+RUN pnpm install --frozen-lockfile
+
+# ─── Estágio 2: build ─────────────────────────────────────────────────────
+FROM node:22-alpine AS builder
+RUN corepack enable
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN pnpm --filter web build
+
+# ─── Estágio 3: runner ────────────────────────────────────────────────────
+FROM node:22-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+# Next.js standalone output
+COPY --from=builder /app/apps/web/.next/standalone ./
+COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder /app/apps/web/public ./apps/web/public
+EXPOSE 3000
+CMD ["node", "apps/web/server.js"]
+```
+
+> O runner do `web` usa o **standalone output** do Next.js. Requer
+> `output: 'standalone'` em `apps/web/next.config.ts`.
+
+### `docker-compose.yml` (dev)
+
+```yaml
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: elos
+      POSTGRES_PASSWORD: elos
+      POSTGRES_DB: elos
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U elos"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: apps/api/.env
+    environment:
+      DATABASE_URL: "postgresql://elos:elos@postgres:5432/elos"
+    ports:
+      - "3333:3333"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: ./apps/api/src
+          target: /app/apps/api/src
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    env_file: apps/web/.env.local
+    environment:
+      NEXT_PUBLIC_API_URL: "http://api:3333"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+```
+
+> Em dev, o serviço `postgres` local substitui o Supabase. Para usar Supabase
+> cloud, basta omitir o serviço `postgres` e apontar `DATABASE_URL` para a URL
+> real — use `docker-compose.prod.yml` para isso.
+
+### `docker-compose.prod.yml` (override de produção)
+
+```yaml
+services:
+  postgres:
+    profiles: ["disabled"]   # Remove o postgres local
+
+  api:
+    environment:
+      DATABASE_URL: ""   # Sobrescrito via env real no deploy
+    restart: always
+
+  web:
+    restart: always
+```
+
+### `.dockerignore` (raiz)
+
+```
+node_modules
+.next
+dist
+build
+coverage
+.env
+.env.local
+.env.*.local
+apps/*/node_modules
+packages/*/node_modules
 ```
 
 ---
