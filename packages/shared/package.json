@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "tsc --noEmit",
-    "lint": "echo 'Biome lint (a configurar em spec 0.2)'",
+    "lint": "biome check .",
     "test": "echo 'Vitest (a configurar em spec 0.3)'",
     "type-check": "tsc --noEmit"
   }
