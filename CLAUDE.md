@@ -37,7 +37,7 @@ Leia na ordem abaixo antes de qualquer decisão arquitetural ou implementação:
    modelo de auth e **invariantes que nunca podem ser quebradas**
 3. `context/ui-context.md` — Tokens de cor, tipografia, border radius, padrões
    de layout e convenções de componentes
-4. `context/code-standards.md` — Regras de TypeScript, segurança, Fastify,
+4. `context/code-standards.md` — Regras de TypeScript, segurança, NestJS,
    Next.js, Zod, testes e organização de arquivos
 5. `context/ai-workflow-rules.md` — Como trabalhar neste projeto: workflow por
    unidade, checklist de segurança, quando dividir o trabalho, ordem de fases
@@ -79,6 +79,7 @@ Atualize o arquivo de contexto relevante **antes de continuar**:
 | Frontend   | Next.js 15 + React 19                            |
 | UI         | Tailwind CSS 4 + shadcn/ui                       |
 | Shared     | `packages/shared` — Zod schemas + tipos TypeScript |
+| Containers | Docker + Docker Compose                          |
 
 ---
 
@@ -91,7 +92,7 @@ Atualize o arquivo de contexto relevante **antes de continuar**:
 5. **Nenhum `catch {}` vazio** — sempre logar ou relançar
 6. **Todo Controller/Service tem teste Vitest** — sem exceção
 7. **Zod schemas de API apenas em `packages/shared`** — zero duplicação
-8. **Queries Prisma sempre escopadas ao tenant** — sem dados cross-tenant
+8. **Queries Drizzle sempre escopadas ao tenant** — sem dados cross-tenant
 9. **CASL check antes de qualquer mutação no banco** — sem exceção
 10. **`components/ui/*` nunca editado manualmente** — somente via CLI shadcn
 11. **`SUPABASE_SERVICE_ROLE_KEY` nunca no frontend** — apenas no backend

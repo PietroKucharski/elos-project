@@ -12,7 +12,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Objetivo Atual
 
-Scaffold do monorepo Turborepo, configuração de tooling, schema Prisma completo e
+Scaffold do monorepo Turborepo, configuração de tooling, schema Drizzle completo e
 bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 
 ---
@@ -37,8 +37,19 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   - `context/architecture.md` atualizado com DrizzleModule, drizzle-zod, estrutura de pastas
   - `context/code-standards.md` atualizado com padrões Drizzle (queries, schema, migrations)
   - `CLAUDE.md` stack table atualizada
+- [x] Adição de Docker + Docker Compose à stack
+  - `context/architecture.md`: seção Docker completa (Dockerfiles multi-stage api/web,
+    `docker-compose.yml` dev, `docker-compose.prod.yml`, `.dockerignore`)
+  - `CLAUDE.md` e `architecture.md`: tabela de stack + decisões atualizadas
+  - Limpeza de referências obsoletas (Prisma→Drizzle, Fastify→NestJS) em
+    `ai-workflow-rules.md`, `code-standards.md`, `CLAUDE.md` (regra 8 e mock Drizzle)
+- [x] `context/git-workflow.md` — convenção de branch, commit (Conventional sem escopo,
+  inglês, uma linha), PR (4 seções) e push manual
+- [x] `context/features-specs/02-tooling-spec.md` — spec da unidade 0.2 (Biome, Husky,
+  lint-staged, `.env.example`, Docker)
 - [x] **0.1 — Scaffold do Monorepo (Turborepo + pnpm)** — spec `01-monorepo-setup-spec.md`
-  - `git init` + branch `main`
+  - Commit `ce0579b` (`chore: scaffold turborepo monorepo with pnpm workspaces`)
+  - `git init` + branches `main` (produção) e `development`
   - `.gitignore` (`.env` ignorado, `.env.example` permitido), `.nvmrc` (`lts/*`)
   - `package.json` raiz (`private: true`) + `pnpm-workspace.yaml` (`apps/*`, `packages/*`)
   - `turbo.json` com tasks `build`, `dev`, `lint`, `test`, `type-check` (chave `tasks`, turbo v2)
@@ -52,13 +63,13 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 
 ## Em Progresso
 
-- Nada ativo. Próximo: **0.2 — Tooling**.
+- Nada ativo. Próximo: **0.2 — Tooling** (spec `02-tooling-spec.md`).
 
 ---
 
 ## Próximos Passos (Fase 0)
 
-### 0.1 — Scaffold do Monorepo (Turborepo + pnpm) ✅ Concluído
+### 0.1 — Scaffold do Monorepo (Turborepo + pnpm) ✅ Concluído (`ce0579b`)
 - [x] Inicializar repositório git com `.gitignore` correto
   (nunca commitar `.env`, apenas `.env.example`)
 - [x] `package.json` raiz com `pnpm-workspace.yaml` e scripts Turborepo
@@ -68,7 +79,7 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 - [x] `.nvmrc` na raiz apontando para Node.js LTS
 - [x] `README.md` na raiz: o que é o projeto, pré-requisitos, como rodar localmente
 
-### 0.2 — Tooling ⬅ próximo
+### 0.2 — Tooling ⬅ próximo (spec `02-tooling-spec.md`)
 - [ ] Biome configurado na raiz do monorepo (`biome.json`) — linter + formatter
 - [ ] Husky + lint-staged: pre-commit (`biome check --write`), pre-push (type-check)
 - [ ] `.env.example` em `apps/api` com todos os vars:
@@ -90,6 +101,11 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
   NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
   ```
+- [ ] `apps/api/Dockerfile` — multi-stage (deps → builder → runner alpine)
+- [ ] `apps/web/Dockerfile` — multi-stage com Next.js standalone output
+- [ ] `docker-compose.yml` na raiz — serviços `api`, `web`, `postgres` (dev)
+- [ ] `docker-compose.prod.yml` — override de produção (sem postgres local)
+- [ ] `.dockerignore` na raiz
 
 ### 0.3 — Schema Drizzle e Banco (Supabase)
 - [ ] Configurar projeto Supabase (ou Supabase CLI local para dev)
@@ -110,7 +126,7 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 
 ### 0.4 — Bootstrap da API (NestJS)
 - [ ] `apps/api/src/app.module.ts` com:
-  - PrismaModule (global)
+  - DrizzleModule (global)
   - AbilityModule (global)
   - AuthModule (Better-Auth)
   - HealthModule
@@ -195,10 +211,12 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | GitHub Actions CI via Turborepo    | Gate automático com cache; impede código quebrado de ir para produção               |
 | `SUPABASE_SERVICE_ROLE_KEY` só no backend | Chave de admin nunca exposta ao browser                                    |
 | Drizzle ORM em vez de Prisma              | Schema em TypeScript puro; queries SQL-like; drizzle-zod para derivar schemas Zod; sem `DIRECT_URL` separada |
+| Docker + Docker Compose                   | Ambientes reproduzíveis para dev e produção; postgres local no docker-compose.yml evita dependência do Supabase cloud em dev offline |
 | drizzle-zod para schemas de API           | Deriva schemas Zod do schema Drizzle — reduz duplicação manual entre definição de tabela e validação de API |
 | Scalar em vez de Swagger UI               | UI mais moderna e usável para referência de API; servida em `/reference` via `@scalar/nestjs-api-reference`; `@anatine/zod-openapi` gera schemas OpenAPI dos Zod schemas sem `@ApiProperty` manual |
-| `packageManager` no `package.json` raiz (0.1) | Turborepo v2.9 recusa resolver workspaces sem o campo (`pnpm@11.1.3`). Adição necessária para `turbo run build` completar — exigido pelo checklist da spec 0.1 |
-| Placeholder `src/index.ts` em `apps/api` e `apps/web` (0.1) | Os scripts `tsc --noEmit` apontam para `src/**/*`; sem nenhum arquivo o TS falha com TS18003 ("No inputs were found"). Barrel vazio (`export {}`), mesmo padrão de `packages/shared`, para `build`/`type-check` passarem; substituído pelo código real nas specs 0.4/0.5 |
+| `packageManager` no `package.json` raiz (0.1) | Turborepo v2.9 recusa resolver workspaces sem o campo (`pnpm@11.1.3`). Necessário para `turbo run build` completar |
+| Placeholder `src/index.ts` em `apps/api` e `apps/web` (0.1) | Scripts `tsc --noEmit` apontam para `src/**/*`; sem arquivos o TS falha com TS18003. Barrel vazio (`export {}`), substituído pelo código real nas specs 0.4/0.5 |
+| Commit sem escopo / push manual           | Convenção em `context/git-workflow.md`: Conventional Commits sem parênteses, mensagem em inglês de uma linha, PR em 4 seções, push sempre manual |
 
 ---
 
@@ -216,6 +234,8 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   - Banco: Supabase (PostgreSQL gerenciado)
   - Frontend: Next.js 15 + React 19 + Tailwind CSS 4 + shadcn/ui
   - Shared: packages/shared com Zod schemas de API
-- **0.1 concluída** (turbo v2.9.16, pnpm 11.1.3, node 24): monorepo scaffold com os 3
-  workspaces; `install`/`build`/`type-check`/`lint`/`test` verdes
-- Próximo passo: Fase 0.2 — Tooling (Biome, Husky/lint-staged, `.env.example`)
+- **0.1 concluída** (commit `ce0579b`; turbo 2.9.16, pnpm 11.1.3, node 24): monorepo
+  scaffold com os 3 workspaces; `install`/`build`/`type-check`/`lint`/`test` verdes
+- Stack passou a incluir **Docker + Docker Compose** (seção em `architecture.md`)
+- Convenção de git formalizada em `context/git-workflow.md`
+- Próximo passo: Fase 0.2 — Tooling (Biome, Husky/lint-staged, `.env.example`, Docker)
