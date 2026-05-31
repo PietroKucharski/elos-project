@@ -71,12 +71,23 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   - `.dockerignore` na raiz
   - **Verificado:** `biome check .` limpo, `pnpm lint` e `pnpm type-check` verdes nos 3 workspaces,
     pre-commit dispara `lint-staged`. Docker (`compose up`/`build`) não executado neste ambiente.
+- [x] **0.3 — Schema Drizzle e Banco** — spec `03-schema-drizzle-spec.md`
+  - Deps em `@elos/api`: `drizzle-orm`, `postgres`, `drizzle-zod`, `zod` + `drizzle-kit`, `tsx` (dev)
+  - `packages/shared/src/enums.ts` (16 enums) + re-export no barrel `index.ts`
+  - 13 arquivos de schema em `apps/api/src/db/schema/` (auth + 12 domínios) + `relations.ts` + `index.ts`
+  - `drizzle.config.ts` (`DIRECT_URL ?? DATABASE_URL`) + scripts `db:generate/migrate/studio/seed`
+  - `db.module.ts` (`DrizzleModule` global, símbolo `DRIZZLE`, `postgres-js`, logger só em dev)
+  - `seed.ts` (SUPER_ADMIN + empresa demo + ADMIN_EMPRESA via `auth.api.signUpEmail`)
+  - Migration `0000_*.sql` gerada: **33 tabelas, 18 enums**, UNIQUE em
+    `user.email`/`session.token`/`companies.cnpj`/`purchase_orders.number`, FKs cascade, timestamptz
+  - **Verificado:** `pnpm db:generate`, `lint`, `type-check`, `build` verdes.
+    Banco vivo (`db:migrate`/`db:studio`/`db:seed`/login) não executado — sem Supabase neste ambiente.
 
 ---
 
 ## Em Progresso
 
-- Nada ativo. Próximo: **0.3 — Schema Drizzle e Banco (Supabase)**.
+- Nada ativo. Próximo: **0.4 — Bootstrap da API (NestJS)**.
 
 ---
 
@@ -121,24 +132,25 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 - [x] `.dockerignore` na raiz
 - [x] `apps/web/next.config.ts` com `output: 'standalone'`
 
-### 0.3 — Schema Drizzle e Banco (Supabase) ⬅ próximo
-- [ ] Configurar projeto Supabase (ou Supabase CLI local para dev)
-- [ ] `drizzle.config.ts` em `apps/api/` apontando para `DATABASE_URL`
-- [ ] Definir tabelas em `apps/api/src/db/schema/`:
+### 0.3 — Schema Drizzle e Banco (Supabase) ✅ Concluído (spec `03-schema-drizzle-spec.md`)
+- [~] Configurar projeto Supabase (ou Supabase CLI local para dev) — pendente (ambiente sem banco)
+- [x] `drizzle.config.ts` em `apps/api/` (usa `DIRECT_URL ?? DATABASE_URL` para migrations)
+- [x] Definir tabelas em `apps/api/src/db/schema/`:
   - `auth.ts` — tabelas Better-Auth (`user`, `session`, `account`, `verification`)
   - Todos os domínios Elos (companies, suppliers, products, quotations, etc.)
   - Enums como `pgEnum` por domínio
   - `relations.ts` — todas as relações Drizzle Kit centralizadas
   - `index.ts` — re-exporta schema completo
-- [ ] `DrizzleModule` (`apps/api/src/db.module.ts`) com `postgres.js` como driver
-- [ ] Gerar primeira migration: `pnpm drizzle-kit generate`
-- [ ] Revisar SQL gerado em `src/db/migrations/` e aplicar: `pnpm drizzle-kit migrate`
-- [ ] Seed básico (`src/db/seed.ts`):
+- [x] `DrizzleModule` (`apps/api/src/db.module.ts`) com `postgres.js` como driver
+- [x] Gerar primeira migration: `pnpm db:generate` (33 tabelas, 18 enums)
+- [~] Revisar SQL gerado em `src/db/migrations/` e aplicar: `pnpm db:migrate` — revisado; aplicar requer banco
+- [x] Seed básico (`src/db/seed.ts`):
   - 1 SUPER_ADMIN
   - 1 empresa de exemplo
   - 1 ADMIN_EMPRESA
+  - (execução `db:seed` requer banco + módulo de auth da 0.4)
 
-### 0.4 — Bootstrap da API (NestJS)
+### 0.4 — Bootstrap da API (NestJS) ⬅ próximo
 - [ ] `apps/api/src/app.module.ts` com:
   - DrizzleModule (global)
   - AbilityModule (global)
@@ -205,6 +217,13 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   apenas registro de URL externa? Impacta se precisamos de blob storage na Fase 0.
 - [ ] **Notificações**: E-mail de notificação (ex: fornecedor aprovado, PO gerado)
   está no escopo v1? Impacta dependência de serviço de e-mail (Resend/SendGrid).
+- [ ] **SUPER_ADMIN bypass no AuthGuard** (spec 0.3): O SUPER_ADMIN precisa de entrada em
+  `company_members` por empresa, ou o AuthGuard deve ter bypass explícito para `role === SUPER_ADMIN`?
+  O seed insere o SUPER_ADMIN como membro da empresa demo. Impacto: AuthGuard da Fase 1.
+- [ ] **Numeração de PO** (spec 0.3): `purchase_orders.number` é `UNIQUE`/`NOT NULL`. Como gerar?
+  `SERIAL`, sequência por empresa (`PO-2024-0001`) ou UUID abreviado? Impacto: schema + Service de PO.
+- [ ] **`inventory` upsert** (spec 0.3): saldo atualizado a cada `stock_movement` via trigger PostgreSQL
+  ou upsert explícito no Service? Preferência do projeto: lógica no Service (sem triggers).
 
 ---
 
@@ -233,6 +252,10 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | Commit sem escopo / push manual           | Convenção em `context/git-workflow.md`: Conventional Commits sem parênteses, mensagem em inglês de uma linha, PR em 4 seções, push sempre manual |
 | Biome fixado em `1.9.4` (0.2)             | O schema/config da spec é 1.9.x (`organizeImports`, `files.ignore`); Biome 2.x mudou o formato e quebraria a config. Pin garante fidelidade à spec |
 | `.turbo` adicionado ao `files.ignore` do Biome (0.2) | Biome não lê `.gitignore` por padrão; sem ignorar `.turbo`, o cache do Turborepo (JSONs) falhava o `biome check .`. Mesmo padrão de `dist`/`.next`/`coverage` |
+| `@nestjs/common` + `@types/node` instalados na 0.3 | `db.module.ts` (escopo 0.3) importa `@nestjs/common` e usa `process.env`; sem essas deps o `type-check` falha. NestJS completo virá na 0.4 |
+| `seed.ts` excluído do `tsconfig` da API (0.3) | O seed importa `../modules/auth/better-auth` (módulo da 0.4, ainda inexistente); excluído da compilação `tsc` até a 0.4 para manter `type-check`/pre-push verdes. Biome ainda o linta |
+| Ignore do Biome trocado para `**/db/migrations/**` (0.3) | Biome roda por workspace (cwd em cada app); o padrão antigo `apps/api/src/db/migrations/**` só casava a partir da raiz, deixando os JSONs de metadata da migration falharem o lint da API |
+| Barrel `@elos/shared` re-exporta `enums.ts` (0.3) | Sem `export * from './enums'`, os enums ficariam inacessíveis pela raiz do pacote `@elos/shared` |
 
 ---
 
@@ -257,4 +280,8 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 - **0.2 concluída**: Biome 1.9.4 + Husky 9 + lint-staged 17, `.env.example` (api/web),
   Dockerfiles multi-stage, docker-compose dev/prod, `.dockerignore`, `next.config.ts` standalone.
   `biome check .`/`lint`/`type-check` verdes; Docker runtime não validado neste ambiente
-- Próximo passo: Fase 0.3 — Schema Drizzle e Banco (Supabase)
+- **0.3 concluída**: schema Drizzle completo (33 tabelas, 18 enums) em `apps/api/src/db/schema/`,
+  `DrizzleModule`, `seed.ts`, migration `0000_*.sql` gerada e revisada; enums em `@elos/shared`.
+  `db:generate`/`lint`/`type-check`/`build` verdes. Banco vivo não disponível no ambiente —
+  `db:migrate`/`db:studio`/`db:seed`/login pendentes para execução local com Supabase
+- Próximo passo: Fase 0.4 — Bootstrap da API (NestJS) — também provê o módulo de auth que o `seed.ts` importa
