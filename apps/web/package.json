@@ -1,0 +1,12 @@
+{
+  "name": "@elos/web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "echo 'Next.js build (a configurar em spec 0.5)'",
+    "dev": "echo 'Next.js dev server (a configurar em spec 0.5)'",
+    "lint": "echo 'Biome lint (a configurar em spec 0.2)'",
+    "test": "echo 'Vitest (a configurar em spec 0.5)'",
+    "type-check": "tsc --noEmit"
+  }
+}
