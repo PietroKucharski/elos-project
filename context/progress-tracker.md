@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 0 — Fundação** · `Em progresso`
+**Fase 0 — Fundação** · `Concluída` (0.1–0.6) → próxima: **Fase 1 — Auth e Empresas**
 
 ---
 
@@ -125,12 +125,27 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     `standalone` (build traces) falha com `EPERM` ao criar symlinks no Windows (mesma classe de
     limitação já documentada em `pnpm-workspace.yaml`); (b) fluxo runtime de login/redirect não
     exercitado — requer API + banco vivos.
+- [x] **0.6 — GitHub Actions (CI)** — spec `06-github-actions-ci.md`
+  - `.github/workflows/ci.yml` — trigger em `pull_request` e `push` para `main`; `concurrency`
+    cancela runs duplicadas; cache do pnpm store (`actions/setup-node` `cache: pnpm`) e do
+    Turborepo (`actions/cache` em `.turbo`)
+  - Job `quality` (`lint` → `type-check` → `test` via `turbo run`, com env de teste dummy) e
+    job `build` (`turbo run build` com `NEXT_PUBLIC_*` placeholder + env da API), `build` com
+    `needs: quality`; `timeout-minutes` 15/20; `fetch-depth: 2` para o diff do Turborepo
+  - `.github/workflows/ci.env` — arquivo de **documentação** (não carregado) das env vars do CI
+    e dos secrets futuros de CD, com a invariante `SUPABASE_SERVICE_ROLE_KEY` fora do job `web`
+  - **Ajuste vs. spec:** removido o input `version` do `pnpm/action-setup@v4` (a spec passava
+    `PNPM_VERSION: "9"`) — o campo `packageManager: pnpm@11.1.3` do `package.json` raiz já fixa a
+    versão e a action falha com "Multiple versions of pnpm specified" se ambos forem informados
+  - **Verificado localmente:** YAML válido (parser); `turbo run lint`/`type-check` verdes;
+    `turbo run test -- --reporter=verbose` → 14 testes passando (flag repassada ao Vitest).
+    Execução real no GitHub Actions e branch protection em `main` pendentes (config no GitHub UI).
 
 ---
 
 ## Em Progresso
 
-- Nada ativo. Próximo: **0.6 — GitHub Actions (CI)**.
+- Nada ativo. **Fase 0 — Fundação concluída** (0.1–0.6). Próximo: **Fase 1 — Auth e Empresas**.
 
 ---
 
@@ -224,12 +239,14 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 - [x] Layout raiz com `Toaster`
 - [x] Páginas de sign-in e sign-up funcionais via Better-Auth client
 
-### 0.6 — GitHub Actions (CI) ⬅ próximo
-- [ ] `.github/workflows/ci.yml`:
-  - Trigger: `pull_request` para `main`
-  - Jobs via Turborepo: `turbo run lint type-check test`
-  - Build verification: `turbo run build`
-  - Cache do Turborepo habilitado no CI
+### 0.6 — GitHub Actions (CI) ✅ Concluído (spec `06-github-actions-ci.md`)
+- [x] `.github/workflows/ci.yml`:
+  - Trigger: `pull_request` (e `push`) para `main`
+  - Jobs via Turborepo: `turbo run lint type-check test` (job `quality`)
+  - Build verification: `turbo run build` (job `build`, `needs: quality`)
+  - Cache do Turborepo (`.turbo`) + cache do pnpm store habilitados no CI
+- [x] `.github/workflows/ci.env` — documentação das env vars/secrets (não carregado)
+- [~] Branch protection rules em `main` — config manual no GitHub UI (pendente do owner)
 
 ---
 
@@ -237,8 +254,8 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 
 | Fase | Nome                            | Status        |
 | ---- | ------------------------------- | ------------- |
-| 0    | Fundação                        | Em progresso  |
-| 1    | Auth e Empresas                 | Não iniciada  |
+| 0    | Fundação                        | Concluída     |
+| 1    | Auth e Empresas                 | Próxima       |
 | 2    | Fornecedores e Produtos         | Não iniciada  |
 | 3    | Cotações e Lances               | Não iniciada  |
 | 4    | Pedidos de Compra               | Não iniciada  |
@@ -309,6 +326,8 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | `exactOptionalPropertyTypes`/`declaration` off no web (0.5) | Herdados do `tsconfig.base.json`: o 1º quebra o `components/ui/sonner.tsx` gerado (não editável), o 2º dispara erro de portabilidade de tipo do better-auth client com os caminhos pnpm. Web é app, não pacote publicado — desligar é seguro |
 | Biome ignora `**/components/ui/**` e `**/next-env.d.ts` (0.5) | `components/ui/*` é gerado pelo shadcn CLI (invariante: não editar à mão) e usa formatação própria; `next-env.d.ts` é gerado pelo Next. Ignorar evita o `--write` do lint-staged tocar nesses arquivos |
 | `allowBuilds` msw/sharp = false (0.5) | Resolve o `ERR_PNPM_IGNORED_BUILDS` (exit 1) que abortava o shadcn CLI. Build scripts não são necessários: `sharp` é otimização de imagem opcional (Next faz fallback), `msw` é transitivo de teste |
+| CI: `pnpm/action-setup@v4` sem input `version` (0.6) | A spec passava `PNPM_VERSION: "9"`, mas o `packageManager: pnpm@11.1.3` (campo do `package.json` raiz, exigido desde 0.1) já fixa a versão. Informar os dois faz a action falhar com "Multiple versions of pnpm specified" — removido o `version` e mantido o campo como fonte única |
+| `.github/workflows/ci.env` como documentação (0.6) | Item do escopo "In" da spec, ausente da árvore "Arquivos a Criar"; criado como arquivo de referência (comentado, não carregado por nada) com base na tabela de secrets da seção 4 da spec, para honrar o escopo sem inventar um `.env` real consumido pelo workflow |
 
 ---
 
@@ -347,3 +366,9 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   Ajustes vs. spec por versões reais das libs (ky 2.x, shadcn CLI v4, peer zod do @hookform/resolvers) —
   ver tabela de Decisões Arquiteturais
 - Próximo passo: Fase 0.6 — GitHub Actions (CI)
+- **0.6 concluída**: `.github/workflows/ci.yml` (jobs `quality` + `build` via Turborepo, caches de
+  pnpm store e `.turbo`, `concurrency`, triggers em PR/push para `main`) + `ci.env` (documentação).
+  Validado localmente: YAML válido, `lint`/`type-check` verdes, `test -- --reporter=verbose` com 14
+  testes passando. Ajuste vs. spec: `pnpm/action-setup` sem `version` (conflito com `packageManager`).
+  Pendente do owner: execução real no GitHub Actions + branch protection rules em `main` (UI)
+- **Fase 0 — Fundação concluída** (0.1–0.6). Próximo: **Fase 1 — Auth e Empresas**
