@@ -1,0 +1,102 @@
+import type { Role } from '@elos/shared'
+import {
+  type CanActivate,
+  type ExecutionContext,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common'
+import { Reflector } from '@nestjs/core'
+import { fromNodeHeaders } from 'better-auth/node'
+import { and, eq } from 'drizzle-orm'
+import type { DrizzleDB } from '../../db'
+import { DRIZZLE } from '../../db.module'
+import { companies, companyMembers } from '../../db/schema'
+import { auth } from '../../modules/auth/better-auth'
+import { IS_PUBLIC_KEY } from '../decorators/public.decorator'
+
+@Injectable()
+export class AuthGuard implements CanActivate {
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDB,
+    private readonly reflector: Reflector,
+  ) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    // Rotas marcadas com @Public() são livres
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ])
+    if (isPublic) return true
+
+    const request = context.switchToHttp().getRequest()
+
+    // 1. Verificar sessão Better-Auth
+    const session = await auth.api.getSession({
+      headers: fromNodeHeaders(request.headers),
+    })
+    if (!session) throw new UnauthorizedException('Sessão inválida ou expirada.')
+
+    // 2. Resolver empresa ativa (se rota tem /:cnpj)
+    const cnpj: string | undefined = request.params?.cnpj
+    let role: Role | null = null
+    let companyId: string | null = null
+
+    if (cnpj) {
+      // Tenta encontrar membership direto na empresa
+      const membership = await this.db
+        .select({ role: companyMembers.role, companyId: companies.id })
+        .from(companyMembers)
+        .innerJoin(companies, eq(companies.id, companyMembers.companyId))
+        .where(and(eq(companyMembers.userId, session.user.id), eq(companies.cnpj, cnpj)))
+        .limit(1)
+        .then((rows) => rows[0] ?? null)
+
+      if (membership) {
+        role = membership.role as Role
+        companyId = membership.companyId
+      } else {
+        // Sem membership direto — verifica se é SUPER_ADMIN em qualquer empresa
+        const isSuperAdmin = await this.db
+          .select({ role: companyMembers.role })
+          .from(companyMembers)
+          .where(
+            and(eq(companyMembers.userId, session.user.id), eq(companyMembers.role, 'SUPER_ADMIN')),
+          )
+          .limit(1)
+          .then((rows) => rows.length > 0)
+
+        if (!isSuperAdmin) {
+          throw new ForbiddenException('Acesso negado a esta empresa.')
+        }
+
+        // Resolve o companyId pelo CNPJ para o SUPER_ADMIN
+        const company = await this.db
+          .select({ id: companies.id })
+          .from(companies)
+          .where(eq(companies.cnpj, cnpj))
+          .limit(1)
+          .then((rows) => rows[0] ?? null)
+
+        if (!company) throw new NotFoundException('Empresa não encontrada.')
+
+        role = 'SUPER_ADMIN'
+        companyId = company.id
+      }
+    }
+
+    // 3. Enriquecer request.user
+    request.user = {
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+      role,
+      companyId,
+    }
+
+    return true
+  }
+}

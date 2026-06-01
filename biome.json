@@ -22,11 +22,15 @@
         "noEmptyBlockStatements": "error"
       },
       "style": {
-        "noNonNullAssertion": "warn"
+        "noNonNullAssertion": "warn",
+        "useImportType": "off"
       }
     }
   },
   "javascript": {
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    },
     "formatter": {
       "quoteStyle": "single",
       "trailingCommas": "all",
@@ -43,5 +47,17 @@
       "coverage",
       "**/db/migrations/**"
     ]
-  }
+  },
+  "overrides": [
+    {
+      "include": ["**/*.spec.ts", "**/*.spec.tsx"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    }
+  ]
 }
