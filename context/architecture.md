@@ -455,10 +455,16 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
 
 ### Estratégia
 
-- **Dev local**: `docker-compose.yml` sobe `api`, `web` e um serviço `postgres`
-  local (alternativa ao Supabase cloud quando se trabalha offline ou sem conta).
+- **Dev local**: `docker compose up` sobe `api`, `web` e `postgres`. O Postgres do
+  container é o **banco primário de desenvolvimento** — Supabase não é usado em dev.
+  O `docker-compose.yml` sobrescreve `DATABASE_URL` **e** `DIRECT_URL` do serviço `api`
+  para o `postgres` local, então migrations e seed rodam dentro do container e nunca
+  tocam o Supabase:
+  - `docker compose exec api pnpm db:migrate`
+  - `docker compose exec api pnpm db:seed`
 - **Produção / staging**: `docker-compose.prod.yml` override — sem `postgres`
-  local; `DATABASE_URL` aponta para Supabase.
+  local; `DATABASE_URL` (pooler) e `DIRECT_URL` (conexão direta) apontam para o
+  Supabase, injetados pelo ambiente do servidor.
 - **Builds**: cada app tem seu próprio `Dockerfile` multi-stage para imagens
   enxutas (~150 MB com `node:22-alpine`).
 

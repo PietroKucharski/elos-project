@@ -26,12 +26,21 @@ pnpm install
 
 # 4. Configure as variáveis de ambiente
 cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env
-# Edite os arquivos .env com suas credenciais locais
+cp apps/web/.env.example apps/web/.env.local
+# Os defaults já apontam para o Postgres do Docker — edite só se necessário
 
-# 5. Inicie o ambiente de desenvolvimento
-pnpm dev
+# 5. Inicie o ambiente de desenvolvimento (tudo no Docker: api + web + postgres)
+docker compose up
+
+# 6. Aplique as migrations e o seed dentro do container da API
+docker compose exec api pnpm db:migrate
+docker compose exec api pnpm db:seed
 ```
+
+> **Banco de dados:** em desenvolvimento o banco é o Postgres do container
+> (`docker compose up`), nunca o Supabase. O Supabase é usado apenas em produção
+> (`docker-compose.prod.yml`). Para rodar só o banco e os apps no host, use
+> `docker compose up postgres` e aponte `DATABASE_URL` para `localhost:5432`.
 
 ## Estrutura do Monorepo
 
