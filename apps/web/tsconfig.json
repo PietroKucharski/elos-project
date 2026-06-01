@@ -1,15 +1,34 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "ES2022"],
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "preserve",
-    "plugins": [{ "name": "next" }],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    // Relaxado para o app web: os primitivos gerados pelo shadcn CLI em
+    // components/ui/* (que a invariante proíbe editar à mão) não são compatíveis
+    // com exactOptionalPropertyTypes herdado do tsconfig.base.json.
+    "exactOptionalPropertyTypes": false,
+    // Web é uma aplicação, não um pacote publicado: emissão de declarations não
+    // faz sentido e dispara erros de portabilidade de tipos com os caminhos
+    // aninhados do pnpm (ex.: tipo inferido do better-auth client).
+    "declaration": false,
+    "declarationMap": false,
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "allowJs": true,
+    "noEmit": true,
+    "incremental": true
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]

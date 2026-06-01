@@ -45,7 +45,9 @@
       "dist",
       "build",
       "coverage",
-      "**/db/migrations/**"
+      "**/db/migrations/**",
+      "**/components/ui/**",
+      "**/next-env.d.ts"
     ]
   },
   "overrides": [
