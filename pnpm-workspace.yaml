@@ -11,3 +11,13 @@ allowBuilds:
   '@nestjs/core': true
   '@scarf/scarf': false
   esbuild: true
+  msw: false
+  sharp: false
+# @hookform/resolvers@5 importa `zod/v4/core` mas não declara `zod` como peer.
+# Sob o layout estrito do pnpm, o resolver (no store virtual) não enxerga o zod
+# do app, quebrando o `next build` com "Can't resolve 'zod/v4/core'". Esta
+# extensão de manifesto declara o peer para que o pnpm crie o symlink do zod.
+packageExtensions:
+  '@hookform/resolvers':
+    peerDependencies:
+      zod: '*'
