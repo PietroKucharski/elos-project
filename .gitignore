@@ -8,6 +8,8 @@ dist/
 build/
 out/
 *.tsbuildinfo
+# Gerado pelo Next.js a cada dev/build — não commitar
+next-env.d.ts
 
 # Variáveis de ambiente (NUNCA commitar)
 .env

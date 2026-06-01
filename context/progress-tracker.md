@@ -100,12 +100,37 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   - 4 spec files Vitest (filter, ability factory, auth guard, health) — **14 testes passando**
   - **Verificado:** `tsc --noEmit`, `biome check`, `vitest run` verdes.
     Runtime vivo (`/health`, `/reference`, login com cookie) não executado — sem banco neste ambiente.
+- [x] **0.5 — Bootstrap do Frontend (Next.js)** — spec `05-bootstrap-front-spec.md`
+  - Deps em `@elos/web`: `next@15`, `react@19`, `react-dom@19`, `better-auth`, `ky`,
+    `react-hook-form`, `@hookform/resolvers`, `zod`, `lucide-react`,
+    `@fontsource-variable/inter`, `geist` + `typescript`, `@types/*`, `tailwindcss@4`,
+    `@tailwindcss/postcss` (dev). shadcn trouxe `radix-ui`, `clsx`, `class-variance-authority`,
+    `tailwind-merge`, `tw-animate-css`, `next-themes`, `sonner` (a CLI `shadcn` removida das deps)
+  - shadcn/ui inicializado (`-t next -b radix -p nova`, `components.json` style `radix-nova`) +
+    componentes `button`, `input`, `label`, `card`, `sonner`; `lib/utils.ts` (`cn`) criado à mão
+    (a init abortou antes de gerá-lo). **`form` não foi gerado** — o registry `radix-nova` não envia
+    arquivo para ele; as páginas usam `react-hook-form` direto (sem o primitivo `<Form>`), então é inócuo
+  - `globals.css` com todos os tokens Elos do `ui-context.md` (light-only). `@theme inline` envolve
+    cada token em `hsl(...)` para as utilities do Tailwind v4 renderizarem cor válida; `@custom-variant
+    dark` ancorado a `.dark` (nunca aplicada) neutraliza o `dark:` default por `prefers-color-scheme`
+  - `lib/auth-client.ts` (Better-Auth `createAuthClient`), `lib/server-auth.ts` (proxy `getSession`
+    via `/api/auth/get-session`, sem banco no front), `lib/api-client.ts` (`ky` `credentials: 'include'`)
+  - `app/layout.tsx` (Inter via `next/font/google` + Geist Mono via `next/font/local`, `Toaster`),
+    `(auth)/layout.tsx` + `sign-in`/`sign-up` (react-hook-form + Zod inline), `(app)/layout.tsx`
+    (sessão server-side + redirect) e `(app)/page.tsx` (placeholder pós-login)
+  - `next.config.ts` (`output: 'standalone'`, `transpilePackages: ['@elos/shared']`, serverActions),
+    `tsconfig.json` (spec) + `postcss.config.mjs`; `src/index.ts` placeholder removido
+  - **Verificado:** `pnpm --filter web build` compila + checa tipos + gera as 6 rotas (✓);
+    `type-check` e `lint` verdes nos 3 workspaces. **Pendências de ambiente:** (a) o passo final
+    `standalone` (build traces) falha com `EPERM` ao criar symlinks no Windows (mesma classe de
+    limitação já documentada em `pnpm-workspace.yaml`); (b) fluxo runtime de login/redirect não
+    exercitado — requer API + banco vivos.
 
 ---
 
 ## Em Progresso
 
-- Nada ativo. Próximo: **0.5 — Bootstrap do Frontend (Next.js)**.
+- Nada ativo. Próximo: **0.6 — GitHub Actions (CI)**.
 
 ---
 
@@ -190,16 +215,16 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 - [x] `modules/auth/` — instância Better-Auth + controller que monta `/api/auth/*`
 - [x] Rota de health check: `GET /health` → `{ status: 'ok', timestamp }`
 
-### 0.5 — Bootstrap do Frontend (Next.js) ⬅ próximo
-- [ ] `apps/web` com Next.js 15 + TypeScript + Tailwind CSS 4 + shadcn/ui
-- [ ] Tokens de cor de `ui-context.md` configurados em `globals.css`
-- [ ] `lib/auth-client.ts` — Better-Auth client (`createAuthClient`)
-- [ ] `lib/api-client.ts` — ky com session cookie automático
-- [ ] Layout protegido `(app)/layout.tsx` com verificação de sessão server-side
-- [ ] Layout raiz com `Toaster`
-- [ ] Páginas de sign-in e sign-up funcionais via Better-Auth client
+### 0.5 — Bootstrap do Frontend (Next.js) ✅ Concluído (spec `05-bootstrap-front-spec.md`)
+- [x] `apps/web` com Next.js 15 + TypeScript + Tailwind CSS 4 + shadcn/ui
+- [x] Tokens de cor de `ui-context.md` configurados em `globals.css`
+- [x] `lib/auth-client.ts` — Better-Auth client (`createAuthClient`)
+- [x] `lib/api-client.ts` — ky com session cookie automático
+- [x] Layout protegido `(app)/layout.tsx` com verificação de sessão server-side
+- [x] Layout raiz com `Toaster`
+- [x] Páginas de sign-in e sign-up funcionais via Better-Auth client
 
-### 0.6 — GitHub Actions (CI)
+### 0.6 — GitHub Actions (CI) ⬅ próximo
 - [ ] `.github/workflows/ci.yml`:
   - Trigger: `pull_request` para `main`
   - Jobs via Turborepo: `turbo run lint type-check test`
@@ -275,6 +300,15 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | `seed.ts` re-incluído no `tsconfig` da API (0.4) | Com o módulo `modules/auth/better-auth` criado na 0.4, a exclusão temporária da 0.3 foi removida; `seed.ts` volta a ser type-checked. Guard de `company` undefined adicionado (exigência do `noUncheckedIndexedAccess`) |
 | Ignore do Biome trocado para `**/db/migrations/**` (0.3) | Biome roda por workspace (cwd em cada app); o padrão antigo `apps/api/src/db/migrations/**` só casava a partir da raiz, deixando os JSONs de metadata da migration falharem o lint da API |
 | Barrel `@elos/shared` re-exporta `enums.ts` (0.3) | Sem `export * from './enums'`, os enums ficariam inacessíveis pela raiz do pacote `@elos/shared` |
+| shadcn CLI v4: `radix` + preset `nova` (0.5) | O wizard novo não tem mais "Default/Slate" — pede component library (`radix`/`base`) e preset. `radix-nova` (Lucide + Geist) é o mais próximo da intenção da spec; base color é irrelevante pois `globals.css` é sobrescrito com os tokens Elos |
+| `@theme inline` envolve tokens em `hsl(...)` (0.5) | Os tokens Elos são triplets HSL crus; sem o `hsl()` no mapeamento, as utilities do Tailwind v4 (`bg-primary`, `border-border`, `ring-ring/50`) gerariam cor inválida. Correção necessária vs. a spec, que mapeava `var(--token)` direto |
+| `@custom-variant dark (.dark)` no `globals.css` (0.5) | Os primitivos shadcn trazem classes `dark:`; ancorá-las a `.dark` (nunca aplicada) impede o default `prefers-color-scheme` de ativar estilos escuros — cumpre a invariante "sem dark mode na v1" sem editar `components/ui/*` |
+| `form` do shadcn não instalado (0.5) | O registry `radix-nova` não envia arquivo para `form`. As páginas de auth usam `react-hook-form` direto (sem o primitivo `<Form>`), então não há perda funcional |
+| `packageExtensions` para `@hookform/resolvers` (0.5) | O resolver@5 importa `zod/v4/core` mas não declara `zod` como peer; sob o layout estrito do pnpm o `next build` quebrava. Extensão de manifesto em `pnpm-workspace.yaml` declara o peer e cria o symlink do zod |
+| ky 2.x: `prefix` + hook `afterResponse(state)` (0.5) | A spec foi escrita para ky 1.x. No ky 2.x `prefixUrl`→`prefix` e o hook recebe um único objeto `{ request, options, response }`. `lib/api-client.ts` adaptado mantendo o redirect 401→`/sign-in` |
+| `exactOptionalPropertyTypes`/`declaration` off no web (0.5) | Herdados do `tsconfig.base.json`: o 1º quebra o `components/ui/sonner.tsx` gerado (não editável), o 2º dispara erro de portabilidade de tipo do better-auth client com os caminhos pnpm. Web é app, não pacote publicado — desligar é seguro |
+| Biome ignora `**/components/ui/**` e `**/next-env.d.ts` (0.5) | `components/ui/*` é gerado pelo shadcn CLI (invariante: não editar à mão) e usa formatação própria; `next-env.d.ts` é gerado pelo Next. Ignorar evita o `--write` do lint-staged tocar nesses arquivos |
+| `allowBuilds` msw/sharp = false (0.5) | Resolve o `ERR_PNPM_IGNORED_BUILDS` (exit 1) que abortava o shadcn CLI. Build scripts não são necessários: `sharp` é otimização de imagem opcional (Next faz fallback), `msw` é transitivo de teste |
 
 ---
 
@@ -304,3 +338,12 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   `db:generate`/`lint`/`type-check`/`build` verdes. Banco vivo não disponível no ambiente —
   `db:migrate`/`db:studio`/`db:seed`/login pendentes para execução local com Supabase
 - Próximo passo: Fase 0.4 — Bootstrap da API (NestJS) — também provê o módulo de auth que o `seed.ts` importa
+- **0.4 concluída**: NestJS (guards/CASL/Better-Auth/health), Scalar em `/reference`, prefixo `/v1`,
+  14 testes Vitest verdes. Runtime vivo pendente (sem banco)
+- **0.5 concluída**: Next.js 15 + Tailwind 4 + shadcn/ui (`radix-nova`), tokens Elos em `globals.css`,
+  clients de auth (browser + proxy server-side) e `ky`, layouts root/auth/(app) e páginas sign-in/sign-up.
+  `build` (compila + 6 rotas) / `type-check` / `lint` verdes. Caveats de ambiente: passo `standalone`
+  falha por `EPERM` de symlink no Windows; fluxo de login não exercitado (sem API/banco vivos).
+  Ajustes vs. spec por versões reais das libs (ky 2.x, shadcn CLI v4, peer zod do @hookform/resolvers) —
+  ver tabela de Decisões Arquiteturais
+- Próximo passo: Fase 0.6 — GitHub Actions (CI)

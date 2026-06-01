@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/* Sem dark mode na v1 (invariante do ui-context). O variant `dark:` presente nos
+   primitivos gerados pelo shadcn CLI fica ancorado a uma classe `.dark` que nunca
+   é aplicada — em vez do default `prefers-color-scheme`, que ativaria estilos
+   escuros sem querer. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ─── Mapeamento Tailwind CSS 4 → CSS variables ─────────────────────────── */
+/* As variáveis de cor são triplets HSL crus; o `hsl(...)` aqui converte cada
+   token em uma cor válida para que as utilities (bg-primary, text-foreground,
+   border-border, ring-ring/50, …) gerem valores corretos no Tailwind v4. */
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-success: hsl(var(--success));
+  --color-warning: hsl(var(--warning));
+  --color-info: hsl(var(--info));
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* ─── Tokens de cor Elos (light mode — sem dark mode na v1) ─────────────── */
+@layer base {
+  :root {
+    /* Superfícies */
+    --background: 0 0% 98%; /* slate-50  */
+    --foreground: 222 47% 11%; /* slate-900 */
+    --card: 0 0% 100%; /* white     */
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Accent primário — Indigo */
+    --primary: 243 75% 59%; /* indigo-500 */
+    --primary-foreground: 0 0% 100%;
+
+    /* Superfície secundária */
+    --secondary: 210 40% 96%; /* slate-100 */
+    --secondary-foreground: 222 47% 11%;
+
+    /* Muted */
+    --muted: 210 40% 96%; /* slate-100 */
+    --muted-foreground: 215 16% 47%; /* slate-500 */
+
+    /* Accent (hover states) */
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+
+    /* Destrutivo / Erro */
+    --destructive: 0 84% 60%; /* red-500   */
+    --destructive-foreground: 0 0% 100%;
+
+    /* Bordas e inputs */
+    --border: 214 32% 91%; /* slate-200 */
+    --input: 214 32% 91%;
+    --ring: 243 75% 59%; /* indigo-500 */
+
+    /* Status customizados */
+    --success: 142 71% 45%; /* green-500 */
+    --warning: 38 92% 50%; /* amber-500 */
+    --info: 199 89% 48%; /* sky-500   */
+
+    /* Border radius base */
+    --radius: 0.5rem;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
