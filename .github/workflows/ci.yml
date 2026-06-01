@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]   # verifica pós-merge também
+
+# Cancela runs anteriores do mesmo PR/branch para não desperdiçar minutos
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Node.js
+  NODE_VERSION: "22"
+  # pnpm: a versão vem do campo `packageManager` do package.json raiz
+  # (pnpm@11.1.3). Passar `version` ao pnpm/action-setup@v4 em paralelo a esse
+  # campo faz a action falhar com "Multiple versions of pnpm specified".
+
+  # Turborepo — identifica o time para o cache remoto (opcional, mas recomendado)
+  # Se não usar Vercel Remote Cache, estas vars podem ser omitidas
+  TURBO_TELEMETRY_DISABLED: "1"
+
+  # Variáveis de build para o Next.js — valores dummy para CI
+  # O build é apenas para verificação de compilação, não para deploy
+  NEXT_PUBLIC_API_URL: "http://localhost:3333"
+  NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: "placeholder-anon-key"
+
+jobs:
+  # ─── Job 1: Qualidade de código ─────────────────────────────────────────
+  quality:
+    name: Lint · Type-check · Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2   # necessário para o Turborepo detectar mudanças
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm   # cache do pnpm store via actions/setup-node
+
+      - name: Cache Turborepo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint (Biome)
+        run: pnpm turbo run lint
+
+      - name: Type-check
+        run: pnpm turbo run type-check
+
+      - name: Testes (Vitest)
+        run: pnpm turbo run test -- --reporter=verbose
+        env:
+          # Garante que testes não tentam conectar ao banco real
+          DATABASE_URL: "postgresql://test:test@localhost:5432/test"
+          BETTER_AUTH_SECRET: "ci-test-secret-at-least-32-characters-long"
+          BETTER_AUTH_URL: "http://localhost:3000"
+          FRONTEND_URL: "http://localhost:3000"
+
+  # ─── Job 2: Build verification ──────────────────────────────────────────
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: quality   # só roda se o job de qualidade passar
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Cache Turborepo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm turbo run build
+        env:
+          # Vars de build para o Next.js (baked in no bundle)
+          NEXT_PUBLIC_API_URL: ${{ env.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          # Vars da API para compilação TypeScript
+          DATABASE_URL: "postgresql://test:test@localhost:5432/test"
+          BETTER_AUTH_SECRET: "ci-build-secret-at-least-32-characters-long"
+          BETTER_AUTH_URL: "http://localhost:3000"
+          FRONTEND_URL: "http://localhost:3000"
+          NODE_ENV: "production"
