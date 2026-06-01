@@ -39,6 +39,10 @@ async function seed() {
     })
     .returning()
 
+  if (!company) {
+    throw new Error('Falha ao criar empresa de exemplo')
+  }
+
   // ─── 3. SUPER_ADMIN como membro da empresa (role SUPER_ADMIN) ───────────
   await db.insert(companyMembers).values({
     companyId: company.id,

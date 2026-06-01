@@ -82,12 +82,30 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     `user.email`/`session.token`/`companies.cnpj`/`purchase_orders.number`, FKs cascade, timestamptz
   - **Verificado:** `pnpm db:generate`, `lint`, `type-check`, `build` verdes.
     Banco vivo (`db:migrate`/`db:studio`/`db:seed`/login) não executado — sem Supabase neste ambiente.
+- [x] **0.4 — Bootstrap da API (NestJS)** — spec `04-bootstrap-api-spec.md`
+  - Deps em `@elos/api`: `@nestjs/{common,core,platform-express}`, `@nestjs/throttler`,
+    `@nestjs/swagger`, `@casl/ability`, `better-auth`, `@scalar/nestjs-api-reference`,
+    `reflect-metadata`, `rxjs` + `@nestjs/testing`, `vitest`, `tsx` (dev)
+  - `src/db/index.ts` — instância Drizzle standalone (pool única compartilhada com Better-Auth);
+    `db.module.ts` passou a `useValue: db` dessa instância
+  - `common/`: `types/session-user.ts`, decorators `@Public()`/`@CurrentUser()`,
+    `pipes/zod-validation.pipe.ts`, `filters/global-exception.filter.ts`,
+    `ability/ability.factory.ts` + `ability.module.ts` (6 papéis CASL),
+    `guards/auth.guard.ts` (Better-Auth + enrich `request.user` + bypass SUPER_ADMIN) e `roles.guard.ts`
+  - `modules/auth/` (`better-auth.ts` + controller `/api/auth/*` `@Public()` + module) e
+    `modules/health/` (`GET /health` → `{ status, timestamp }`)
+  - `app.module.ts` (Throttler 100/min, DrizzleModule/AbilityModule globais, `APP_GUARD` AuthGuard + ThrottlerGuard)
+  - `main.ts` (CORS whitelist, prefixo `/v1` com exclude, GlobalExceptionFilter, Scalar `/reference`, `/openapi.json`)
+  - `seed.ts` re-incluído no `tsconfig` (módulo de auth da 0.4 agora existe); guard de `company` undefined
+  - 4 spec files Vitest (filter, ability factory, auth guard, health) — **14 testes passando**
+  - **Verificado:** `tsc --noEmit`, `biome check`, `vitest run` verdes.
+    Runtime vivo (`/health`, `/reference`, login com cookie) não executado — sem banco neste ambiente.
 
 ---
 
 ## Em Progresso
 
-- Nada ativo. Próximo: **0.4 — Bootstrap da API (NestJS)**.
+- Nada ativo. Próximo: **0.5 — Bootstrap do Frontend (Next.js)**.
 
 ---
 
@@ -150,29 +168,29 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   - 1 ADMIN_EMPRESA
   - (execução `db:seed` requer banco + módulo de auth da 0.4)
 
-### 0.4 — Bootstrap da API (NestJS) ⬅ próximo
-- [ ] `apps/api/src/app.module.ts` com:
+### 0.4 — Bootstrap da API (NestJS) ✅ Concluído (spec `04-bootstrap-api-spec.md`)
+- [x] `apps/api/src/app.module.ts` com:
   - DrizzleModule (global)
   - AbilityModule (global)
   - AuthModule (Better-Auth)
   - HealthModule
-- [ ] `apps/api/src/main.ts`:
+- [x] `apps/api/src/main.ts`:
   - CORS com `origin: [process.env.FRONTEND_URL!]` — nunca aberto
   - GlobalExceptionFilter registrado
-  - ZodValidationPipe como pipe global
+  - ZodValidationPipe por parâmetro (não global — cada rota tem seu schema)
   - Swagger spec gerado com `@nestjs/swagger` + Scalar UI em `/reference`
   - JSON spec exposto em `/openapi.json`
   - Prefixo global `/v1` (exceto `/api/auth/*`, `/health`, `/reference`, `/openapi.json`)
-- [ ] `common/filters/global-exception.filter.ts`
-- [ ] `common/guards/auth.guard.ts` (integração Better-Auth)
-- [ ] `common/guards/roles.guard.ts` (CASL)
-- [ ] `common/ability/ability.factory.ts`
-- [ ] `common/pipes/zod-validation.pipe.ts`
-- [ ] `common/decorators/` — @CurrentUser, @Roles, @Public
-- [ ] `modules/auth/` — instância Better-Auth + controller que monta `/api/auth/*`
-- [ ] Rota de health check: `GET /health` → `{ status: 'ok', timestamp }`
+- [x] `common/filters/global-exception.filter.ts`
+- [x] `common/guards/auth.guard.ts` (integração Better-Auth + bypass SUPER_ADMIN)
+- [x] `common/guards/roles.guard.ts` (coarse-grained role check)
+- [x] `common/ability/ability.factory.ts` (CASL — 6 papéis)
+- [x] `common/pipes/zod-validation.pipe.ts`
+- [x] `common/decorators/` — @CurrentUser, @Public
+- [x] `modules/auth/` — instância Better-Auth + controller que monta `/api/auth/*`
+- [x] Rota de health check: `GET /health` → `{ status: 'ok', timestamp }`
 
-### 0.5 — Bootstrap do Frontend (Next.js)
+### 0.5 — Bootstrap do Frontend (Next.js) ⬅ próximo
 - [ ] `apps/web` com Next.js 15 + TypeScript + Tailwind CSS 4 + shadcn/ui
 - [ ] Tokens de cor de `ui-context.md` configurados em `globals.css`
 - [ ] `lib/auth-client.ts` — Better-Auth client (`createAuthClient`)
@@ -217,9 +235,10 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   apenas registro de URL externa? Impacta se precisamos de blob storage na Fase 0.
 - [ ] **Notificações**: E-mail de notificação (ex: fornecedor aprovado, PO gerado)
   está no escopo v1? Impacta dependência de serviço de e-mail (Resend/SendGrid).
-- [ ] **SUPER_ADMIN bypass no AuthGuard** (spec 0.3): O SUPER_ADMIN precisa de entrada em
-  `company_members` por empresa, ou o AuthGuard deve ter bypass explícito para `role === SUPER_ADMIN`?
-  O seed insere o SUPER_ADMIN como membro da empresa demo. Impacto: AuthGuard da Fase 1.
+- [x] **SUPER_ADMIN bypass no AuthGuard** (spec 0.3) — **Resolvido na 0.4**: o AuthGuard tenta
+  primeiro o membership direto na empresa do `/:cnpj`; se não houver, verifica se o usuário tem
+  `role = 'SUPER_ADMIN'` em qualquer empresa e, se sim, resolve o `companyId` via CNPJ e concede
+  acesso com `role: 'SUPER_ADMIN'`. Não é preciso criar membership pré-configurado por empresa.
 - [ ] **Numeração de PO** (spec 0.3): `purchase_orders.number` é `UNIQUE`/`NOT NULL`. Como gerar?
   `SERIAL`, sequência por empresa (`PO-2024-0001`) ou UUID abreviado? Impacto: schema + Service de PO.
 - [ ] **`inventory` upsert** (spec 0.3): saldo atualizado a cada `stock_movement` via trigger PostgreSQL
@@ -253,7 +272,7 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | Biome fixado em `1.9.4` (0.2)             | O schema/config da spec é 1.9.x (`organizeImports`, `files.ignore`); Biome 2.x mudou o formato e quebraria a config. Pin garante fidelidade à spec |
 | `.turbo` adicionado ao `files.ignore` do Biome (0.2) | Biome não lê `.gitignore` por padrão; sem ignorar `.turbo`, o cache do Turborepo (JSONs) falhava o `biome check .`. Mesmo padrão de `dist`/`.next`/`coverage` |
 | `@nestjs/common` + `@types/node` instalados na 0.3 | `db.module.ts` (escopo 0.3) importa `@nestjs/common` e usa `process.env`; sem essas deps o `type-check` falha. NestJS completo virá na 0.4 |
-| `seed.ts` excluído do `tsconfig` da API (0.3) | O seed importa `../modules/auth/better-auth` (módulo da 0.4, ainda inexistente); excluído da compilação `tsc` até a 0.4 para manter `type-check`/pre-push verdes. Biome ainda o linta |
+| `seed.ts` re-incluído no `tsconfig` da API (0.4) | Com o módulo `modules/auth/better-auth` criado na 0.4, a exclusão temporária da 0.3 foi removida; `seed.ts` volta a ser type-checked. Guard de `company` undefined adicionado (exigência do `noUncheckedIndexedAccess`) |
 | Ignore do Biome trocado para `**/db/migrations/**` (0.3) | Biome roda por workspace (cwd em cada app); o padrão antigo `apps/api/src/db/migrations/**` só casava a partir da raiz, deixando os JSONs de metadata da migration falharem o lint da API |
 | Barrel `@elos/shared` re-exporta `enums.ts` (0.3) | Sem `export * from './enums'`, os enums ficariam inacessíveis pela raiz do pacote `@elos/shared` |
 

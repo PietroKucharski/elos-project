@@ -1,6 +1,13 @@
 packages:
   - "apps/*"
   - "packages/*"
+# Disable pnpm's pre-run frozen install check. On this Windows setup (repo under
+# Documents/OneDrive + Defender Controlled Folder Access) the relink step fails
+# with EPERM on node_modules renames, blocking every `pnpm <script>` run —
+# including Husky's pre-commit/pre-push hooks. Lockfile is synced via `pnpm install`.
+verifyDepsBeforeRun: false
 allowBuilds:
   '@biomejs/biome': true
+  '@nestjs/core': true
+  '@scarf/scarf': false
   esbuild: true
