@@ -9,8 +9,8 @@ vi.mock('../../modules/auth/better-auth', () => ({
 vi.mock('better-auth/node', () => ({
   fromNodeHeaders: (h: unknown) => h,
 }))
-
 import { auth } from '../../modules/auth/better-auth'
+import { IS_PUBLIC_KEY } from '../decorators/public.decorator'
 import { AuthGuard } from './auth.guard'
 
 // Request memoizado: o guard e o teste enxergam o mesmo objeto, então a
@@ -46,8 +46,13 @@ function makeDb(rowQueue: unknown[][]) {
   return chain
 }
 
-const reflector = (isPublic: boolean): Reflector =>
-  ({ getAllAndOverride: vi.fn().mockReturnValue(isPublic) }) as unknown as Reflector
+// Reflector ciente da chave consultada: IS_PUBLIC_KEY e ALLOW_PLATFORM_ROUTE_KEY.
+const reflector = (opts: { isPublic?: boolean; allowPlatform?: boolean } = {}): Reflector =>
+  ({
+    getAllAndOverride: vi.fn((key: string) =>
+      key === IS_PUBLIC_KEY ? (opts.isPublic ?? false) : (opts.allowPlatform ?? false),
+    ),
+  }) as unknown as Reflector
 
 describe('AuthGuard', () => {
   beforeEach(() => {
@@ -55,7 +60,7 @@ describe('AuthGuard', () => {
   })
 
   it('permite rota @Public() sem verificar sessão', async () => {
-    const guard = new AuthGuard(makeDb([]) as never, reflector(true))
+    const guard = new AuthGuard(makeDb([]) as never, reflector({ isPublic: true }))
     const result = await guard.canActivate(makeContext())
     expect(result).toBe(true)
     expect(auth.api.getSession).not.toHaveBeenCalled()
@@ -63,7 +68,7 @@ describe('AuthGuard', () => {
 
   it('lança UnauthorizedException sem sessão válida', async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(null)
-    const guard = new AuthGuard(makeDb([]) as never, reflector(false))
+    const guard = new AuthGuard(makeDb([]) as never, reflector())
     await expect(guard.canActivate(makeContext())).rejects.toThrow(UnauthorizedException)
   })
 
@@ -76,7 +81,7 @@ describe('AuthGuard', () => {
     const ctx = makeContext(request.params, request)
     const guard = new AuthGuard(
       makeDb([[{ role: 'COMPRADOR', companyId: 'c1' }]]) as never,
-      reflector(false),
+      reflector(),
     )
 
     await guard.canActivate(ctx)
@@ -90,10 +95,53 @@ describe('AuthGuard', () => {
     } as never)
 
     // 1ª query (membership) → []; 2ª query (super admin) → []
-    const guard = new AuthGuard(makeDb([[], []]) as never, reflector(false))
+    const guard = new AuthGuard(makeDb([[], []]) as never, reflector())
 
     await expect(guard.canActivate(makeContext({ cnpj: '00000000000191' }))).rejects.toThrow(
       ForbiddenException,
     )
+  })
+
+  // --- Rotas de plataforma (sem :cnpj) ---
+
+  it('eleva a SUPER_ADMIN em rota de plataforma quando o usuário é SUPER_ADMIN', async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: 'u1', email: 'a@b.com', name: 'A' },
+    } as never)
+
+    const request = { params: {} as Record<string, string>, headers: {} as Record<string, string> }
+    const ctx = makeContext(request.params, request)
+    // Query de SUPER_ADMIN em qualquer empresa → encontrada
+    const guard = new AuthGuard(makeDb([[{ role: 'SUPER_ADMIN' }]]) as never, reflector())
+
+    await guard.canActivate(ctx)
+
+    expect(request).toMatchObject({ user: { role: 'SUPER_ADMIN', companyId: null } })
+  })
+
+  it('fail-closed: ForbiddenException em rota de plataforma para não-SUPER_ADMIN sem opt-in', async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: 'u1', email: 'a@b.com', name: 'A' },
+    } as never)
+
+    // Não é SUPER_ADMIN em nenhuma empresa → []
+    const guard = new AuthGuard(makeDb([[]]) as never, reflector())
+
+    await expect(guard.canActivate(makeContext())).rejects.toThrow(ForbiddenException)
+  })
+
+  it('permite rota de plataforma com @AllowPlatformRoute() para não-SUPER_ADMIN (role null)', async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: 'u1', email: 'a@b.com', name: 'A' },
+    } as never)
+
+    const request = { params: {} as Record<string, string>, headers: {} as Record<string, string> }
+    const ctx = makeContext(request.params, request)
+    const guard = new AuthGuard(makeDb([[]]) as never, reflector({ allowPlatform: true }))
+
+    const result = await guard.canActivate(ctx)
+
+    expect(result).toBe(true)
+    expect(request).toMatchObject({ user: { role: null, companyId: null } })
   })
 })

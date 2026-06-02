@@ -15,6 +15,7 @@ import type { DrizzleDB } from '../../db'
 import { DRIZZLE } from '../../db.module'
 import { companies, companyMembers } from '../../db/schema'
 import { auth } from '../../modules/auth/better-auth'
+import { ALLOW_PLATFORM_ROUTE_KEY } from '../decorators/platform-route.decorator'
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator'
 
 @Injectable()
@@ -102,9 +103,19 @@ export class AuthGuard implements CanActivate {
       if (superAdminMembership) {
         role = 'SUPER_ADMIN'
         // companyId permanece null — sem escopo de tenant
+      } else {
+        // Fail-closed: rotas de plataforma exigem SUPER_ADMIN, exceto quando a rota
+        // opta explicitamente via @AllowPlatformRoute() (ex.: GET /v1/me/companies,
+        // que depende apenas de session.user.id, sem contexto de tenant).
+        const allowPlatformRoute = this.reflector.getAllAndOverride<boolean>(
+          ALLOW_PLATFORM_ROUTE_KEY,
+          [context.getHandler(), context.getClass()],
+        )
+        if (!allowPlatformRoute) {
+          throw new ForbiddenException('Acesso restrito a SUPER_ADMIN.')
+        }
+        // role/companyId permanecem null; a rota opt-in usa session.user.id direto.
       }
-      // Usuários não-SUPER_ADMIN em rotas sem :cnpj ficam com role/companyId null;
-      // o CASL check no Service rejeitará com ForbiddenException.
     }
 
     // 3. Enriquecer request.user
