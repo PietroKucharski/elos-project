@@ -1,5 +1,11 @@
-import { AbilityBuilder, type MongoAbility, createMongoAbility } from '@casl/ability'
+import {
+  AbilityBuilder,
+  type ForcedSubject,
+  type MongoAbility,
+  createMongoAbility,
+} from '@casl/ability'
 import { Injectable } from '@nestjs/common'
+import type { Company } from '../../db/schema/companies'
 import type { SessionUser } from '../types/session-user'
 
 export type Actions =
@@ -14,7 +20,12 @@ export type Actions =
   | 'select' // selecionar lance vencedor em cotação
 
 export type Subjects =
+  // 'Company' aceita tanto a string (checagem por tipo: can('read', 'Company'))
+  // quanto a row tagueada (ForcedSubject) para condições por objeto
+  // (ex.: { id: companyId }) e passar a row do Drizzle direto ao CASL. Os
+  // demais subjects permanecem strings até precisarem de escopo por objeto.
   | 'Company'
+  | (Company & ForcedSubject<'Company'>)
   | 'CompanyMember'
   | 'Supplier'
   | 'SupplierContact'
@@ -46,13 +57,17 @@ export class AbilityFactory {
   createForUser(user: SessionUser): AppAbility {
     const { can, build } = new AbilityBuilder<AppAbility>(createMongoAbility)
 
+    // Empresa ativa do usuário; '' nunca casa um uuid real (deny seguro se null).
+    const companyId = user.companyId ?? ''
+
     switch (user.role) {
       case 'SUPER_ADMIN':
         can('manage', 'all')
         break
 
       case 'ADMIN_EMPRESA':
-        can('manage', 'Company')
+        can('read', 'Company', { id: companyId })
+        can('update', 'Company', { id: companyId })
         can('manage', 'CompanyMember')
         can('manage', 'Supplier')
         can('manage', 'SupplierContact')
@@ -72,6 +87,7 @@ export class AbilityFactory {
         break
 
       case 'COMPRADOR':
+        can('read', 'Company', { id: companyId })
         can(['read', 'create', 'update'], 'Supplier')
         can('approve', 'Supplier')
         can('reject', 'Supplier')
@@ -93,6 +109,7 @@ export class AbilityFactory {
         break
 
       case 'ALMOXARIFE':
+        can('read', 'Company', { id: companyId })
         can('read', 'PurchaseOrder')
         can('manage', 'Receipt')
         can('manage', 'Warehouse')
@@ -102,6 +119,7 @@ export class AbilityFactory {
         break
 
       case 'ANALISTA_FINANCEIRO':
+        can('read', 'Company', { id: companyId })
         can('read', 'PurchaseOrder')
         can('read', 'Receipt')
         can('manage', 'Invoice')
@@ -109,6 +127,7 @@ export class AbilityFactory {
         break
 
       case 'TRANSPORTADOR':
+        can('read', 'Company', { id: companyId })
         can('read', 'PurchaseOrder')
         can('manage', 'Shipment')
         break

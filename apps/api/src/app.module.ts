@@ -5,6 +5,7 @@ import { AbilityModule } from './common/ability/ability.module'
 import { AuthGuard } from './common/guards/auth.guard'
 import { DrizzleModule } from './db.module'
 import { AuthModule } from './modules/auth/auth.module'
+import { CompaniesModule } from './modules/companies/companies.module'
 import { HealthModule } from './modules/health/health.module'
 
 @Module({
@@ -19,6 +20,7 @@ import { HealthModule } from './modules/health/health.module'
     // Módulos de feature
     AuthModule,
     HealthModule,
+    CompaniesModule,
     // Fases 1–7: módulos de domínio adicionados aqui
   ],
   providers: [

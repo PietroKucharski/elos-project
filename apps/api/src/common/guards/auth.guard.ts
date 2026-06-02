@@ -86,6 +86,25 @@ export class AuthGuard implements CanActivate {
         role = 'SUPER_ADMIN'
         companyId = company.id
       }
+    } else {
+      // Rotas de plataforma (sem contexto de empresa no URL).
+      // Verifica se o usuário é SUPER_ADMIN em alguma empresa; se sim, assume
+      // esse papel com companyId null (queries sem escopo de tenant).
+      const superAdminMembership = await this.db
+        .select({ role: companyMembers.role })
+        .from(companyMembers)
+        .where(
+          and(eq(companyMembers.userId, session.user.id), eq(companyMembers.role, 'SUPER_ADMIN')),
+        )
+        .limit(1)
+        .then((rows) => rows[0] ?? null)
+
+      if (superAdminMembership) {
+        role = 'SUPER_ADMIN'
+        // companyId permanece null — sem escopo de tenant
+      }
+      // Usuários não-SUPER_ADMIN em rotas sem :cnpj ficam com role/companyId null;
+      // o CASL check no Service rejeitará com ForbiddenException.
     }
 
     // 3. Enriquecer request.user
