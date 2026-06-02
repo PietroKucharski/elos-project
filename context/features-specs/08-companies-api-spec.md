@@ -1,4 +1,4 @@
-# Feature Spec — 1.2 Companies Module (API
+# Feature Spec — 1.2 Companies Module (API)
 
 > **Antes de qualquer coisa:** leia o arquivo `CLAUDE.md` na raiz do repositório.
 > Ele define sua persona, as invariantes inegociáveis e a ordem de leitura dos
