@@ -95,6 +95,9 @@ export class CompaniesService {
       .where(eq(companies.id, company.id))
       .returning()
 
+    // Corrida: empresa removida entre o fetch e o update → returning vazio
+    if (!updated) throw new NotFoundException('Empresa não encontrada.')
+
     return updated
   }
 }

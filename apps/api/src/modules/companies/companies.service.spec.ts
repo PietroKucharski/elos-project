@@ -188,5 +188,14 @@ describe('CompaniesService', () => {
         ForbiddenException,
       )
     })
+
+    it('lança NotFoundException se a empresa some entre o fetch e o update', async () => {
+      setThenResult(mockCompany) // fetch encontra a empresa
+      mockDb.returning = vi.fn().mockResolvedValue([]) // update não afeta nenhuma linha
+
+      await expect(
+        service.update('12345678000195', { name: 'Novo Nome' }, adminUser),
+      ).rejects.toThrow(NotFoundException)
+    })
   })
 })
