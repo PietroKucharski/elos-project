@@ -3,9 +3,6 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode
 }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      {children}
-    </div>
-  )
+  // Container full-bleed: as páginas de auth são split-screen e usam height: 100%.
+  return <div style={{ height: '100vh', overflow: 'hidden' }}>{children}</div>
 }
