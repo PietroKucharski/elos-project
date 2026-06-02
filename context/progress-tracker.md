@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 1 — Auth e Empresas** · `Em andamento` (1.1, 1.2 e 1.3 concluídas) → próxima: **1.4**
+**Fase 1 — Auth e Empresas** · `Em andamento` (1.1, 1.2, 1.3 e 1.4 concluídas) → próxima: **1.5**
 
 ---
 
@@ -204,11 +204,36 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     `DrizzleDB` importado de `../../db` (não `../../db/types`), subject `CompanyMember` tagueado, mock
     thenable-leaf no spec do service
 
+- [x] **1.4 — App Shell e Company Switcher (Frontend)** — spec `10-app-shell-company-switcher-spec.md`
+  - Commit convencional esperado: `feat: add app shell layout with topbar, sidebar and company switcher`
+  - `apps/web/src/app/globals.css` — token set completo do design (surfaces/text/brand/borders/semantic,
+    radii, shadows, layout `--sidebar-w`/`--row-h`, fontes), base reset, scrollbars, focus ring,
+    keyframes (`popIn`/`pageIn`/`shimmer`/…), `.skeleton`, `.page-enter` e media query do brand panel
+  - `lib/api.ts` — fetch server-side tipado (`getMyCompaniesServer`/`getCompanyServer`/`getMembersServer`/
+    `getAllCompaniesServer`) com cookie de sessão via `headers()` e `cache: 'no-store'`
+  - `components/domain/`: `logo.tsx` (SVG dos elos), `topbar.tsx` (64px, toggle sidebar via DOM, sino
+    com ponto), `sidebar.tsx` (colapsável 240↔64, navegação agrupada por papel, item ativo + barra,
+    card de ajuda), `company-switcher.tsx` (dropdown hand-rolled, check no ativo) e `user-menu.tsx`
+    (avatar com inicial+cor gerada, sign-out)
+  - Rotas: `(app)/layout.tsx` (guard de sessão passthrough), `(app)/page.tsx` (redirect p/ 1ª empresa ou
+    `/no-company`), `(app)/no-company/page.tsx`, `(app)/[cnpj]/layout.tsx` (shell topbar+sidebar, SSR
+    guard de membership), `[cnpj]/loading.tsx` (skeleton), `[cnpj]/error.tsx`, `[cnpj]/dashboard/page.tsx`
+  - `(auth)/sign-in` e `(auth)/sign-up` redesenhados (split-screen com brand panel indigo + padrão de
+    correntes SVG); `(auth)/layout.tsx` passou a wrapper full-bleed (`100vh`)
+  - `@elos/shared` adicionado como `dependency` (`workspace:*`) de `@elos/web` — 1ª vez que o front
+    importa os tipos/enums do pacote shared
+  - **Verificado:** `pnpm type-check` (3 workspaces) e `pnpm lint` verdes (3 warnings `noNonNullAssertion`
+    pré-existentes, do uso de `!` do próprio spec); `pnpm --filter web build` **compila + checa tipos +
+    gera as 7 rotas** (✓). Mesma pendência de ambiente da 0.5: passo `output: 'standalone'` falha por
+    `EPERM` de symlink no Windows; fluxo runtime (login→`/:cnpj/dashboard`, troca de empresa) não
+    exercitado — requer API + banco vivos
+  - **Ajustes vs. spec:** ver Decisões Arquiteturais (1.4)
+
 ---
 
 ## Em Progresso
 
-- Nada ativo. **Fase 1.3 concluída**. Próximo: **1.4** (próxima unidade da Fase 1 — Auth e Empresas).
+- Nada ativo. **Fase 1.4 concluída**. Próximo: **1.5** (próxima unidade da Fase 1 — Auth e Empresas).
 
 ---
 
@@ -409,6 +434,12 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | `DrizzleDB` de `../../db`, não `../../db/types` (1.3) | A spec importa `DrizzleDB` de `../../db/types`, arquivo que **não existe** (decisão de 1.2: não criar `db/types.ts` — `DrizzleDB` já é exportado por `db/index.ts`). Service importa de `../../db`, fiel ao `CompaniesService` e ao `AuthGuard` |
 | Mock thenable-leaf + delegação no `members.service.spec` (1.3) | A spec monta `mockDb` com `then` direto no objeto de `useValue` (mesmo problema de 1.2: NestJS 11 adota thenables e substitui o provider). Reescrito: um `qb` (query builder) thenable e encadeável, **separado** do `mockDb` injetado, que apenas delega `select/insert/update/delete` ao `qb`. O `qb.then` consome de uma fila de linhas (`enqueue`), cobrindo as queries sequenciais do `invite`/`remove`. As asserções da spec (Conflict/Forbidden/BadRequest/NotFound) atingem só ramos de guarda que retornam antes das queries multi-etapa |
 | `if (!member)`/`if (!updated)` após `returning()` (1.3) | Sob `noUncheckedIndexedAccess`, `const [member] = …returning()` é `T | undefined`. Adicionados guards `BadRequestException`/`NotFoundException` no `invite`/`updateRole` (mesma defesa do `CompaniesService.update` em 1.2) para nunca seguir com `undefined` |
+| `@elos/shared` como dependency de `@elos/web` (1.4) | 1ª unidade em que o front importa do pacote shared (`MyCompany`/`Role`/`CompanyResponse`/`MemberResponse`). Sob layout estrito do pnpm o `tsc` não resolvia `@elos/shared` sem a declaração; adicionado `"@elos/shared": "workspace:*"` + `pnpm install` (cria o symlink). `transpilePackages: ['@elos/shared']` no `next.config.ts` (da 0.5) já cobria o runtime |
+| `(auth)/layout.tsx` modificado p/ full-bleed (1.4) | A spec lista o layout como "já existe" e não o modifica, mas as novas páginas split-screen usam `height: 100%`, que precisa de um ancestral com altura definida. O layout antigo centralizava com `min-h-screen flex items-center justify-center px-4` (espremeria o design). Trocado por wrapper `100vh`/`overflow:hidden` — ajuste necessário p/ fidelidade visual |
+| `<Link href="/sign-in">` em vez de `<a href="#">` p/ "Esqueci a senha" (1.4) | O snippet da spec usava `<a href="#">`, que viola a regra `a11y/useValidAnchor` do Biome (erro) e ainda não há rota de recuperação de senha. Trocado por `<Link>` para `/sign-in` (placeholder) — mantém o visual e passa o lint |
+| shadcn `dropdown-menu`/`avatar`/`separator`/`skeleton`/`sheet` não instalados (1.4) | A seção 1 da spec manda instalá-los via CLI, mas **nenhum** dos componentes implementados (o próprio código da spec) os importa: switcher e user-menu são dropdowns hand-rolled, o skeleton usa a classe CSS `.skeleton` do `globals.css`. Rodar o CLI shadcn arriscaria sobrescrever o `globals.css` recém-configurado (init/add reescreve CSS). Omitidos sem perda funcional |
+| `type="button"` nos botões dos componentes de domínio (1.4) | Os `<button>` hand-rolled do topbar/switcher/user-menu não traziam `type` explícito; o default `submit` dispararia o `useButtonType` do Biome (erro) e poderia submeter forms. Adicionado `type="button"` em todos — fora do escopo literal do snippet, exigência do lint |
+| `biome check --write .` normalizou CRLF→LF de arquivos pré-existentes (1.4) | Com `core.autocrlf=true` e sem `.gitattributes`, o checkout no Windows trazia configs/src antigos com CRLF; o `pnpm lint` (cache do turbo invalidado) passou a acusá-los. O `--write` os normalizou p/ LF, mas o git armazena LF — o `git diff` desses arquivos é vazio e o `git add` (autocrlf) não os inclui no commit. Artefato de checkout, não do feature; só os arquivos com mudança real entram no commit |
 
 ---
 
@@ -473,3 +504,11 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   sem promover a SUPER_ADMIN. 46 testes da API passando, `type-check`/`lint` verdes. Ajustes vs. spec:
   `@AllowPlatformRoute()` no `/me/companies`, subject `CompanyMember` tagueado, `DrizzleDB` de `../../db`,
   mock thenable-leaf — ver Decisões Arquiteturais (1.3). Próximo: **1.4**
+- **1.4 concluída**: App shell do frontend — `globals.css` com token set completo do design, `lib/api.ts`
+  (fetch server-side tipado), componentes de domínio (`logo`/`topbar`/`sidebar`/`company-switcher`/`user-menu`),
+  route group `(app)/[cnpj]/...` (layout shell + dashboard + loading + error), `(app)/page.tsx` redirect p/ 1ª
+  empresa, `(app)/no-company`, e sign-in/sign-up redesenhados (split-screen + brand panel). `@elos/shared`
+  adicionado como dependency do web. `type-check`/`lint` verdes; `build` compila + gera as 7 rotas (passo
+  `standalone` falha por `EPERM` de symlink no Windows — mesma limitação da 0.5). Ajustes vs. spec:
+  `(auth)/layout` full-bleed, `<Link>` no "esqueci a senha", `type="button"`, shadcn dropdown/avatar/etc.
+  omitidos (nenhum import) — ver Decisões Arquiteturais (1.4). Próximo: **1.5**
