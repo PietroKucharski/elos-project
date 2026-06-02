@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 1 — Auth e Empresas** · `Em andamento` (1.1 concluída) → próxima: **1.2**
+**Fase 1 — Auth e Empresas** · `Em andamento` (1.1 e 1.2 concluídas) → próxima: **1.3**
 
 ---
 
@@ -163,11 +163,32 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     de empresa são exportados direto de `schemas/company.ts` via `z.infer`, espelhando o tratamento
     dos tipos de membro; formatação de cadeias colapsada pelo `biome check --write` (lint-staged)
 
+- [x] **1.2 — Companies Module (API)** — spec `08-companies-api-spec.md`
+  - Commit convencional esperado: `feat(api): add companies module with crud endpoints`
+  - `apps/api/src/modules/companies/`: `companies.module.ts` (exporta `CompaniesService`),
+    `companies.controller.ts` (`POST/GET /v1/companies`, `GET/PATCH /v1/companies/:cnpj`,
+    Swagger tags + `ZodValidationPipe` por rota), `companies.service.ts` (create/findAll/findByCnpj/update
+    com CASL antes de cada mutação e checagem de CNPJ duplicado), `companies.service.spec.ts` (10 testes),
+    `companies.controller.spec.ts` (4 testes) — **28 testes da API passando no total**
+  - `auth.guard.ts` — bloco `else` (rotas sem `:cnpj`): eleva `role='SUPER_ADMIN'` (com `companyId=null`)
+    se o usuário for SUPER_ADMIN em alguma empresa; demais usuários ficam `role/companyId=null`
+  - `ability.factory.ts` — regras `Company`: ADMIN_EMPRESA `read`+`update` escopado a `{ id: companyId }`
+    (era `manage` irrestrito — removido o poder de `create`, que fica só com SUPER_ADMIN via `manage all`);
+    COMPRADOR/ALMOXARIFE/ANALISTA_FINANCEIRO/TRANSPORTADOR ganham `read` escopado a `{ id: companyId }`
+  - `app.module.ts` — `CompaniesModule` importado
+  - **Verificado:** `vitest run` (28/28), `pnpm type-check` (3 workspaces) e `biome check` verdes.
+    Checklist de segurança validado (ver Decisões Arquiteturais): 403 garantido pela combinação
+    guard (zera `role` de não-SUPER_ADMIN em rotas sem `:cnpj`) + CASL no Service
+  - **Ajustes vs. spec (CASL/tipos/runtime):** ver tabela de Decisões Arquiteturais (1.2) — tipagem
+    tagueada do subject `Company`, helper `subject()` no Service, mock thenable do Drizzle separado do
+    provider injetado, `overrideGuard` no teste do controller, e `DrizzleDB`/`db/types.ts`
+
 ---
 
 ## Em Progresso
 
-- Nada ativo. **Fase 1.1 concluída**. Próximo: **1.2 — Companies (Controller/Service/Module NestJS)**.
+- Nada ativo. **Fase 1.2 concluída**. Próximo: **1.3 — Membros de Empresa (endpoints de membros,
+  `GET /v1/me/companies`, convites)**.
 
 ---
 
@@ -277,7 +298,7 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | Fase | Nome                            | Status        |
 | ---- | ------------------------------- | ------------- |
 | 0    | Fundação                        | Concluída     |
-| 1    | Auth e Empresas                 | Próxima       |
+| 1    | Auth e Empresas                 | Em andamento  |
 | 2    | Fornecedores e Produtos         | Não iniciada  |
 | 3    | Cotações e Lances               | Não iniciada  |
 | 4    | Pedidos de Compra               | Não iniciada  |
@@ -353,6 +374,14 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | `error` em vez de `errorMap` no `z.enum` (1.1) | A spec usava a API de erros do Zod 3 (`errorMap: () => ({ message })`), mas o projeto está em `zod@4.4.3`, onde a chave `errorMap` foi removida em favor de um único `error: string \| (issue) => string`. Sob `strict`/excess-property check o literal `{ errorMap }` falharia o type-check — trocado por `error: () => 'Papel inválido para atribuição'` preservando a mensagem |
 | `zod` como dependency de `@elos/shared` (1.1) | A 0.3 instalou `zod` só em `@elos/api`/`@elos/web`; com `schemas/*.ts` importando `zod` no pacote shared, o layout estrito do pnpm não resolveria o módulo sem a declaração. Adicionado `zod@^4.4.3` ao manifesto do shared |
 | `types/company.ts` não criado (1.1) | A árvore de arquivos da spec lista `types/company.ts`, mas a "Implementação Detalhada" define os tipos dentro de `schemas/company.ts` (via `z.infer`) e o barrel re-exporta apenas `./schemas/*`. Criar o arquivo deixaria-o órfão (fora do barrel) ou geraria export duplicado. Seguida a implementação detalhada — tipos vivem nos schema files, como já ocorre com os de membro |
+| Subject `Company` tagueado no CASL (1.2) | O setup 0.4 usava subjects **só como strings** (`MongoAbility<[Actions, Subjects]>`), que não tipa condições por objeto (`{ id }`) nem aceita passar a row do Drizzle a `can`. 1.2 é a 1ª unidade a precisar de escopo por objeto. `Subjects` passou a incluir `'Company'` (checagem por tipo) **e** `Company & ForcedSubject<'Company'>` (condições + row tagueada). Como `can`/`cannot` usam `CanParameters` = `T[1]` cru, ambos os membros (string e objeto) são necessários no union |
+| Helper `subject('Company', company)` no Service (1.2) | A spec escreve `ability.cannot('read', company)` passando a row crua. Sem tag, o CASL detecta o tipo via `constructor.name` (= `Object` numa row Drizzle), nunca casando as regras de `Company` — falha de tipo e de runtime. `subject()` do `@casl/ability` adiciona `__caslSubjectType__: 'Company'`, fazendo o CASL casar as regras condicionais corretamente |
+| ADMIN_EMPRESA: `read`+`update` escopado em vez de `manage Company` (1.2) | A spec pede `can('read'/'update','Company',{id})`. O 0.4 tinha `can('manage','Company')` irrestrito — isso permitiria ADMIN_EMPRESA **criar** empresas (`create` ⊂ `manage`), violando "POST só para SUPER_ADMIN". Trocado por `read`+`update` escopado a `{ id: companyId }`; `create` fica exclusivo do SUPER_ADMIN (`manage all`) |
+| `companyId = user.companyId ?? ''` nas condições (1.2) | `SessionUser.companyId` é `string \| null`; a condição CASL `{ id }` exige `string`. Coalescido para `''` (nunca casa um uuid real → deny seguro). SUPER_ADMIN tem `companyId=null` mas usa `manage all`, não as regras escopadas |
+| Checklist de segurança garantido por guard + CASL, não só CASL (1.2) | Verificado empiricamente: uma regra **condicional** (`can('read','Company',{id})`) faz `ability.can('read','Company')` (checagem por tipo, sem instância) retornar `true` no CASL. Logo `findAll`/`create` **não** dependem só do CASL para barrar não-SUPER_ADMIN: o `AuthGuard` zera `role=null` para não-SUPER_ADMIN em rotas **sem** `:cnpj` → `createForUser` cai no `default` (sem abilities) → `cannot(...)` = `true` → 403. As regras condicionais só atuam nas rotas `/:cnpj`, onde o guard popula `role`/`companyId` (defesa em profundidade no `findByCnpj`/`update`) |
+| `DrizzleDB` de `../../db`; `db/types.ts` não criado (1.2) | A nota da spec sugere criar `apps/api/src/db/types.ts` "se ainda não existir". O `DrizzleDB` já é exportado por `db/index.ts` (e re-exportado por `db.module.ts`), padrão já usado pelo `auth.guard.ts`. Criar `db/types.ts` duplicaria a definição — Service importa de `../../db`, fiel ao código existente |
+| Mock do thenable Drizzle separado do provider injetado (1.2) | A spec monta `mockDb` com `then` direto no objeto passado a `useValue: mockDb`. O NestJS 11 **adota thenables** de `useValue` (faz `await` e substitui a instância pelo valor resolvido) → o `db` injetado virava o array resolvido e `this.db.select` deixava de existir (e, com `then` que ignora o `resolve`, o `beforeEach` travava 10s). Correção: `.limit()` retorna uma **folha thenable** separada (que honra o `resolve`, como o `auth.guard.spec`); o `mockDb` injetado **não** é thenable. Helper `setThenResult` + 1 `biome-ignore noThenProperty` |
+| `overrideGuard(AuthGuard)` no teste do controller (1.2) | `@UseGuards(AuthGuard)` no controller faz o NestJS instanciar o guard via DI ao montar o `TestingModule`, exigindo `DRIZZLE` + `Reflector` (ausentes no módulo de teste do controller). A spec não previa isso. Adicionado `.overrideGuard(AuthGuard).useValue({ canActivate: () => true })` — o comportamento do guard é coberto pelo `auth.guard.spec` |
 
 ---
 
@@ -402,3 +431,10 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   `build`/`type-check`/`lint` verdes. Ajustes vs. spec por Zod 4 (`error` vs `errorMap`) e por
   inconsistência da spec (`types/company.ts` órfão — não criado) — ver Decisões Arquiteturais.
   Próximo: **1.2 — Companies (NestJS Controller/Service/Module)**
+- **1.2 concluída**: `CompaniesModule` NestJS (controller + service + module), CRUD em `/v1/companies`
+  e `/v1/companies/:cnpj` (sem DELETE), CASL antes de cada mutação, ajustes cirúrgicos no `AuthGuard`
+  (SUPER_ADMIN em rotas sem `:cnpj`) e no `AbilityFactory` (regras `Company`). 28 testes da API
+  passando, `type-check`/`biome` verdes. Ajustes vs. spec por semântica real do CASL 7 (subject
+  tagueado + helper `subject()`), por adoção de thenable do NestJS 11 nos mocks de teste, e por DI
+  do guard no teste do controller — ver Decisões Arquiteturais (1.2). Checklist de segurança validado.
+  Próximo: **1.3 — Membros de Empresa**
