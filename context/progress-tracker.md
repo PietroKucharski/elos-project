@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 0 — Fundação** · `Concluída` (0.1–0.6) → próxima: **Fase 1 — Auth e Empresas**
+**Fase 1 — Auth e Empresas** · `Em andamento` (1.1 concluída) → próxima: **1.2**
 
 ---
 
@@ -141,11 +141,33 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     `turbo run test -- --reporter=verbose` → 14 testes passando (flag repassada ao Vitest).
     Execução real no GitHub Actions e branch protection em `main` pendentes (config no GitHub UI).
 
+- [x] **1.1 — Shared Schemas: Empresas e Membros** — spec `07-shared-schemas-companies-members-spec.md`
+  - Commit convencional esperado: `feat: add company and member zod schemas`
+  - `packages/shared/src/schemas/company.ts` — `createCompanySchema` (CNPJ 14 dígitos, CEP 8 dígitos,
+    UF 2 chars, demais campos opcionais), `updateCompanySchema` (`omit cnpj` + `partial` — CNPJ imutável,
+    chave de tenant) e `companyResponseSchema` (campos `nullable` + `createdAt`/`updatedAt` datetime);
+    tipos `CreateCompanyDto`, `UpdateCompanyDto`, `CompanyResponse` via `z.infer`
+  - `packages/shared/src/schemas/member.ts` — `assignableRoles` (5 papéis, **sem SUPER_ADMIN**),
+    `inviteMemberSchema`, `updateMemberRoleSchema`, `memberResponseSchema` (shape aninhado com `user`),
+    `myCompanySchema` (company switcher); tipos `InviteMemberDto`, `UpdateMemberRoleDto`,
+    `MemberResponse`, `MyCompany` via `z.infer`
+  - Barrel `packages/shared/src/index.ts` re-exporta `./schemas/company` e `./schemas/member`
+  - `zod@^4.4.3` adicionado como `dependency` de `@elos/shared` (antes ausente; necessário sob layout
+    estrito do pnpm para `import { z } from 'zod'` resolver)
+  - **Verificado:** `pnpm --filter @elos/shared build`, `pnpm type-check` (3 workspaces) e
+    `pnpm --filter @elos/shared lint` verdes. `assignableRoles` não inclui SUPER_ADMIN;
+    `cnpjSchema` (`^\d{14}$`) rejeita pontuação e tamanhos ≠ 14
+  - **Ajustes vs. spec (Zod 4):** `errorMap: () => ({ message })` → `error: () => '...'` (a chave
+    `errorMap` foi removida na API de erros do Zod 4); `types/company.ts` (listado na árvore de
+    arquivos mas sem conteúdo na implementação detalhada nem no barrel) **não criado** — os tipos
+    de empresa são exportados direto de `schemas/company.ts` via `z.infer`, espelhando o tratamento
+    dos tipos de membro; formatação de cadeias colapsada pelo `biome check --write` (lint-staged)
+
 ---
 
 ## Em Progresso
 
-- Nada ativo. **Fase 0 — Fundação concluída** (0.1–0.6). Próximo: **Fase 1 — Auth e Empresas**.
+- Nada ativo. **Fase 1.1 concluída**. Próximo: **1.2 — Companies (Controller/Service/Module NestJS)**.
 
 ---
 
@@ -328,6 +350,9 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | `allowBuilds` msw/sharp = false (0.5) | Resolve o `ERR_PNPM_IGNORED_BUILDS` (exit 1) que abortava o shadcn CLI. Build scripts não são necessários: `sharp` é otimização de imagem opcional (Next faz fallback), `msw` é transitivo de teste |
 | CI: `pnpm/action-setup@v4` sem input `version` (0.6) | A spec passava `PNPM_VERSION: "9"`, mas o `packageManager: pnpm@11.1.3` (campo do `package.json` raiz, exigido desde 0.1) já fixa a versão. Informar os dois faz a action falhar com "Multiple versions of pnpm specified" — removido o `version` e mantido o campo como fonte única |
 | `.github/workflows/ci.env` como documentação (0.6) | Item do escopo "In" da spec, ausente da árvore "Arquivos a Criar"; criado como arquivo de referência (comentado, não carregado por nada) com base na tabela de secrets da seção 4 da spec, para honrar o escopo sem inventar um `.env` real consumido pelo workflow |
+| `error` em vez de `errorMap` no `z.enum` (1.1) | A spec usava a API de erros do Zod 3 (`errorMap: () => ({ message })`), mas o projeto está em `zod@4.4.3`, onde a chave `errorMap` foi removida em favor de um único `error: string \| (issue) => string`. Sob `strict`/excess-property check o literal `{ errorMap }` falharia o type-check — trocado por `error: () => 'Papel inválido para atribuição'` preservando a mensagem |
+| `zod` como dependency de `@elos/shared` (1.1) | A 0.3 instalou `zod` só em `@elos/api`/`@elos/web`; com `schemas/*.ts` importando `zod` no pacote shared, o layout estrito do pnpm não resolveria o módulo sem a declaração. Adicionado `zod@^4.4.3` ao manifesto do shared |
+| `types/company.ts` não criado (1.1) | A árvore de arquivos da spec lista `types/company.ts`, mas a "Implementação Detalhada" define os tipos dentro de `schemas/company.ts` (via `z.infer`) e o barrel re-exporta apenas `./schemas/*`. Criar o arquivo deixaria-o órfão (fora do barrel) ou geraria export duplicado. Seguida a implementação detalhada — tipos vivem nos schema files, como já ocorre com os de membro |
 
 ---
 
@@ -372,3 +397,8 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   testes passando. Ajuste vs. spec: `pnpm/action-setup` sem `version` (conflito com `packageManager`).
   Pendente do owner: execução real no GitHub Actions + branch protection rules em `main` (UI)
 - **Fase 0 — Fundação concluída** (0.1–0.6). Próximo: **Fase 1 — Auth e Empresas**
+- **1.1 concluída**: schemas Zod de empresa e membro em `packages/shared` (`schemas/company.ts`,
+  `schemas/member.ts`), tipos via `z.infer`, barrel atualizado, `zod` declarado no shared.
+  `build`/`type-check`/`lint` verdes. Ajustes vs. spec por Zod 4 (`error` vs `errorMap`) e por
+  inconsistência da spec (`types/company.ts` órfão — não criado) — ver Decisões Arquiteturais.
+  Próximo: **1.2 — Companies (NestJS Controller/Service/Module)**

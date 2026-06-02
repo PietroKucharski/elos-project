@@ -12,5 +12,8 @@
     "lint": "biome check .",
     "test": "echo 'Vitest (a configurar em spec 0.3)'",
     "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
   }
 }

@@ -1,5 +1,9 @@
 // @elos/shared — ponto de entrada
 // Schemas Zod e tipos TypeScript compartilhados entre apps/api e apps/web
-// Exportações serão adicionadas nas specs 0.3+ conforme os domínios são implementados
 
+// Schemas
+export * from './schemas/company'
+export * from './schemas/member'
+
+// Enums
 export * from './enums'
