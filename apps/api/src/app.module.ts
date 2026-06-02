@@ -7,6 +7,7 @@ import { DrizzleModule } from './db.module'
 import { AuthModule } from './modules/auth/auth.module'
 import { CompaniesModule } from './modules/companies/companies.module'
 import { HealthModule } from './modules/health/health.module'
+import { MembersModule } from './modules/members/members.module'
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { HealthModule } from './modules/health/health.module'
     AuthModule,
     HealthModule,
     CompaniesModule,
+    MembersModule,
     // Fases 1–7: módulos de domínio adicionados aqui
   ],
   providers: [

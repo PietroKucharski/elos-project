@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 1 — Auth e Empresas** · `Em andamento` (1.1 e 1.2 concluídas) → próxima: **1.3**
+**Fase 1 — Auth e Empresas** · `Em andamento` (1.1, 1.2 e 1.3 concluídas) → próxima: **1.4**
 
 ---
 
@@ -183,12 +183,32 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     tagueada do subject `Company`, helper `subject()` no Service, mock thenable do Drizzle separado do
     provider injetado, `overrideGuard` no teste do controller, e `DrizzleDB`/`db/types.ts`
 
+- [x] **1.3 — Members Module (API)** — spec `09-members-api-spec.md`
+  - Commit convencional esperado: `feat(api): add members module with invite and management endpoints`
+  - `apps/api/src/modules/members/`: `members.module.ts`, `members.controller.ts` (`@Controller()` sem
+    prefixo: `GET /v1/me/companies` + `GET/POST /v1/companies/:cnpj/members` e
+    `PATCH/DELETE /v1/companies/:cnpj/members/:userId`, Swagger tags + `ZodValidationPipe` no invite/updateRole),
+    `members.service.ts` (findAll/invite/updateRole/remove/getMyCompanies com CASL antes de cada ação),
+    `members.service.spec.ts` (8 testes) e `members.controller.spec.ts` (5 testes) — **46 testes da API no total**
+  - `ability.factory.ts` — regras `CompanyMember`: ADMIN_EMPRESA `read`+`create`+`update`+`delete` escopado a
+    `{ companyId }` (era `manage CompanyMember` irrestrito); COMPRADOR/ALMOXARIFE/ANALISTA_FINANCEIRO/TRANSPORTADOR
+    ganham `read` escopado a `{ companyId }`. Subject `CompanyMember` tagueado (`& ForcedSubject`) como `Company`
+  - `app.module.ts` — `MembersModule` importado
+  - **Restrições de segurança implementadas:** ADMIN_EMPRESA não pode promover a SUPER_ADMIN (herdado dos
+    `assignableRoles` de 1.1); membro não remove a si mesmo (400); não pode remover o último ADMIN_EMPRESA (400);
+    não pode alterar o próprio papel (400). Convite v1: vincula usuário existente ou cria via
+    `auth.api.signUpEmail` com senha temporária (reset pelo fluxo "esqueci a senha", futuro)
+  - **Verificado:** `vitest run` (46/46), `pnpm type-check` (3 workspaces) e `pnpm lint` (exit 0) verdes
+  - **Ajustes vs. spec:** ver Decisões Arquiteturais (1.3) — `@AllowPlatformRoute()` adicionado ao
+    `GET /me/companies` (a spec omitia; sem ele o `AuthGuard` fail-closed barraria não-SUPER_ADMIN),
+    `DrizzleDB` importado de `../../db` (não `../../db/types`), subject `CompanyMember` tagueado, mock
+    thenable-leaf no spec do service
+
 ---
 
 ## Em Progresso
 
-- Nada ativo. **Fase 1.2 concluída**. Próximo: **1.3 — Membros de Empresa (endpoints de membros,
-  `GET /v1/me/companies`, convites)**.
+- Nada ativo. **Fase 1.3 concluída**. Próximo: **1.4** (próxima unidade da Fase 1 — Auth e Empresas).
 
 ---
 
@@ -383,6 +403,12 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | `DrizzleDB` de `../../db`; `db/types.ts` não criado (1.2) | A nota da spec sugere criar `apps/api/src/db/types.ts` "se ainda não existir". O `DrizzleDB` já é exportado por `db/index.ts` (e re-exportado por `db.module.ts`), padrão já usado pelo `auth.guard.ts`. Criar `db/types.ts` duplicaria a definição — Service importa de `../../db`, fiel ao código existente |
 | Mock do thenable Drizzle separado do provider injetado (1.2) | A spec monta `mockDb` com `then` direto no objeto passado a `useValue: mockDb`. O NestJS 11 **adota thenables** de `useValue` (faz `await` e substitui a instância pelo valor resolvido) → o `db` injetado virava o array resolvido e `this.db.select` deixava de existir (e, com `then` que ignora o `resolve`, o `beforeEach` travava 10s). Correção: `.limit()` retorna uma **folha thenable** separada (que honra o `resolve`, como o `auth.guard.spec`); o `mockDb` injetado **não** é thenable. Helper `setThenResult` + 1 `biome-ignore noThenProperty` |
 | `overrideGuard(AuthGuard)` no teste do controller (1.2) | `@UseGuards(AuthGuard)` no controller faz o NestJS instanciar o guard via DI ao montar o `TestingModule`, exigindo `DRIZZLE` + `Reflector` (ausentes no módulo de teste do controller). A spec não previa isso. Adicionado `.overrideGuard(AuthGuard).useValue({ canActivate: () => true })` — o comportamento do guard é coberto pelo `auth.guard.spec` |
+| `@AllowPlatformRoute()` no `GET /me/companies` (1.3) | O snippet do controller na spec **omite** o decorator, mas `GET /v1/me/companies` é rota de plataforma (sem `:cnpj`) e o `AuthGuard` é fail-closed desde 1.2 — sem o opt-in, qualquer não-SUPER_ADMIN levaria 403, contrariando a própria checklist da spec ("funciona sem `:cnpj`, role pode ser null"). O decorator `@AllowPlatformRoute()` (criado em 1.2 justamente "pensado para 1.3") foi adicionado, realizando o comentário da spec "guard resolve userId" |
+| Subject `CompanyMember` tagueado no CASL (1.3) | A spec usa `can('read','CompanyMember',{ companyId })` (condição por objeto), mas `CompanyMember` era subject **string-only** no union → o `can` tipava as condições como `MongoQuery<never>` e o `{ companyId }` falhava o type-check (TS2769), mesmo sintoma de `Company` em 1.2. Adicionado `(CompanyMember & ForcedSubject<'CompanyMember'>)` ao union `Subjects` (a row tem `companyId: string`). O Service usa só checagens por tipo (`cannot('read','CompanyMember')`), sem passar instância |
+| ADMIN_EMPRESA: ações escopadas em vez de `manage CompanyMember` (1.3) | A spec pede `read`+`create`+`update`+`delete` de `CompanyMember` escopados a `{ companyId }`. O 0.4/1.2 tinha `can('manage','CompanyMember')` irrestrito. Trocado pelas 4 ações escopadas; os demais papéis (COMPRADOR/ALMOXARIFE/ANALISTA_FINANCEIRO/TRANSPORTADOR) ganham só `read` escopado (lista de membros p/ atribuição futura) |
+| `DrizzleDB` de `../../db`, não `../../db/types` (1.3) | A spec importa `DrizzleDB` de `../../db/types`, arquivo que **não existe** (decisão de 1.2: não criar `db/types.ts` — `DrizzleDB` já é exportado por `db/index.ts`). Service importa de `../../db`, fiel ao `CompaniesService` e ao `AuthGuard` |
+| Mock thenable-leaf + delegação no `members.service.spec` (1.3) | A spec monta `mockDb` com `then` direto no objeto de `useValue` (mesmo problema de 1.2: NestJS 11 adota thenables e substitui o provider). Reescrito: um `qb` (query builder) thenable e encadeável, **separado** do `mockDb` injetado, que apenas delega `select/insert/update/delete` ao `qb`. O `qb.then` consome de uma fila de linhas (`enqueue`), cobrindo as queries sequenciais do `invite`/`remove`. As asserções da spec (Conflict/Forbidden/BadRequest/NotFound) atingem só ramos de guarda que retornam antes das queries multi-etapa |
+| `if (!member)`/`if (!updated)` após `returning()` (1.3) | Sob `noUncheckedIndexedAccess`, `const [member] = …returning()` é `T | undefined`. Adicionados guards `BadRequestException`/`NotFoundException` no `invite`/`updateRole` (mesma defesa do `CompaniesService.update` em 1.2) para nunca seguir com `undefined` |
 
 ---
 
@@ -439,3 +465,11 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   tagueado + helper `subject()`), por adoção de thenable do NestJS 11 nos mocks de teste, e por DI
   do guard no teste do controller — ver Decisões Arquiteturais (1.2). Checklist de segurança validado.
   Próximo: **1.3 — Membros de Empresa**
+- **1.3 concluída**: `MembersModule` NestJS (controller + service + module), rotas
+  `GET /v1/me/companies` e `GET/POST /v1/companies/:cnpj/members` + `PATCH/DELETE .../:userId`,
+  regras `CompanyMember` no `AbilityFactory` (CASL antes de cada ação) e `MembersModule` no `app.module`.
+  Convite v1: vincula usuário existente ou cria via `auth.api.signUpEmail` com senha temporária.
+  Restrições de segurança: sem auto-remoção, sem remover o último ADMIN_EMPRESA, sem auto-alteração de papel,
+  sem promover a SUPER_ADMIN. 46 testes da API passando, `type-check`/`lint` verdes. Ajustes vs. spec:
+  `@AllowPlatformRoute()` no `/me/companies`, subject `CompanyMember` tagueado, `DrizzleDB` de `../../db`,
+  mock thenable-leaf — ver Decisões Arquiteturais (1.3). Próximo: **1.4**

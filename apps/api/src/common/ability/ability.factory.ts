@@ -5,7 +5,7 @@ import {
   createMongoAbility,
 } from '@casl/ability'
 import { Injectable } from '@nestjs/common'
-import type { Company } from '../../db/schema/companies'
+import type { Company, CompanyMember } from '../../db/schema/companies'
 import type { SessionUser } from '../types/session-user'
 
 export type Actions =
@@ -26,7 +26,10 @@ export type Subjects =
   // demais subjects permanecem strings até precisarem de escopo por objeto.
   | 'Company'
   | (Company & ForcedSubject<'Company'>)
+  // 'CompanyMember' tagueado (como 'Company') para suportar condições por objeto
+  // — ex.: can('read', 'CompanyMember', { companyId }) — sem cair em MongoQuery<never>
   | 'CompanyMember'
+  | (CompanyMember & ForcedSubject<'CompanyMember'>)
   | 'Supplier'
   | 'SupplierContact'
   | 'SupplierBankAccount'
@@ -68,7 +71,10 @@ export class AbilityFactory {
       case 'ADMIN_EMPRESA':
         can('read', 'Company', { id: companyId })
         can('update', 'Company', { id: companyId })
-        can('manage', 'CompanyMember')
+        can('read', 'CompanyMember', { companyId })
+        can('create', 'CompanyMember', { companyId })
+        can('update', 'CompanyMember', { companyId })
+        can('delete', 'CompanyMember', { companyId })
         can('manage', 'Supplier')
         can('manage', 'SupplierContact')
         can('manage', 'SupplierBankAccount')
@@ -88,6 +94,7 @@ export class AbilityFactory {
 
       case 'COMPRADOR':
         can('read', 'Company', { id: companyId })
+        can('read', 'CompanyMember', { companyId })
         can(['read', 'create', 'update'], 'Supplier')
         can('approve', 'Supplier')
         can('reject', 'Supplier')
@@ -110,6 +117,7 @@ export class AbilityFactory {
 
       case 'ALMOXARIFE':
         can('read', 'Company', { id: companyId })
+        can('read', 'CompanyMember', { companyId })
         can('read', 'PurchaseOrder')
         can('manage', 'Receipt')
         can('manage', 'Warehouse')
@@ -120,6 +128,7 @@ export class AbilityFactory {
 
       case 'ANALISTA_FINANCEIRO':
         can('read', 'Company', { id: companyId })
+        can('read', 'CompanyMember', { companyId })
         can('read', 'PurchaseOrder')
         can('read', 'Receipt')
         can('manage', 'Invoice')
@@ -128,6 +137,7 @@ export class AbilityFactory {
 
       case 'TRANSPORTADOR':
         can('read', 'Company', { id: companyId })
+        can('read', 'CompanyMember', { companyId })
         can('read', 'PurchaseOrder')
         can('manage', 'Shipment')
         break
