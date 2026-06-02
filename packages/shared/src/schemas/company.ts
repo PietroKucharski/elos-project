@@ -1,7 +1,17 @@
 import { z } from 'zod'
 
-// CNPJ: 14 dígitos numéricos sem pontuação
-const cnpjSchema = z.string().regex(/^\d{14}$/, 'CNPJ deve ter exatamente 14 dígitos numéricos')
+// CNPJ alfanumérico (Receita Federal, a partir de jul/2026): 12 caracteres
+// alfanuméricos [A-Z0-9] + 2 dígitos verificadores, sem pontuação.
+// Normaliza para maiúsculas antes de validar (letras minúsculas são aceitas).
+const cnpjSchema = z.preprocess(
+  (val) => (typeof val === 'string' ? val.toUpperCase() : val),
+  z
+    .string()
+    .regex(
+      /^[A-Z0-9]{12}\d{2}$/,
+      'CNPJ deve ter 12 caracteres alfanuméricos seguidos de 2 dígitos',
+    ),
+)
 
 // CEP: 8 dígitos numéricos sem hífen
 const zipCodeSchema = z
@@ -13,7 +23,7 @@ export const createCompanySchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres').max(255),
   tradeName: z.string().max(255).optional(),
   cnpj: cnpjSchema,
-  email: z.string().email('E-mail inválido').optional(),
+  email: z.email('E-mail inválido').optional(),
   phone: z.string().max(20).optional(),
   street: z.string().max(255).optional(),
   number: z.string().max(20).optional(),
@@ -28,7 +38,7 @@ export const updateCompanySchema = createCompanySchema.omit({ cnpj: true }).part
 
 // Shape da resposta da API (o que o backend retorna)
 export const companyResponseSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string(),
   tradeName: z.string().nullable(),
   cnpj: z.string(),
@@ -40,8 +50,8 @@ export const companyResponseSchema = z.object({
   city: z.string().nullable(),
   state: z.string().nullable(),
   zipCode: z.string().nullable(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 })
 
 export type CreateCompanyDto = z.infer<typeof createCompanySchema>

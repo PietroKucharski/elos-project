@@ -28,7 +28,6 @@ respostas). Nenhum código de API ou UI é criado nesta unidade.
 - `packages/shared/src/schemas/company.ts` — schemas Zod de empresa
 - `packages/shared/src/schemas/member.ts` — schemas Zod de membro
 - `packages/shared/src/types/company.ts` — tipos derivados via `z.infer`
-- `packages/shared/src/types/member.ts` — tipos derivados via `z.infer`
 - Atualização do barrel `packages/shared/src/index.ts`
 
 ### Out (não implementar nesta unidade)
@@ -41,7 +40,7 @@ respostas). Nenhum código de API ou UI é criado nesta unidade.
 
 ## Arquivos a Criar / Modificar
 
-```
+```text
 packages/shared/src/
   schemas/
     company.ts      ← criar
