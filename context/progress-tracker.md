@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 1 — Auth e Empresas** · `Em andamento` (1.1, 1.2, 1.3 e 1.4 concluídas) → próxima: **1.5**
+**Fase 1 — Auth e Empresas** · `Em andamento` (1.1, 1.2, 1.3, 1.4 e 1.5 concluídas) → Fase 1 concluída; próxima: **Fase 2**
 
 ---
 
@@ -229,11 +229,31 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     exercitado — requer API + banco vivos
   - **Ajustes vs. spec:** ver Decisões Arquiteturais (1.4)
 
+- [x] **1.5 — Companies Management UI (Frontend)** — spec `11-companies-management-ui-spec.md`
+  - Commit convencional esperado: `feat(web): add company settings and members management ui`
+  - shadcn via CLI: `sheet` + `alert-dialog` (únicos importados; pacote `radix-ui` unificado, `globals.css` intacto).
+    `table`/`badge`/`select` listados na spec mas nunca importados (tabelas/badges/select são inline) — omitidos
+  - `lib/api.ts` estendido com mutações client-side (`updateCompany`/`createCompany`/`inviteMember`/
+    `updateMemberRole`/`removeMember`) via import dinâmico do ky client (export `api`); `next/headers` passou a
+    import **dinâmico** dentro das funções server-side (helper `sessionHeaders`) — sem isso, Client Components
+    que importam as mutações puxariam código server-only e o `next build` quebrava
+  - `components/domain/`: `company-form.tsx` (form reutilizável create/edit, inline styles), `members-table.tsx`
+    (avatar+nome+email, badge de papel, kebab menu, `RoleEditor`, `AlertDialog` de remoção) e
+    `invite-member-sheet.tsx` (Sheet lateral 440px com preview de permissões do papel)
+  - Rotas: `(app)/[cnpj]/settings/page.tsx` (2 colunas: logo + form), `[cnpj]/settings/members/page.tsx`
+    (tabela + invite), `(app)/admin/layout.tsx` (shell de plataforma SUPER_ADMIN com `<Logo>`),
+    `admin/companies/page.tsx` (listagem) e `admin/companies/new/page.tsx` (criação)
+  - **Verificado:** `pnpm type-check` (3 workspaces) verde; `biome check` do web limpo (só os 10 warnings
+    `noNonNullAssertion` pré-existentes); `pnpm --filter web build` **compila + checa tipos + gera as 9 rotas**
+    (✓ 9/9) — passo `output: 'standalone'` falha por `EPERM` de symlink no Windows (mesma limitação de 0.5/1.4).
+    Fluxo runtime (settings/members/admin) não exercitado — requer API + banco vivos
+  - **Ajustes vs. spec:** ver Decisões Arquiteturais (1.5)
+
 ---
 
 ## Em Progresso
 
-- Nada ativo. **Fase 1.4 concluída**. Próximo: **1.5** (próxima unidade da Fase 1 — Auth e Empresas).
+- Nada ativo. **Fase 1.5 concluída → Fase 1 (Auth e Empresas) concluída**. Próximo: **Fase 2 — Fornecedores e Produtos**.
 
 ---
 
@@ -343,7 +363,7 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | Fase | Nome                            | Status        |
 | ---- | ------------------------------- | ------------- |
 | 0    | Fundação                        | Concluída     |
-| 1    | Auth e Empresas                 | Em andamento  |
+| 1    | Auth e Empresas                 | Concluída     |
 | 2    | Fornecedores e Produtos         | Não iniciada  |
 | 3    | Cotações e Lances               | Não iniciada  |
 | 4    | Pedidos de Compra               | Não iniciada  |
@@ -440,6 +460,14 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | shadcn `dropdown-menu`/`avatar`/`separator`/`skeleton`/`sheet` não instalados (1.4) | A seção 1 da spec manda instalá-los via CLI, mas **nenhum** dos componentes implementados (o próprio código da spec) os importa: switcher e user-menu são dropdowns hand-rolled, o skeleton usa a classe CSS `.skeleton` do `globals.css`. Rodar o CLI shadcn arriscaria sobrescrever o `globals.css` recém-configurado (init/add reescreve CSS). Omitidos sem perda funcional |
 | `type="button"` nos botões dos componentes de domínio (1.4) | Os `<button>` hand-rolled do topbar/switcher/user-menu não traziam `type` explícito; o default `submit` dispararia o `useButtonType` do Biome (erro) e poderia submeter forms. Adicionado `type="button"` em todos — fora do escopo literal do snippet, exigência do lint |
 | `biome check --write .` normalizou CRLF→LF de arquivos pré-existentes (1.4) | Com `core.autocrlf=true` e sem `.gitattributes`, o checkout no Windows trazia configs/src antigos com CRLF; o `pnpm lint` (cache do turbo invalidado) passou a acusá-los. O `--write` os normalizou p/ LF, mas o git armazena LF — o `git diff` desses arquivos é vazio e o `git add` (autocrlf) não os inclui no commit. Artefato de checkout, não do feature; só os arquivos com mudança real entram no commit |
+| `next/headers` importado dinamicamente em `lib/api.ts` (1.5) | A spec adiciona as mutações client-side ao **mesmo** módulo `lib/api.ts` que já importava `next/headers` no topo. Como os Client Components (`company-form`/`invite-member-sheet`/`members-table`) importam essas mutações, o `next build` falhava ("importing a component that needs next/headers ... not supported"). Solução: `next/headers` passou a ser importado dinamicamente dentro de um helper `sessionHeaders()` usado pelas funções server-side; o topo do módulo deixou de ter import server-only, e o client só carrega as mutações |
+| `client()` importa `api` (não `apiClient`) de `lib/api-client` (1.5) | O snippet da spec faz `const { apiClient } = await import('@/lib/api-client')`, mas o export real (definido em 0.5) é `api`. Helper ajustado para `const { api } = ...; return api` |
+| `.json<T>()` tipado nas mutações (1.5) | A spec escreve `.json()` puro; no ky 2.x `.json()` retorna `Promise<unknown>`, que não satisfaz as anotações de retorno (`Promise<CompanyResponse>` etc.) sob `strict`. Adicionado o parâmetro de tipo (`.json<CompanyResponse>()`/`.json<MemberResponse>()`) |
+| `CompanyForm`: `useForm<CreateCompanyDto>` + cast do resolver (1.5) | A spec usa `useForm<CreateCompanyDto \| UpdateCompanyDto>`; com o union, `register('cnpj')` falha o type-check (cnpj só existe em `CreateCompanyDto`, e `keyof` de um union é a interseção das chaves). Trocado pelo superset `CreateCompanyDto` (tem todos os campos) com `resolver: zodResolver(schema) as Resolver<CreateCompanyDto>` (o schema muda por modo); no `edit`, o `cnpj` readonly não é registrado e `data as UpdateCompanyDto` é enviado (o `updateCompanySchema` ignora chaves extras) |
+| `settings/page.tsx` mapeia null→undefined nos `defaultValues` (1.5) | A spec passa `defaultValues={company ?? undefined}`, mas `CompanyResponse` tem campos `nullable` (`string \| null`) e o form espera `Partial<CreateCompanyDto>` (opcionais `string \| undefined`); `null` não é atribuível. A página agora constrói um objeto convertendo cada campo com `?? undefined` |
+| `htmlFor`/`id` em todos os campos de formulário (1.5) | Os snippets da spec usam `<label>` sem associação, o que dispara `a11y/noLabelWithoutControl` (erro do Biome) e contraria a própria checklist de acessibilidade ("todo campo com `<label>` associado"). Adicionados pares `htmlFor`/`id` em `company-form` (11 campos) e `invite-member-sheet` (nome/email/papel) |
+| `type="button"` + `ROLE_BADGE.TRANSPORTADOR` (dot) (1.5) | Mesmo padrão de 1.4: `<button>` hand-rolled exigem `type="button"` (`useButtonType`); `ROLE_BADGE['TRANSPORTADOR']` trocado por acesso por ponto (`useLiteralKeys`). Ajustes de lint fora do snippet literal |
+| shadcn `table`/`badge`/`select` não instalados (1.5) | A seção 1 da spec manda instalar 5 componentes, mas só `sheet` e `alert-dialog` são importados — tabelas, badges e o select são inline/nativos (a própria checklist diz "tabela sem shadcn Table"). Instalados via CLI apenas os 2 usados; `globals.css` verificado intacto após o `add` |
 
 ---
 
@@ -512,3 +540,13 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   `standalone` falha por `EPERM` de symlink no Windows — mesma limitação da 0.5). Ajustes vs. spec:
   `(auth)/layout` full-bleed, `<Link>` no "esqueci a senha", `type="button"`, shadcn dropdown/avatar/etc.
   omitidos (nenhum import) — ver Decisões Arquiteturais (1.4). Próximo: **1.5**
+- **1.5 concluída**: UI de gestão de empresas e membros (frontend) — shadcn `sheet`+`alert-dialog` (únicos
+  importados; `globals.css` intacto), `lib/api.ts` estendido com mutações client-side via ky (`next/headers`
+  agora dinâmico para o módulo poder ser importado por Client Components), `components/domain/`
+  (`company-form`/`members-table`/`invite-member-sheet`), e rotas `[cnpj]/settings` (2 colunas logo+form),
+  `[cnpj]/settings/members` (tabela + invite sheet), `admin/layout` (shell SUPER_ADMIN), `admin/companies`
+  e `admin/companies/new`. `type-check` (3 workspaces) verde, `biome check` do web limpo, `build` compila +
+  gera as **9 rotas** (passo `standalone` falha por `EPERM` de symlink no Windows — mesma limitação de 0.5/1.4).
+  Ajustes vs. spec: `next/headers` dinâmico, `client()` importa `api`, `.json<T>()` tipado, `useForm<CreateCompanyDto>`
+  + cast do resolver, null→undefined nos defaultValues, `htmlFor`/`id` nos campos — ver Decisões Arquiteturais (1.5).
+  **Fase 1 — Auth e Empresas concluída.** Próximo: **Fase 2 — Fornecedores e Produtos**
