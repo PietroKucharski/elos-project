@@ -1,98 +1,222 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
-/* Sem dark mode na v1 (invariante do ui-context). O variant `dark:` presente nos
-   primitivos gerados pelo shadcn CLI fica ancorado a uma classe `.dark` que nunca
-   é aplicada — em vez do default `prefers-color-scheme`, que ativaria estilos
-   escuros sem querer. */
-@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant dark (&:is(.dark *));
 
-/* ─── Mapeamento Tailwind CSS 4 → CSS variables ─────────────────────────── */
-/* As variáveis de cor são triplets HSL crus; o `hsl(...)` aqui converte cada
-   token em uma cor válida para que as utilities (bg-primary, text-foreground,
-   border-border, ring-ring/50, …) gerem valores corretos no Tailwind v4. */
 @theme inline {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-  --color-success: hsl(var(--success));
-  --color-warning: hsl(var(--warning));
-  --color-info: hsl(var(--info));
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 2px);
-  --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-geist-mono);
+  /* Surfaces */
+  --color-background: hsl(210 40% 98%); /* slate-50 */
+  --color-card: hsl(0 0% 100%);
+  --color-muted: hsl(210 40% 96.1%); /* slate-100 */
+  --color-muted-2: hsl(214 32% 93%);
+
+  /* Text */
+  --color-foreground: hsl(222 47% 11%); /* slate-900 */
+  --color-foreground-2: hsl(217 33% 17%); /* slate-800 */
+  --color-muted-foreground: hsl(215 16% 47%); /* slate-500 */
+  --color-subtle-foreground: hsl(215 20% 65%); /* slate-400 */
+
+  /* Brand */
+  --color-primary: hsl(243 75% 59%); /* indigo-500 */
+  --color-primary-hover: hsl(243 70% 50%); /* indigo-600 */
+  --color-primary-foreground: hsl(0 0% 100%);
+  --color-primary-soft: hsl(243 75% 96%); /* indigo wash */
+  --color-primary-soft-border: hsl(243 60% 88%);
+
+  /* Borders */
+  --color-border: hsl(214 32% 91%); /* slate-200 */
+  --color-border-strong: hsl(214 25% 84%); /* slate-300 */
+  --color-input: hsl(214 32% 91%);
+  --color-ring: hsl(243 75% 59%);
+
+  /* Semantic */
+  --color-success: hsl(142 71% 40%);
+  --color-success-soft: hsl(142 60% 95%);
+  --color-success-border: hsl(142 45% 82%);
+  --color-warning: hsl(33 92% 45%);
+  --color-warning-soft: hsl(38 92% 95%);
+  --color-warning-border: hsl(38 80% 80%);
+  --color-destructive: hsl(0 72% 51%);
+  --color-destructive-soft: hsl(0 86% 97%);
+  --color-destructive-border: hsl(0 80% 89%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+  --color-info: hsl(199 89% 42%);
+  --color-info-soft: hsl(199 90% 95%);
+  --color-info-border: hsl(199 80% 82%);
+
+  /* Radii */
+  --radius: 0.5rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 hsl(222 47% 11% / 0.04);
+  --shadow-card: 0 1px 3px 0 hsl(222 47% 11% / 0.05), 0 1px 2px -1px hsl(222 47% 11% / 0.04);
+  --shadow-pop: 0 4px 16px -2px hsl(222 47% 11% / 0.12), 0 2px 6px -2px hsl(222 47% 11% / 0.08);
+  --shadow-drawer: -8px 0 28px -6px hsl(222 47% 11% / 0.16);
+
+  /* Layout */
+  --sidebar-w: 240px;
+  --row-h: 52px;
+
+  /* Fonts */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 
-/* ─── Tokens de cor Elos (light mode — sem dark mode na v1) ─────────────── */
-@layer base {
-  :root {
-    /* Superfícies */
-    --background: 0 0% 98%; /* slate-50  */
-    --foreground: 222 47% 11%; /* slate-900 */
-    --card: 0 0% 100%; /* white     */
-    --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+/* --- Base --- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
-    /* Accent primário — Indigo */
-    --primary: 243 75% 59%; /* indigo-500 */
-    --primary-foreground: 0 0% 100%;
+html,
+body {
+  height: 100%;
+}
 
-    /* Superfície secundária */
-    --secondary: 210 40% 96%; /* slate-100 */
-    --secondary-foreground: 222 47% 11%;
+body {
+  font-family: var(--font-sans);
+  background: hsl(210 40% 98%);
+  color: hsl(222 47% 11%);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-size: 14px;
+  line-height: 1.5;
+  font-feature-settings: "cv11", "ss01";
+}
 
-    /* Muted */
-    --muted: 210 40% 96%; /* slate-100 */
-    --muted-foreground: 215 16% 47%; /* slate-500 */
+::selection {
+  background: hsl(243 75% 59% / 0.18);
+}
 
-    /* Accent (hover states) */
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(214 25% 84%);
+  border-radius: 99px;
+  border: 2px solid hsl(210 40% 98%);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(215 16% 65%);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
 
-    /* Destrutivo / Erro */
-    --destructive: 0 84% 60%; /* red-500   */
-    --destructive-foreground: 0 0% 100%;
+/* Focus ring */
+:focus-visible {
+  outline: 2px solid hsl(243 75% 59% / 0.55);
+  outline-offset: 1px;
+}
 
-    /* Bordas e inputs */
-    --border: 214 32% 91%; /* slate-200 */
-    --input: 214 32% 91%;
-    --ring: 243 75% 59%; /* indigo-500 */
-
-    /* Status customizados */
-    --success: 142 71% 45%; /* green-500 */
-    --warning: 38 92% 50%; /* amber-500 */
-    --info: 199 89% 48%; /* sky-500   */
-
-    /* Border radius base */
-    --radius: 0.5rem;
+/* --- Animations --- */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
   }
-
-  * {
-    border-color: hsl(var(--border));
+  to {
+    opacity: 1;
   }
+}
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes sheetIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes rowIn {
+  from {
+    transform: translateY(5px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@keyframes pageIn {
+  from {
+    transform: translateY(7px);
+    opacity: 0.6;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
 
-  body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-feature-settings: "rlig" 1, "calt" 1;
+.page-enter {
+  animation: pageIn 0.26s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+/* Skeleton shimmer */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: hsl(210 40% 96.1%);
+  border-radius: 0.375rem;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.6), transparent);
+  transform: translateX(-100%);
+  animation: shimmer 1.4s infinite;
+}
+
+/* Mono utility */
+.font-mono-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Auth responsive: hide brand panel on narrow */
+@media (max-width: 768px) {
+  .auth-brand {
+    display: none !important;
+  }
+  .auth-mobile-logo {
+    display: block !important;
   }
 }

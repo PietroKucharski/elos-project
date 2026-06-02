@@ -95,6 +95,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@elos/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@fontsource-variable/inter':
         specifier: ^5.2.8
         version: 5.2.8
