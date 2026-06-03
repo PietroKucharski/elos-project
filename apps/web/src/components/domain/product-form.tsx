@@ -4,6 +4,7 @@
 
 import { Button } from '@/components/ui/button'
 import { createProduct, updateProduct } from '@/lib/api'
+import { cn } from '@/lib/utils'
 import {
   type CreateProductDto,
   type ProductResponse,
@@ -18,21 +19,14 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
-const fieldStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6 }
-const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 500, color: 'hsl(217 33% 17%)' }
-const inputStyle: React.CSSProperties = {
-  height: 38,
-  padding: '0 12px',
-  fontSize: 13.5,
-  borderRadius: '0.375rem',
-  border: '1px solid hsl(214 32% 91%)',
-  background: 'hsl(0 0% 100%)',
-  color: 'hsl(222 47% 11%)',
-  outline: 'none',
-  width: '100%',
-}
-const errorStyle: React.CSSProperties = { fontSize: 12, color: 'hsl(0 72% 51%)' }
-const hintStyle: React.CSSProperties = { fontSize: 11, color: 'hsl(215 16% 47%)' }
+const FIELD = 'flex flex-col gap-1.5'
+const LABEL = 'text-[13px] font-medium text-foreground-2'
+const INPUT =
+  'h-[38px] w-full rounded-md border border-input bg-card px-3 text-[13.5px] text-foreground outline-none transition-[border-color,box-shadow] focus:border-ring focus:ring-3 focus:ring-ring/[0.13]'
+const SELECT = cn(INPUT, 'cursor-pointer')
+const TEXTAREA = cn(INPUT, 'h-auto resize-y py-2')
+const ERROR = 'text-xs text-destructive'
+const HINT = 'text-[11px] text-muted-foreground'
 
 // Label amigável para cada unidade de medida
 const UNIT_LABELS: Record<string, string> = {
@@ -94,54 +88,51 @@ export function ProductForm({ mode, cnpj, productId, defaultValues, onSuccess }:
   }
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      style={{ display: 'flex', flexDirection: 'column', gap: 20 }}
-    >
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
       {/* Nome */}
-      <div style={fieldStyle}>
-        <label htmlFor="name" style={labelStyle}>
+      <div className={FIELD}>
+        <label htmlFor="name" className={LABEL}>
           Nome do produto *
         </label>
         <input
           id="name"
           {...register('name')}
-          style={inputStyle}
+          className={INPUT}
           placeholder="Ex: Parafuso M6 × 20mm"
         />
-        {errors.name && <span style={errorStyle}>{errors.name.message}</span>}
+        {errors.name && <span className={ERROR}>{errors.name.message}</span>}
       </div>
 
       {/* Código interno */}
-      <div style={fieldStyle}>
-        <label htmlFor="code" style={labelStyle}>
+      <div className={FIELD}>
+        <label htmlFor="code" className={LABEL}>
           Código interno
         </label>
-        <input id="code" {...register('code')} style={inputStyle} placeholder="Ex: PAR-M6-20" />
-        {errors.code && <span style={errorStyle}>{errors.code.message}</span>}
-        <p style={hintStyle}>
+        <input id="code" {...register('code')} className={INPUT} placeholder="Ex: PAR-M6-20" />
+        {errors.code && <span className={ERROR}>{errors.code.message}</span>}
+        <p className={HINT}>
           Código único por empresa. Deixe em branco para geração automática futura.
         </p>
       </div>
 
       {/* Unidade de medida */}
-      <div style={fieldStyle}>
-        <label htmlFor="unit" style={labelStyle}>
+      <div className={FIELD}>
+        <label htmlFor="unit" className={LABEL}>
           Unidade de medida *
         </label>
-        <select id="unit" {...register('unit')} style={{ ...inputStyle, cursor: 'pointer' }}>
+        <select id="unit" {...register('unit')} className={SELECT}>
           {unitOfMeasureValues.map((u) => (
             <option key={u} value={u}>
               {UNIT_LABELS[u] ?? u}
             </option>
           ))}
         </select>
-        {errors.unit && <span style={errorStyle}>{errors.unit.message}</span>}
+        {errors.unit && <span className={ERROR}>{errors.unit.message}</span>}
       </div>
 
       {/* Estoque mínimo */}
-      <div style={fieldStyle}>
-        <label htmlFor="minStock" style={labelStyle}>
+      <div className={FIELD}>
+        <label htmlFor="minStock" className={LABEL}>
           Estoque mínimo
         </label>
         <input
@@ -150,61 +141,52 @@ export function ProductForm({ mode, cnpj, productId, defaultValues, onSuccess }:
           min={0}
           step="0.001"
           {...register('minStock', { valueAsNumber: true })}
-          style={inputStyle}
+          className={INPUT}
           placeholder="0"
         />
-        {errors.minStock && <span style={errorStyle}>{errors.minStock.message}</span>}
-        <p style={hintStyle}>
+        {errors.minStock && <span className={ERROR}>{errors.minStock.message}</span>}
+        <p className={HINT}>
           Alerta quando o estoque cair abaixo deste valor (funcionalidade na Fase 5).
         </p>
       </div>
 
       {/* Descrição */}
-      <div style={fieldStyle}>
-        <label htmlFor="description" style={labelStyle}>
+      <div className={FIELD}>
+        <label htmlFor="description" className={LABEL}>
           Descrição
         </label>
         <textarea
           id="description"
           {...register('description')}
           rows={3}
-          style={{ ...inputStyle, height: 'auto', padding: '8px 12px', resize: 'vertical' }}
+          className={TEXTAREA}
           placeholder="Especificações técnicas, observações..."
         />
-        {errors.description && <span style={errorStyle}>{errors.description.message}</span>}
+        {errors.description && <span className={ERROR}>{errors.description.message}</span>}
       </div>
 
       {/* Ativo — apenas em modo edit */}
       {mode === 'edit' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="flex items-center gap-2.5">
           <input
             id="isActive"
             type="checkbox"
             {...register('isActive')}
-            style={{ width: 16, height: 16, cursor: 'pointer' }}
+            className="h-4 w-4 cursor-pointer"
           />
-          <label htmlFor="isActive" style={{ fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+          <label htmlFor="isActive" className="cursor-pointer text-[13px] font-medium">
             Produto ativo
           </label>
         </div>
       )}
 
       {/* Submit */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 8 }}>
+      <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="outline" onClick={() => router.back()}>
           Cancelar
         </Button>
         <Button type="submit" disabled={loading}>
-          {loading && (
-            <Loader2
-              style={{
-                width: 14,
-                height: 14,
-                marginRight: 6,
-                animation: 'spin 1s linear infinite',
-              }}
-            />
-          )}
+          {loading && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
           {mode === 'create' ? 'Criar produto' : 'Salvar alterações'}
         </Button>
       </div>

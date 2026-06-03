@@ -11,6 +11,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { linkSupplierToProduct } from '@/lib/api'
+import { cn } from '@/lib/utils'
 import {
   type LinkProductSupplierDto,
   type SupplierResponse,
@@ -39,18 +40,12 @@ interface LinkSupplierSheetProps {
   onLinked: (link: LinkedSupplier) => void
 }
 
-const fieldStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6 }
-const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 500, color: 'hsl(217 33% 17%)' }
-const inputStyle: React.CSSProperties = {
-  height: 38,
-  padding: '0 12px',
-  fontSize: 13.5,
-  borderRadius: '0.375rem',
-  border: '1px solid hsl(214 32% 91%)',
-  background: 'hsl(0 0% 100%)',
-  color: 'hsl(222 47% 11%)',
-  width: '100%',
-}
+const FIELD = 'flex flex-col gap-1.5'
+const LABEL = 'text-[13px] font-medium text-foreground-2'
+const INPUT =
+  'h-[38px] w-full rounded-md border border-input bg-card px-3 text-[13.5px] text-foreground outline-none transition-[border-color,box-shadow] focus:border-ring focus:ring-3 focus:ring-ring/[0.13]'
+const SELECT = cn(INPUT, 'cursor-pointer')
+const TEXTAREA = cn(INPUT, 'h-auto resize-y py-2')
 
 export function LinkSupplierSheet({
   open,
@@ -99,7 +94,7 @@ export function LinkSupplierSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent style={{ width: 440 }}>
+      <SheetContent className="w-[440px]">
         <SheetHeader>
           <SheetTitle>Vincular fornecedor</SheetTitle>
           <SheetDescription>
@@ -107,25 +102,18 @@ export function LinkSupplierSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          style={{ display: 'flex', flexDirection: 'column', gap: 20, marginTop: 24 }}
-        >
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-5">
           {/* Seleção do fornecedor */}
-          <div style={fieldStyle}>
-            <label htmlFor="supplierId" style={labelStyle}>
+          <div className={FIELD}>
+            <label htmlFor="supplierId" className={LABEL}>
               Fornecedor *
             </label>
             {availableSuppliers.length === 0 ? (
-              <p style={{ fontSize: 13, color: 'hsl(215 16% 47%)' }}>
+              <p className="text-[13px] text-muted-foreground">
                 Todos os fornecedores aprovados já estão vinculados.
               </p>
             ) : (
-              <select
-                id="supplierId"
-                {...register('supplierId')}
-                style={{ ...inputStyle, cursor: 'pointer' }}
-              >
+              <select id="supplierId" {...register('supplierId')} className={SELECT}>
                 <option value="">Selecione...</option>
                 {availableSuppliers.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -135,51 +123,42 @@ export function LinkSupplierSheet({
               </select>
             )}
             {errors.supplierId && (
-              <span style={{ fontSize: 12, color: 'hsl(0 72% 51%)' }}>
-                {errors.supplierId.message}
-              </span>
+              <span className="text-xs text-destructive">{errors.supplierId.message}</span>
             )}
           </div>
 
           {/* Preferido */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="flex items-center gap-2.5">
             <input
               id="isPreferred"
               type="checkbox"
               {...register('isPreferred')}
-              style={{ width: 16, height: 16, cursor: 'pointer' }}
+              className="h-4 w-4 cursor-pointer"
             />
-            <label htmlFor="isPreferred" style={{ fontSize: 13, cursor: 'pointer' }}>
+            <label htmlFor="isPreferred" className="cursor-pointer text-[13px]">
               Fornecedor preferido para este produto
             </label>
           </div>
 
           {/* Observações */}
-          <div style={fieldStyle}>
-            <label htmlFor="notes" style={labelStyle}>
+          <div className={FIELD}>
+            <label htmlFor="notes" className={LABEL}>
               Observações
             </label>
             <textarea
               id="notes"
               {...register('notes')}
               rows={2}
-              style={{ ...inputStyle, height: 'auto', padding: '8px 12px', resize: 'vertical' }}
+              className={TEXTAREA}
               placeholder="Condições especiais, prazo típico de entrega..."
             />
           </div>
 
           {/* Preview do fornecedor selecionado */}
           {selectedSupplier && (
-            <div
-              style={{
-                background: 'hsl(210 40% 96%)',
-                borderRadius: '0.375rem',
-                padding: '10px 14px',
-                fontSize: 13,
-              }}
-            >
-              <p style={{ fontWeight: 500 }}>{selectedSupplier.name}</p>
-              <p style={{ color: 'hsl(215 16% 47%)', marginTop: 2 }}>
+            <div className="rounded-md bg-muted px-3.5 py-2.5 text-[13px]">
+              <p className="font-medium">{selectedSupplier.name}</p>
+              <p className="mt-0.5 text-muted-foreground">
                 {selectedSupplier.type === 'PJ'
                   ? `CNPJ: ${selectedSupplier.cnpj}`
                   : `CPF: ${selectedSupplier.cpf}`}
@@ -188,21 +167,12 @@ export function LinkSupplierSheet({
             </div>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 8 }}>
+          <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
             <Button type="submit" disabled={loading || availableSuppliers.length === 0}>
-              {loading && (
-                <Loader2
-                  style={{
-                    width: 14,
-                    height: 14,
-                    marginRight: 6,
-                    animation: 'spin 1s linear infinite',
-                  }}
-                />
-              )}
+              {loading && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
               Vincular
             </Button>
           </div>

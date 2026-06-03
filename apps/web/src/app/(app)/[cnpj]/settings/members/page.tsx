@@ -18,33 +18,17 @@ export default async function MembersPage({ params }: Props) {
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          marginBottom: 22,
-          gap: 16,
-        }}
-      >
+      <div className="mb-[22px] flex items-start justify-between gap-4">
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 600, color: 'hsl(222 47% 11%)' }}>Usuários</h1>
-          <p style={{ fontSize: 14, color: 'hsl(215 16% 47%)', marginTop: 4 }}>
+          <h1 className="text-[22px] font-semibold text-foreground">Usuários</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Membros da empresa e seus papéis de acesso.
           </p>
         </div>
         <InviteMemberSheet cnpj={cnpj} />
       </div>
 
-      <div
-        style={{
-          background: 'hsl(0 0% 100%)',
-          border: '1px solid hsl(214 32% 91%)',
-          borderRadius: '0.5rem',
-          boxShadow: '0 1px 3px 0 hsl(222 47% 11% / 0.05)',
-          overflow: 'hidden',
-        }}
-      >
+      <div className="overflow-hidden rounded-lg border border-border bg-card shadow-card">
         <MembersTable cnpj={cnpj} members={members} currentUserId={session?.user.id ?? ''} />
       </div>
     </div>

@@ -13,18 +13,9 @@ export default async function EditSupplierPage({ params }: Props) {
   if (!supplier) notFound()
 
   return (
-    <div style={{ maxWidth: 720 }}>
-      <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 24, color: 'hsl(222 47% 11%)' }}>
-        Editar fornecedor
-      </h1>
-      <div
-        style={{
-          background: 'white',
-          borderRadius: '0.5rem',
-          border: '1px solid hsl(214 32% 91%)',
-          padding: 28,
-        }}
-      >
+    <div className="max-w-[720px]">
+      <h1 className="mb-6 text-[22px] font-semibold text-foreground">Editar fornecedor</h1>
+      <div className="rounded-lg border border-border bg-card p-7">
         <SupplierForm
           mode="edit"
           cnpj={cnpj}

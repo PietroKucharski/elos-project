@@ -41,38 +41,19 @@ export default async function ProductDetailPage({ params }: Props) {
   const canMutate = MUTATE_ROLES.includes(role)
 
   return (
-    <div style={{ maxWidth: 960 }}>
+    <div className="max-w-[960px]">
       {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          marginBottom: 24,
-          gap: 16,
-        }}
-      >
+      <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 600, color: 'hsl(222 47% 11%)' }}>
-              {product.name}
-            </h1>
+          <div className="mb-1.5 flex items-center gap-3">
+            <h1 className="text-[22px] font-semibold text-foreground">{product.name}</h1>
             {!product.isActive && (
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 500,
-                  padding: '2px 8px',
-                  borderRadius: 9999,
-                  background: 'hsl(214 32% 91%)',
-                  color: 'hsl(215 16% 47%)',
-                }}
-              >
+              <span className="rounded-full bg-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                 Inativo
               </span>
             )}
           </div>
-          <p style={{ fontSize: 13, color: 'hsl(215 16% 47%)' }}>
+          <p className="text-[13px] text-muted-foreground">
             {product.code && `Código: ${product.code} · `}
             Unidade: {UNIT_LABELS[product.unit] ?? product.unit}
             {product.minStock && ` · Estoque mínimo: ${product.minStock}`}
@@ -81,7 +62,7 @@ export default async function ProductDetailPage({ params }: Props) {
         {canMutate && (
           <Link href={`/${cnpj}/products/${id}/edit`}>
             <Button variant="outline" size="sm">
-              <Pencil style={{ width: 14, height: 14, marginRight: 6 }} />
+              <Pencil className="mr-1.5 h-3.5 w-3.5" />
               Editar
             </Button>
           </Link>
@@ -90,19 +71,9 @@ export default async function ProductDetailPage({ params }: Props) {
 
       {/* Descrição */}
       {product.description && (
-        <div
-          style={{
-            background: 'white',
-            borderRadius: '0.5rem',
-            border: '1px solid hsl(214 32% 91%)',
-            padding: 20,
-            marginBottom: 24,
-          }}
-        >
-          <p style={{ fontSize: 12, color: 'hsl(215 16% 47%)', marginBottom: 6 }}>Descrição</p>
-          <p style={{ fontSize: 14, color: 'hsl(222 47% 11%)', whiteSpace: 'pre-wrap' }}>
-            {product.description}
-          </p>
+        <div className="mb-6 rounded-lg border border-border bg-card p-5">
+          <p className="mb-1.5 text-xs text-muted-foreground">Descrição</p>
+          <p className="text-sm whitespace-pre-wrap text-foreground">{product.description}</p>
         </div>
       )}
 

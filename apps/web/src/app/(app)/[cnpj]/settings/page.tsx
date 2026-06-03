@@ -30,78 +30,33 @@ export default async function SettingsPage({ params }: Props) {
       }
     : undefined
 
-  const cardStyle: React.CSSProperties = {
-    background: 'hsl(0 0% 100%)',
-    border: '1px solid hsl(214 32% 91%)',
-    borderRadius: '0.5rem',
-    boxShadow: '0 1px 3px 0 hsl(222 47% 11% / 0.05)',
-    padding: 20,
-  }
+  const cardClass = 'rounded-lg border border-border bg-card p-5 shadow-card'
 
   return (
     <div>
       {/* Page header */}
-      <div style={{ marginBottom: 22 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 600, color: 'hsl(222 47% 11%)' }}>
-          Configurações da Empresa
-        </h1>
-        <p style={{ fontSize: 14, color: 'hsl(215 16% 47%)', marginTop: 4 }}>
+      <div className="mb-[22px]">
+        <h1 className="text-[22px] font-semibold text-foreground">Configurações da Empresa</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Dados cadastrais e identidade da empresa.
         </p>
       </div>
 
       {/* Two-column layout (identical to protótipo Settings page) */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '260px 1fr',
-          gap: 20,
-          alignItems: 'start',
-        }}
-      >
+      <div className="grid grid-cols-[260px_1fr] items-start gap-5">
         {/* Left: Logo card */}
-        <div style={cardStyle}>
-          <div
-            style={{
-              fontSize: 15.5,
-              fontWeight: 600,
-              marginBottom: 14,
-              color: 'hsl(222 47% 11%)',
-            }}
-          >
-            Logo
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+        <div className={cardClass}>
+          <div className="mb-3.5 text-[15.5px] font-semibold text-foreground">Logo</div>
+          <div className="flex flex-col items-center gap-3.5">
             {/* Avatar placeholder com inicial da empresa */}
-            <div
-              style={{
-                width: 96,
-                height: 96,
-                borderRadius: '0.75rem',
-                background: 'hsl(243 75% 96%)',
-                color: 'hsl(243 75% 59%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 34,
-                fontWeight: 700,
-                border: '1px solid hsl(243 60% 88%)',
-              }}
-            >
+            <div className="flex h-24 w-24 items-center justify-center rounded-xl border border-primary-soft-border bg-primary-soft text-[34px] font-bold text-primary">
               {company?.name?.[0]?.toUpperCase() ?? '?'}
             </div>
             <Button variant="outline" size="sm" className="w-full">
-              <Upload size={14} strokeWidth={1.5} style={{ marginRight: 6 }} />
+              <Upload size={14} strokeWidth={1.5} className="mr-1.5" />
               Enviar logo
             </Button>
-            <p
-              style={{
-                fontSize: 11.5,
-                color: 'hsl(215 16% 47%)',
-                textAlign: 'center',
-                lineHeight: 1.5,
-              }}
-            >
+            <p className="text-center text-[11.5px] leading-normal text-muted-foreground">
               PNG ou SVG, até 2 MB.
               <br />
               Recomendado 256×256px.
@@ -110,18 +65,9 @@ export default async function SettingsPage({ params }: Props) {
         </div>
 
         {/* Right: form card */}
-        <div style={cardStyle}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 18,
-            }}
-          >
-            <span style={{ fontSize: 15.5, fontWeight: 600, color: 'hsl(222 47% 11%)' }}>
-              Dados cadastrais
-            </span>
+        <div className={cardClass}>
+          <div className="mb-[18px] flex items-center justify-between">
+            <span className="text-[15.5px] font-semibold text-foreground">Dados cadastrais</span>
           </div>
           <CompanyForm mode="edit" cnpj={cnpj} defaultValues={defaults} />
         </div>

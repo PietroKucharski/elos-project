@@ -6,24 +6,13 @@ export default async function DashboardPage({ params }: Props) {
   const { cnpj } = await params
   return (
     <div>
-      <div style={{ marginBottom: 22 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.2, color: 'hsl(222 47% 11%)' }}>
-          Dashboard
-        </h1>
-        <p style={{ fontSize: 14, color: 'hsl(215 16% 47%)', marginTop: 4 }}>
-          Empresa <span style={{ fontFamily: 'monospace', fontSize: 13 }}>{cnpj}</span>
+      <div className="mb-[22px]">
+        <h1 className="text-[22px] font-semibold leading-[1.2] text-foreground">Dashboard</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Empresa <span className="font-mono text-[13px]">{cnpj}</span>
         </p>
       </div>
-      <div
-        style={{
-          border: '2px dashed hsl(214 32% 91%)',
-          borderRadius: '0.5rem',
-          padding: '48px 24px',
-          textAlign: 'center',
-          color: 'hsl(215 16% 47%)',
-          fontSize: 14,
-        }}
-      >
+      <div className="rounded-lg border-2 border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground">
         KPIs e gráficos chegam na Fase 7 — Audit Log e Administração.
       </div>
     </div>

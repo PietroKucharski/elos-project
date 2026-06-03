@@ -36,25 +36,15 @@ export default async function SupplierDetailPage({ params }: Props) {
   const canMutate = MUTATE_ROLES.includes(role)
 
   return (
-    <div style={{ maxWidth: 960 }}>
+    <div className="max-w-[960px]">
       {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          marginBottom: 24,
-          gap: 16,
-        }}
-      >
+      <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 600, color: 'hsl(222 47% 11%)' }}>
-              {supplier.name}
-            </h1>
+          <div className="mb-1.5 flex items-center gap-3">
+            <h1 className="text-[22px] font-semibold text-foreground">{supplier.name}</h1>
             <SupplierStatusBadge status={supplier.status} />
           </div>
-          <p style={{ fontSize: 13, color: 'hsl(215 16% 47%)' }}>
+          <p className="text-[13px] text-muted-foreground">
             {supplier.type === 'PJ' ? `CNPJ: ${supplier.cnpj}` : `CPF: ${supplier.cpf}`}
             {supplier.email && ` · ${supplier.email}`}
           </p>
@@ -62,7 +52,7 @@ export default async function SupplierDetailPage({ params }: Props) {
         {canMutate && (
           <Link href={`/${cnpj}/suppliers/${id}/edit`}>
             <Button variant="outline" size="sm">
-              <Pencil style={{ width: 14, height: 14, marginRight: 6 }} />
+              <Pencil className="mr-1.5 h-3.5 w-3.5" />
               Editar
             </Button>
           </Link>
@@ -78,16 +68,8 @@ export default async function SupplierDetailPage({ params }: Props) {
         </TabsList>
 
         <TabsContent value="info">
-          <div
-            style={{
-              background: 'white',
-              borderRadius: '0.5rem',
-              border: '1px solid hsl(214 32% 91%)',
-              padding: 24,
-              marginTop: 16,
-            }}
-          >
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <div className="mt-4 rounded-lg border border-border bg-card p-6">
+            <div className="grid grid-cols-2 gap-5">
               <InfoField label="Telefone" value={supplier.phone} />
               <InfoField label="Avaliação" value={supplier.rating ? `${supplier.rating}/5` : '—'} />
               {supplier.address && (
@@ -141,9 +123,9 @@ function InfoField({
   fullWidth?: boolean
 }) {
   return (
-    <div style={fullWidth ? { gridColumn: '1 / -1' } : {}}>
-      <p style={{ fontSize: 12, color: 'hsl(215 16% 47%)', marginBottom: 4 }}>{label}</p>
-      <p style={{ fontSize: 14, color: 'hsl(222 47% 11%)' }}>{value ?? '—'}</p>
+    <div className={fullWidth ? 'col-span-2' : undefined}>
+      <p className="mb-1 text-xs text-muted-foreground">{label}</p>
+      <p className="text-sm text-foreground">{value ?? '—'}</p>
     </div>
   )
 }
