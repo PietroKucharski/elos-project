@@ -25,6 +25,18 @@ import { suppliers } from '../../db/schema/suppliers'
 // Unidades de medida válidas — espelham o `unitOfMeasureEnum` do banco
 const validUnits = ['UN', 'KG', 'G', 'L', 'ML', 'M', 'M2', 'M3', 'CX', 'PC'] as const
 
+// `23505` = unique_violation do PostgreSQL. As checagens select-then-insert são
+// otimistas (mensagem amigável no caso comum); este guard fecha a corrida quando
+// duas requisições concorrentes passam pela checagem antes de qualquer insert.
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as { code?: unknown }).code === '23505'
+  )
+}
+
 @Injectable()
 export class ProductsService {
   constructor(
@@ -73,12 +85,20 @@ export class ProductsService {
       conditions.push(eq(products.unit, query.unit as (typeof validUnits)[number]))
     }
 
-    // Se supplierId informado, filtra produtos que têm esse fornecedor vinculado
+    // Se supplierId informado, filtra produtos que têm esse fornecedor vinculado.
+    // Join com `products` + filtro de tenant garante que só ids do próprio
+    // companyId entrem no inArray (sem vazar vínculos de outro tenant).
     if (query.supplierId) {
       const linkedProductIds = await this.db
         .select({ productId: productSuppliers.productId })
         .from(productSuppliers)
-        .where(eq(productSuppliers.supplierId, query.supplierId))
+        .innerJoin(products, eq(products.id, productSuppliers.productId))
+        .where(
+          and(
+            eq(productSuppliers.supplierId, query.supplierId),
+            eq(products.companyId, user.companyId!),
+          ),
+        )
         .then((rows) => rows.map((r) => r.productId))
 
       if (linkedProductIds.length === 0) return []
@@ -147,14 +167,22 @@ export class ProductsService {
     }
 
     const [created] = await this.db.transaction(async (tx) => {
-      const rows = await tx
-        .insert(products)
-        .values({
-          ...dto,
-          minStock: dto.minStock != null ? String(dto.minStock) : null,
-          companyId: user.companyId!,
-        })
-        .returning()
+      let rows: (typeof products.$inferSelect)[]
+      try {
+        rows = await tx
+          .insert(products)
+          .values({
+            ...dto,
+            minStock: dto.minStock != null ? String(dto.minStock) : null,
+            companyId: user.companyId!,
+          })
+          .returning()
+      } catch (err) {
+        if (isUniqueViolation(err)) {
+          throw new ConflictException('Já existe um produto com este código.')
+        }
+        throw err
+      }
 
       const [row] = rows
       if (!row) throw new BadRequestException('Falha ao criar produto.')
@@ -203,15 +231,23 @@ export class ProductsService {
     }
 
     const [updated] = await this.db.transaction(async (tx) => {
-      const rows = await tx
-        .update(products)
-        .set({
-          ...dto,
-          minStock: dto.minStock != null ? String(dto.minStock) : undefined,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(products.id, id), eq(products.companyId, user.companyId!)))
-        .returning()
+      let rows: (typeof products.$inferSelect)[]
+      try {
+        rows = await tx
+          .update(products)
+          .set({
+            ...dto,
+            minStock: dto.minStock != null ? String(dto.minStock) : undefined,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(products.id, id), eq(products.companyId, user.companyId!)))
+          .returning()
+      } catch (err) {
+        if (isUniqueViolation(err)) {
+          throw new ConflictException('Já existe um produto com este código.')
+        }
+        throw err
+      }
 
       if (!rows[0]) throw new NotFoundException('Produto não encontrado.')
 
@@ -312,15 +348,23 @@ export class ProductsService {
 
     if (existing) throw new ConflictException('Este fornecedor já está vinculado ao produto.')
 
-    const [link] = await this.db
-      .insert(productSuppliers)
-      .values({
-        productId,
-        supplierId: dto.supplierId,
-        isPreferred: dto.isPreferred ?? false,
-        notes: dto.notes ?? null,
-      })
-      .returning()
+    let link: typeof productSuppliers.$inferSelect | undefined
+    try {
+      ;[link] = await this.db
+        .insert(productSuppliers)
+        .values({
+          productId,
+          supplierId: dto.supplierId,
+          isPreferred: dto.isPreferred ?? false,
+          notes: dto.notes ?? null,
+        })
+        .returning()
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new ConflictException('Este fornecedor já está vinculado ao produto.')
+      }
+      throw err
+    }
 
     if (!link) throw new BadRequestException('Falha ao criar vínculo.')
     return link

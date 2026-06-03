@@ -387,7 +387,7 @@ export class ProductsService {
       await tx
         .update(products)
         .set({ isActive: false, updatedAt: new Date() })
-        .where(eq(products.id, id))
+        .where(and(eq(products.id, id), eq(products.companyId, user.companyId!)))
 
       await tx.insert(auditLogs).values({
         entity: 'Product',
