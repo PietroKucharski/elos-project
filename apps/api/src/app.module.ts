@@ -5,6 +5,7 @@ import { AbilityModule } from './common/ability/ability.module'
 import { AuthGuard } from './common/guards/auth.guard'
 import { DrizzleModule } from './db.module'
 import { AuthModule } from './modules/auth/auth.module'
+import { BidsModule } from './modules/bids/bids.module'
 import { CompaniesModule } from './modules/companies/companies.module'
 import { HealthModule } from './modules/health/health.module'
 import { MembersModule } from './modules/members/members.module'
@@ -29,6 +30,7 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module'
     SuppliersModule,
     ProductsModule,
     QuotationsModule,
+    BidsModule,
     // Fases 1–7: módulos de domínio adicionados aqui
   ],
   providers: [
