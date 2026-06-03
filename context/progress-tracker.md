@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 2 — Fornecedores e Produtos** · `Concluída` (2.1, 2.2, 2.3, 2.4 e 2.5 concluídas) → próxima fase: **Fase 3**
+**Fase 3 — Cotações e Lances** · `Em andamento` (3.1 concluída) → próxima unidade: **3.2 — Quotations Module (API)**
 
 ---
 
@@ -381,11 +381,37 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     lista busca ativos+inativos em paralelo para filtro client-side, `Resolver` cast no `link-supplier-sheet`,
     sem o wrapper de `padding` extra (o `[cnpj]/layout` já aplica), `error.tsx` com `console.error`
 
+- [x] **3.1 — Shared Schemas: Cotações e Lances** — spec `17-shared-schemas-quotations-bids.md`
+  - Commit convencional esperado: `feat(shared): add quotation and bid zod schemas`
+  - `packages/shared/src/schemas/quotation.ts` — `quotationStatusValues` (DRAFT/OPEN/CLOSED/CANCELLED),
+    `createQuotationSchema` (`deadline` ISO datetime), `updateQuotationSchema`, `quotationResponseSchema`
+    (`itemCount`/`bidCount` opcionais — lista vs. detalhe); itens (`create/update/responseQuotationItemSchema`,
+    `quantity` string no response = numeric do postgres.js, `unit` texto livre); convite de fornecedor
+    (`quotationSupplierStatusValues` INVITED/RESPONDED/DECLINED, `inviteSupplierToQuotationSchema`,
+    `quotationSupplierResponseSchema`) + tipos via `z.infer`
+  - `packages/shared/src/schemas/bid.ts` — `bidStatusValues` (DRAFT/SUBMITTED/ACCEPTED/REJECTED),
+    `createBidSchema` (**comprador cria em nome do fornecedor** — `supplierId` obrigatório, portal de
+    fornecedor fora do escopo v1), `updateBidSchema`, `bidResponseSchema` (`totalPrice` string nullable,
+    calculado pelo backend); itens (`create/update/responseBidItemSchema`, `unitPrice` nonnegative,
+    `deliveryDays` int positive); comparativo (`bidComparisonCellSchema`/`bidComparisonRowSchema` com
+    `z.record(uuid, cell)`/`bidComparisonResponseSchema`); seleção de vencedor v1 por lance único
+    (`selectWinnerSchema`) + tipos via `z.infer`
+  - Barrel `packages/shared/src/index.ts` re-exporta `./schemas/bid` e `./schemas/quotation`
+  - **Verificado:** `pnpm --filter @elos/shared build` + `pnpm type-check` (3 workspaces) verdes;
+    `biome check` dos 3 arquivos (bid/quotation/index) limpo; 5 `safeParse` da spec confirmados
+    (cotação com título curto+data inválida falha; cotação válida passa; bid com `supplierId` não-uuid
+    falha; bid item com preço negativo falha; selectWinner com uuid válido passa). `pnpm lint` na raiz do
+    pacote reporta apenas ruído CRLF pré-existente em arquivos não tocados (`core.autocrlf` no Windows;
+    repo armazena LF — normalizado pelo `--write` do pre-commit / Linux no CI)
+  - **Ajuste vs. spec:** ver Decisões Arquiteturais (3.1) — `export type QuotationStatus` e
+    `export type BidStatus` removidos dos schema files (colidiam com os tipos homônimos já exportados por
+    `enums.ts` no barrel)
+
 ---
 
 ## Em Progresso
 
-- Nada ativo. **Fase 2 concluída** (2.1–2.5). Próximo: **Fase 3**.
+- Nada ativo. **3.1 concluída**. Próximo: **3.2 — Quotations Module (API)**.
 
 ---
 
@@ -496,8 +522,8 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | ---- | ------------------------------- | ------------- |
 | 0    | Fundação                        | Concluída     |
 | 1    | Auth e Empresas                 | Concluída     |
-| 2    | Fornecedores e Produtos         | Em andamento  |
-| 3    | Cotações e Lances               | Não iniciada  |
+| 2    | Fornecedores e Produtos         | Concluída     |
+| 3    | Cotações e Lances               | Em andamento  |
 | 4    | Pedidos de Compra               | Não iniciada  |
 | 5    | Recebimento e Estoque           | Não iniciada  |
 | 6    | Financeiro (NF + Pagamentos)    | Não iniciada  |
@@ -507,12 +533,14 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 
 ## Open Questions
 
-- [ ] **Fornecedores no portal**: Fornecedores submetem lances diretamente no sistema
-  ou via e-mail/link externo? (Impacto: se via portal, precisamos de auth para
-  fornecedores — papel FORNECEDOR não está no escopo v1 atualmente)
-- [ ] **Múltiplos vencedores por cotação**: Um pedido de compra pode ter itens de
-  fornecedores diferentes (seleção por item) ou deve ser sempre um único fornecedor
-  por cotação?
+- [x] **Fornecedores no portal** — **Resolvido na 3.1 (v1)**: os lances são registrados pelo
+  **COMPRADOR no sistema, em nome do fornecedor**. O portal de autoatendimento do fornecedor está
+  explicitamente **fora do escopo v1** (não há papel FORNECEDOR nem auth para fornecedores). Reflexo nos
+  schemas: `createBidSchema` exige `supplierId` e `bidResponseSchema` traz `supplierName` para o comparativo.
+- [~] **Múltiplos vencedores por cotação** — **v1 decidido na 3.1**: seleção de **um único lance vencedor**
+  por cotação (`selectWinnerSchema` aceita um `bidId`). Seleção por item fica para a v2 e pode ser adicionada
+  sem breaking change (campo opcional `itemWinners?: Record<uuid, uuid>`). A pergunta sobre PO com itens de
+  fornecedores diferentes permanece em aberto para a Fase 4.
 - [ ] **Armazenamento de anexos v1**: Upload real de arquivo (S3/equivalente) ou
   apenas registro de URL externa? Impacta se precisamos de blob storage na Fase 0.
 - [ ] **Notificações**: E-mail de notificação (ex: fornecedor aprovado, PO gerado)
@@ -624,6 +652,7 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | `Resolver` cast no `link-supplier-sheet` (2.5) | `useForm<LinkProductSupplierDto>` falhava o type-check: `isPreferred` tem `.default(false)` no `linkProductSupplierSchema`, divergindo o tipo de **input** (opcional) do **output** (obrigatório) que o react-hook-form usa nas duas pontas (TS2322/TS2345). `resolver: zodResolver(linkProductSupplierSchema) as Resolver<LinkProductSupplierDto>` (mesmo padrão de `company-form` 1.5 / forms de 2.4) reconcilia. O `product-form` usa `zodResolver(createProductSchema) as never` (o `createProductSchema` também tem `isActive.default(true)`) |
 | Coluna "Fornecedores" mostra "—" na lista (2.5) | A tabela da spec inclui a coluna "Fornecedores", mas o endpoint de **lista** (`findAll`) retorna produtos sem o array `suppliers` (presente só no `GET :id` via `innerJoin`). A célula renderiza `product.suppliers?.length` quando presente, senão "—" — sem fetch extra por linha (contagem por produto fica para uma agregação futura no endpoint de lista, fora do escopo desta unidade) |
 | `console.error` no `error.tsx` + nos catch dos componentes (2.5) | Invariante 5 ("nenhum `catch {}` vazio — sempre logar ou relançar") + precedente de 2.4. Os snippets da spec usam `} catch {` só com `toast.error`; todos os catch dos handlers client (`product-form.onSubmit`, `products-list-client.handleDeactivate`, `product-suppliers-panel.handleUnlink`/`handleTogglePreferred`, `link-supplier-sheet.onSubmit`) ganharam `catch (error) { console.error('[Componente.handler]', error); toast.error(...) }`. O `error.tsx` segue o boundary de suppliers (`useEffect` + `console.error('[ProductsError]', error)`) |
+| `export type QuotationStatus`/`BidStatus` removidos dos schema files (3.1) | A spec re-declara `export type QuotationStatus`/`BidStatus = (typeof …Values)[number]` em `quotation.ts`/`bid.ts`, mas `enums.ts` (0.3) já exporta `QuotationStatus` e `BidStatus` (const + type), e ambos passam pelo barrel `index.ts` → `error TS2308` (re-export ambíguo) — mesmo padrão já resolvido para `UnitOfMeasure` em 2.1. Mantidos `quotationStatusValues`/`bidStatusValues` (necessários p/ `z.enum`) e removidas as re-declarações de tipo, com comentário apontando para `enums.ts`. Nota: o `BidStatus` de `enums.ts` usa `SELECTED` enquanto os schemas usam `ACCEPTED` — a validação dos schemas usa `bidStatusValues` (não o tipo do enum), então não há divergência de runtime; eventual reconciliação dos valores fica para a 3.3 (Bids API) |
 
 ---
 
@@ -754,3 +783,11 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   role via membership, lista busca ativos+inativos em paralelo p/ filtro client-side, `Resolver` cast no
   `link-supplier-sheet`, sem padding extra (layout já aplica), `console.error` nos catch — ver Decisões
   Arquiteturais (2.5). **Fase 2 — Fornecedores e Produtos concluída.** Próximo: **Fase 3**
+- **3.1 concluída**: schemas Zod de cotação e lance em `packages/shared` (`schemas/quotation.ts`,
+  `schemas/bid.ts`) — cotação + itens + convite de fornecedor; lance + itens + comparativo
+  (`z.record` por `bidId`) + seleção de vencedor único (v1). Decisão de domínio: **comprador registra
+  lances em nome do fornecedor** (portal de fornecedor fora do escopo v1). Tipos via `z.infer`, barrel
+  atualizado. `build`/`type-check` verdes; `biome check` dos 3 arquivos limpo; 5 `safeParse` da spec
+  confirmados. Ajuste vs. spec: `QuotationStatus`/`BidStatus` duplicados removidos (já em `enums.ts`) —
+  ver Decisões Arquiteturais (3.1). Open questions "Fornecedores no portal" (resolvida) e "Múltiplos
+  vencedores por cotação" (v1 = lance único) atualizadas. Próximo: **3.2 — Quotations Module (API)**
