@@ -4,6 +4,8 @@
 // Schemas
 export * from './schemas/company'
 export * from './schemas/member'
+export * from './schemas/product'
+export * from './schemas/supplier'
 
 // Enums
 export * from './enums'
