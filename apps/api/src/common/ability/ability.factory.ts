@@ -6,6 +6,7 @@ import {
 } from '@casl/ability'
 import { Injectable } from '@nestjs/common'
 import type { Company, CompanyMember } from '../../db/schema/companies'
+import type { Product } from '../../db/schema/products'
 import type { Supplier } from '../../db/schema/suppliers'
 import type { SessionUser } from '../types/session-user'
 
@@ -37,7 +38,10 @@ export type Subjects =
   | (Supplier & ForcedSubject<'Supplier'>)
   | 'SupplierContact'
   | 'SupplierBankAccount'
+  // 'Product' tagueado (como 'Supplier') para suportar condições por objeto via
+  // subject('Product', row) no ProductsService — sem cair em MongoQuery<never>
   | 'Product'
+  | (Product & ForcedSubject<'Product'>)
   | 'ProductSupplier'
   | 'Quotation'
   | 'QuotationItem'
@@ -122,6 +126,7 @@ export class AbilityFactory {
       case 'ALMOXARIFE':
         can('read', 'Company', { id: companyId })
         can('read', 'CompanyMember', { companyId })
+        can('read', 'Product')
         can('read', 'PurchaseOrder')
         can('manage', 'Receipt')
         can('manage', 'Warehouse')
@@ -133,6 +138,7 @@ export class AbilityFactory {
       case 'ANALISTA_FINANCEIRO':
         can('read', 'Company', { id: companyId })
         can('read', 'CompanyMember', { companyId })
+        can('read', 'Product')
         can('read', 'PurchaseOrder')
         can('read', 'Receipt')
         can('manage', 'Invoice')
@@ -142,6 +148,7 @@ export class AbilityFactory {
       case 'TRANSPORTADOR':
         can('read', 'Company', { id: companyId })
         can('read', 'CompanyMember', { companyId })
+        can('read', 'Product')
         can('read', 'PurchaseOrder')
         can('manage', 'Shipment')
         break
