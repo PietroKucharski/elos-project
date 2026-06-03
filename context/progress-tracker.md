@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 2 — Fornecedores e Produtos** · `Em andamento` (2.1 e 2.2 concluídas) → próxima: **2.3 — Products Module (API)**
+**Fase 2 — Fornecedores e Produtos** · `Em andamento` (2.1, 2.2 e 2.3 concluídas) → próxima: **2.4 — Suppliers Management UI (Frontend)**
 
 ---
 
@@ -294,11 +294,37 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     tagueado, `findAll` com `| undefined` (exactOptionalPropertyTypes), `enqueue` envolve em array,
     bracket-keys → dot (useLiteralKeys)
 
+- [x] **2.3 — Products Module (API)** — spec `14-products-api-spec.md`
+  - Commit convencional esperado: `feat(api): add products module with crud and supplier links`
+  - `apps/api/src/modules/products/`: `products.module.ts` (exporta `ProductsService`),
+    `products.controller.ts` (`@Controller('companies/:cnpj/products')`: GET/POST lista+criação,
+    GET/PATCH/DELETE `:id` — DELETE é **soft delete** (`isActive=false`, retorna `{ success: true }`),
+    sub-recurso de vínculos `:id/suppliers` com POST/PATCH/DELETE; Swagger + `ZodValidationPipe` por rota),
+    `products.service.ts` (findAll com filtros `search`/`isActive`/`supplierId`/`unit`/paginação,
+    findOne com fornecedores vinculados via `innerJoin`, create/update com dedup de `code` na transação,
+    deactivate soft, link/update/unlink de fornecedor com regra **fornecedor APPROVED** e dedup do vínculo;
+    CASL antes de cada mutação e audit log em create/update/deactivate),
+    `products.service.spec.ts` (9 testes) e `products.controller.spec.ts` (7 testes) — **77 testes da API no total**
+  - `ability.factory.ts` — subject `Product` tagueado (`& ForcedSubject<'Product'>`) adicionado ao union
+    `Subjects` para suportar `subject('Product', row)` no `update`/`deactivate`; regra `read Product`
+    adicionada a ALMOXARIFE/ANALISTA_FINANCEIRO/TRANSPORTADOR (ADMIN_EMPRESA e COMPRADOR já tinham `manage Product`)
+  - `app.module.ts` — `ProductsModule` importado
+  - **Verificado:** `vitest run` (77/77), `pnpm type-check` (3 workspaces) e `biome check` dos arquivos
+    novos verdes (só warnings `noNonNullAssertion` de `companyId!`, severidade `warn`, padrão do projeto).
+    Checklist de segurança coberto pelos testes: 403 sem permissão (read/create/update/delete), 400 unit
+    inválida, 409 código duplicado, soft delete preserva referências, queries escopadas a `companyId`,
+    audit log em create/update/deactivate. `linkSupplier` valida fornecedor APPROVED (400) e vínculo
+    duplicado (409)
+  - **Ajustes vs. spec:** ver Decisões Arquiteturais (2.3) — `@Inject` explícito, subject `Product` tagueado +
+    `read` p/ papéis read-only (regras `manage` já existiam, sem reescrever `case`), `findAll` sem `import()`
+    dinâmico (`inArray` no topo) + `| undefined`, ternário `isActive` simplificado, `enqueue` em array,
+    deactivate com escopo `companyId` no update
+
 ---
 
 ## Em Progresso
 
-- Nada ativo. **Fase 2.2 concluída**. Próximo: **2.3 — Products Module (API)**.
+- Nada ativo. **Fase 2.3 concluída**. Próximo: **2.4 — Suppliers Management UI (Frontend)**.
 
 ---
 
@@ -519,6 +545,11 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | `findAll(query)` com campos `\| undefined` explícitos (2.2) | O controller passa `{ status: string \| undefined, ... }` (de `@Query()` opcional) ao Service, mas a assinatura da spec usava `{ status?: string }`. Sob `exactOptionalPropertyTypes` (do `tsconfig.base`), `status?: string` **não** aceita `undefined` explícito (`error TS2379`). Tipo do parâmetro ajustado para `status?: string \| undefined` (etc.), preservando a chamada do controller verbatim |
 | `enqueue` envolve o resultado em array no `suppliers.service.spec` (2.2) | O `enqueue(x)` da spec resolvia o thenable com o valor cru, mas o Service consome as queries como arrays (`const [row] = await …` e `.then((r) => r[0] ?? null)`). Com valor cru, `const [row] = undefined` lançava `TypeError` em vez de cair no `NotFoundException`. Corrigido para `resolve([result])`: `enqueue(undefined)` → linha ausente; `enqueue(obj)` → 1 linha — fazendo os 7 testes de guarda (Conflict/NotFound/BadRequest/Forbidden) passarem com as chamadas da spec intactas |
 | Bracket-keys → dot + `biome-ignore noThenProperty` (2.2) | `useLiteralKeys` (error do recommended) sinalizou os acessos `updateData['name']`/`qb['select']`/`service['findAll']` dos snippets — convertidos para acesso por ponto (`--fix --unsafe` do biome, todos identificadores válidos). O thenable de teste (`qb.then = …`) recebe 1 `// biome-ignore lint/suspicious/noThenProperty` (mesmo padrão dos specs de 1.2/1.3). `noNonNullAssertion` de `companyId!` mantidos como warning (severidade `warn`, presente em todos os Services existentes) |
+| `@Inject` explícito no `ProductsService`/`ProductsController` (2.3) | Mesmo motivo de 1.2/2.2: tsx/esbuild não emite metadata de tipo para a DI do Nest. O snippet da spec omite `@Inject(DRIZZLE)`/`@Inject(AbilityFactory)`/`@Inject(ProductsService)`; sem eles a resolução falharia em runtime. Adicionados, fiéis ao `SuppliersService`/`Controller` |
+| Subject `Product` tagueado + `read` p/ papéis read-only, sem reescrever `case` (2.3) | A seção 1 da spec mostra adicionar regras `Product` granulares por papel **e** o tipo tagueado ao union. O `AbilityFactory` já tinha `can('manage','Product')` para ADMIN_EMPRESA/COMPRADOR (cobre create/read/update/delete) — reescrever as `case` para `create`/`read`/`update`/`delete` separados seria redundante. Aplicado só o que faltava: `(Product & ForcedSubject<'Product'>)` no union (p/ `subject('Product', existing)` tipar no `update`/`deactivate`, mesmo padrão de `Supplier` 2.2) e `can('read','Product')` para ALMOXARIFE/ANALISTA_FINANCEIRO/TRANSPORTADOR (a spec pedia read-only a esses papéis, ausente até então) |
+| `findAll` sem `import()` dinâmico + `inArray` no topo (2.3) | O snippet da spec reatribuía `query_` e fazia `(await import('drizzle-orm')).inArray(...)` com `biome-ignore` para o filtro `supplierId`. Reescrito: `inArray` importado no topo (junto de `and`/`desc`/`eq`/`ilike`) e a condição `supplierId` empurrada ao array `conditions` **antes** da query única — sem reatribuição nem import dinâmico, eliminando o `biome-ignore noExplicitAny`. Campos do `query` tipados com `\| undefined` (exactOptionalPropertyTypes, como em 2.2) |
+| Ternário `isActiveFilter` simplificado (2.3) | A spec escrevia `query.isActive === 'false' ? false : true`, que dispara `noUselessTernary` (error do recommended). Trocado por `query.isActive !== 'false'` — mesmo resultado (default `true`, só `'false'` desativa) sem o literal booleano no ternário |
+| `enqueue` envolve em array + `deactivate` escopa `companyId` no update (2.3) | `enqueue` segue o padrão de 2.2 (`resolve([result])`) — o Service consome queries como arrays (`const [row] = …` / `.then((r) => r[0])`); valor cru lançaria `TypeError` em vez do `NotFoundException`. No `deactivate`, o `update` da spec filtrava só por `eq(products.id, id)`; adicionado `eq(products.companyId, …)` (invariante 8: toda query escopada ao tenant) — defesa em profundidade, embora o `existing` já tenha sido validado por `companyId` |
 
 ---
 
@@ -613,3 +644,14 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   `biome check` verdes. Ajustes vs. spec: `@Inject` explícito, subject tagueado, `findAll` com
   `| undefined`, `enqueue` em array, bracket-keys→dot — ver Decisões Arquiteturais (2.2).
   Próximo: **2.3 — Products Module (API)**
+- **2.3 concluída**: `ProductsModule` NestJS (controller + service + module), rotas sob
+  `/v1/companies/:cnpj/products` — CRUD (DELETE = soft delete `isActive=false`) + sub-recurso de
+  vínculos `:id/suppliers` (POST/PATCH/DELETE), findAll com filtros `search`/`isActive`/`supplierId`/
+  `unit`/paginação, findOne com fornecedores via `innerJoin`, dedup de `code`, regra fornecedor APPROVED
+  no link + dedup do vínculo, CASL antes de cada mutação e audit log em create/update/deactivate.
+  Subject `Product` tagueado no `AbilityFactory` + `read Product` p/ papéis read-only, `ProductsModule`
+  no `app.module`. 77 testes da API passando, `type-check` (3 workspaces) e `biome check` verdes.
+  Ajustes vs. spec: `@Inject` explícito, subject tagueado + read p/ read-only (sem reescrever `case`),
+  `findAll` sem `import()` dinâmico (`inArray` no topo), ternário `isActive` simplificado, `enqueue` em
+  array, deactivate escopa `companyId` — ver Decisões Arquiteturais (2.3). Próximo: **2.4 — Suppliers
+  Management UI (Frontend)**
