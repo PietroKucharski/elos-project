@@ -23,6 +23,18 @@ import { auditLogs } from '../../db/schema/audit-logs'
 import { bids, quotationItems, quotationSuppliers, quotations } from '../../db/schema/quotations'
 import { suppliers } from '../../db/schema/suppliers'
 
+// `23505` = unique_violation do PostgreSQL. Usado para fechar a corrida na geração
+// do número sequencial da cotação (COT-{ano}-NNNN): o índice único (company_id,
+// number) garante a unicidade e o `create` reexecuta a transação na colisão.
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as { code?: unknown }).code === '23505'
+  )
+}
+
 @Injectable()
 export class QuotationsService {
   constructor(
@@ -47,8 +59,17 @@ export class QuotationsService {
       throw new ForbiddenException('Sem permissão para listar cotações.')
     }
 
-    const limit = Math.min(query.limit ?? 20, 100)
-    const offset = ((query.page ?? 1) - 1) * limit
+    // Normaliza paginação: descarta NaN/0/negativos (vindos de query strings inválidas)
+    // antes de chegarem a `.limit()`/`.offset()` e gerarem SQL inválido (500).
+    const limit =
+      typeof query.limit === 'number' && Number.isFinite(query.limit)
+        ? Math.min(Math.max(1, Math.floor(query.limit)), 100)
+        : 20
+    const page =
+      typeof query.page === 'number' && Number.isFinite(query.page)
+        ? Math.max(1, Math.floor(query.page))
+        : 1
+    const offset = (page - 1) * limit
 
     const validStatuses = ['DRAFT', 'OPEN', 'CLOSED', 'CANCELLED'] as const
     if (query.status && !validStatuses.includes(query.status as never)) {
@@ -80,11 +101,11 @@ export class QuotationsService {
         createdAt: quotations.createdAt,
         updatedAt: quotations.updatedAt,
         itemCount: sql<number>`(
-          SELECT COUNT(*) FROM quotation_items
+          SELECT COUNT(*)::int FROM quotation_items
           WHERE quotation_items.quotation_id = ${quotations.id}
         )`.as('item_count'),
         bidCount: sql<number>`(
-          SELECT COUNT(*) FROM bids
+          SELECT COUNT(*)::int FROM bids
           WHERE bids.quotation_id = ${quotations.id}
           AND bids.status != 'REJECTED'
         )`.as('bid_count'),
@@ -120,51 +141,65 @@ export class QuotationsService {
       throw new ForbiddenException('Sem permissão para criar cotação.')
     }
 
-    // Gerar número sequencial por empresa: COT-{ano}-{4 dígitos}
     const year = new Date().getFullYear()
-    const [counted] = await this.db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(quotations)
-      .where(
-        and(
-          eq(quotations.companyId, user.companyId!),
-          sql`EXTRACT(YEAR FROM ${quotations.createdAt}) = ${year}`,
-        ),
-      )
-
-    const sequential = String(Number(counted?.count ?? 0) + 1).padStart(4, '0')
-    const number = `COT-${year}-${sequential}`
-
     const { deadline, ...rest } = dto
 
-    const [created] = await this.db.transaction(async (tx) => {
-      const rows = await tx
-        .insert(quotations)
-        .values({
-          ...rest,
-          number,
-          companyId: user.companyId!,
-          createdBy: user.id,
-          status: 'DRAFT',
-          deadline: new Date(deadline),
+    // Número sequencial por empresa: COT-{ano}-{4 dígitos}. Contagem e insert correm
+    // na mesma transação; sob concorrência o índice único (company_id, number) rejeita
+    // a colisão (23505) e reexecutamos — a contagem seguinte já enxerga a linha
+    // concorrente commitada, derivando o próximo número.
+    const MAX_ATTEMPTS = 5
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      try {
+        return await this.db.transaction(async (tx) => {
+          const [counted] = await tx
+            .select({ count: sql<number>`COUNT(*)::int` })
+            .from(quotations)
+            .where(
+              and(
+                eq(quotations.companyId, user.companyId!),
+                sql`EXTRACT(YEAR FROM ${quotations.createdAt}) = ${year}`,
+              ),
+            )
+
+          const sequential = String((counted?.count ?? 0) + 1).padStart(4, '0')
+          const number = `COT-${year}-${sequential}`
+
+          const [created] = await tx
+            .insert(quotations)
+            .values({
+              ...rest,
+              number,
+              companyId: user.companyId!,
+              createdBy: user.id,
+              status: 'DRAFT',
+              deadline: new Date(deadline),
+            })
+            .returning()
+
+          if (!created) throw new BadRequestException('Falha ao criar cotação.')
+
+          await tx.insert(auditLogs).values({
+            entity: 'Quotation',
+            entityId: created.id,
+            action: 'CREATE',
+            before: null,
+            after: created,
+            userId: user.id,
+            companyId: user.companyId,
+          })
+
+          return created
         })
-        .returning()
+      } catch (err) {
+        if (isUniqueViolation(err) && attempt < MAX_ATTEMPTS - 1) continue
+        throw err
+      }
+    }
 
-      await tx.insert(auditLogs).values({
-        entity: 'Quotation',
-        entityId: rows[0]!.id,
-        action: 'CREATE',
-        before: null,
-        after: rows[0],
-        userId: user.id,
-        companyId: user.companyId,
-      })
-
-      return rows
-    })
-
-    if (!created) throw new BadRequestException('Falha ao criar cotação.')
-    return created
+    throw new ConflictException(
+      'Não foi possível gerar um número único para a cotação. Tente novamente.',
+    )
   }
 
   async update(id: string, dto: UpdateQuotationDto, user: SessionUser) {
@@ -262,7 +297,7 @@ export class QuotationsService {
       const rows = await tx
         .update(quotations)
         .set({ status: 'OPEN', updatedAt: new Date() })
-        .where(eq(quotations.id, id))
+        .where(and(eq(quotations.id, id), eq(quotations.companyId, user.companyId!)))
         .returning()
 
       await tx.insert(auditLogs).values({
@@ -307,7 +342,7 @@ export class QuotationsService {
       const rows = await tx
         .update(quotations)
         .set({ status: 'CLOSED', closedAt: new Date(), updatedAt: new Date() })
-        .where(eq(quotations.id, id))
+        .where(and(eq(quotations.id, id), eq(quotations.companyId, user.companyId!)))
         .returning()
 
       await tx.insert(auditLogs).values({
@@ -352,13 +387,19 @@ export class QuotationsService {
       await tx
         .update(quotations)
         .set({ status: 'CANCELLED', updatedAt: new Date() })
-        .where(eq(quotations.id, id))
+        .where(and(eq(quotations.id, id), eq(quotations.companyId, user.companyId!)))
 
       // Rejeitar todos os lances não finalizados (SELECTED/REJECTED são finais)
       await tx
         .update(bids)
         .set({ status: 'REJECTED', updatedAt: new Date() })
-        .where(and(eq(bids.quotationId, id), sql`${bids.status} NOT IN ('SELECTED', 'REJECTED')`))
+        .where(
+          and(
+            eq(bids.quotationId, id),
+            eq(bids.companyId, user.companyId!),
+            sql`${bids.status} NOT IN ('SELECTED', 'REJECTED')`,
+          ),
+        )
 
       await tx.insert(auditLogs).values({
         entity: 'Quotation',
@@ -414,20 +455,35 @@ export class QuotationsService {
       throw new BadRequestException('Itens só podem ser adicionados em cotações com status DRAFT.')
     }
 
-    const [item] = await this.db
-      .insert(quotationItems)
-      .values({
-        quotationId,
-        productId: dto.productId ?? null,
-        description: dto.description,
-        // numeric do postgres.js trafega como string
-        quantity: String(dto.quantity),
-        unit: dto.unit,
-        notes: dto.notes ?? null,
-      })
-      .returning()
+    const item = await this.db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(quotationItems)
+        .values({
+          quotationId,
+          productId: dto.productId ?? null,
+          description: dto.description,
+          // numeric do postgres.js trafega como string
+          quantity: String(dto.quantity),
+          unit: dto.unit,
+          notes: dto.notes ?? null,
+        })
+        .returning()
 
-    if (!item) throw new BadRequestException('Falha ao criar item.')
+      if (!created) throw new BadRequestException('Falha ao criar item.')
+
+      await tx.insert(auditLogs).values({
+        entity: 'QuotationItem',
+        entityId: created.id,
+        action: 'CREATE',
+        before: null,
+        after: created,
+        userId: user.id,
+        companyId: user.companyId,
+      })
+
+      return created
+    })
+
     return item
   }
 
@@ -448,6 +504,14 @@ export class QuotationsService {
       throw new BadRequestException('Itens só podem ser editados em cotações com status DRAFT.')
     }
 
+    const [before] = await this.db
+      .select()
+      .from(quotationItems)
+      .where(and(eq(quotationItems.id, itemId), eq(quotationItems.quotationId, quotationId)))
+      .limit(1)
+
+    if (!before) throw new NotFoundException('Item não encontrado.')
+
     const updateData: Record<string, unknown> = { updatedAt: new Date() }
     if (dto.productId !== undefined) updateData.productId = dto.productId
     if (dto.description !== undefined) updateData.description = dto.description
@@ -455,13 +519,28 @@ export class QuotationsService {
     if (dto.unit !== undefined) updateData.unit = dto.unit
     if (dto.notes !== undefined) updateData.notes = dto.notes
 
-    const [updated] = await this.db
-      .update(quotationItems)
-      .set(updateData)
-      .where(and(eq(quotationItems.id, itemId), eq(quotationItems.quotationId, quotationId)))
-      .returning()
+    const updated = await this.db.transaction(async (tx) => {
+      const [row] = await tx
+        .update(quotationItems)
+        .set(updateData)
+        .where(and(eq(quotationItems.id, itemId), eq(quotationItems.quotationId, quotationId)))
+        .returning()
 
-    if (!updated) throw new NotFoundException('Item não encontrado.')
+      if (!row) throw new NotFoundException('Item não encontrado.')
+
+      await tx.insert(auditLogs).values({
+        entity: 'QuotationItem',
+        entityId: itemId,
+        action: 'UPDATE',
+        before,
+        after: row,
+        userId: user.id,
+        companyId: user.companyId,
+      })
+
+      return row
+    })
+
     return updated
   }
 
@@ -477,9 +556,29 @@ export class QuotationsService {
       throw new BadRequestException('Itens só podem ser removidos em cotações com status DRAFT.')
     }
 
-    await this.db
-      .delete(quotationItems)
+    const [before] = await this.db
+      .select()
+      .from(quotationItems)
       .where(and(eq(quotationItems.id, itemId), eq(quotationItems.quotationId, quotationId)))
+      .limit(1)
+
+    if (!before) return { success: true }
+
+    await this.db.transaction(async (tx) => {
+      await tx
+        .delete(quotationItems)
+        .where(and(eq(quotationItems.id, itemId), eq(quotationItems.quotationId, quotationId)))
+
+      await tx.insert(auditLogs).values({
+        entity: 'QuotationItem',
+        entityId: itemId,
+        action: 'DELETE',
+        before,
+        after: null,
+        userId: user.id,
+        companyId: user.companyId,
+      })
+    })
 
     return { success: true }
   }
@@ -554,17 +653,32 @@ export class QuotationsService {
       throw new ConflictException('Este fornecedor já foi convidado para esta cotação.')
     }
 
-    const [invite] = await this.db
-      .insert(quotationSuppliers)
-      .values({
-        quotationId,
-        supplierId: dto.supplierId,
-        status: 'INVITED',
-        invitedAt: new Date(),
-      })
-      .returning()
+    const invite = await this.db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(quotationSuppliers)
+        .values({
+          quotationId,
+          supplierId: dto.supplierId,
+          status: 'INVITED',
+          invitedAt: new Date(),
+        })
+        .returning()
 
-    if (!invite) throw new BadRequestException('Falha ao criar convite.')
+      if (!created) throw new BadRequestException('Falha ao criar convite.')
+
+      await tx.insert(auditLogs).values({
+        entity: 'QuotationSupplier',
+        entityId: created.id,
+        action: 'INVITE',
+        before: null,
+        after: created,
+        userId: user.id,
+        companyId: user.companyId,
+      })
+
+      return created
+    })
+
     return invite
   }
 
@@ -580,14 +694,39 @@ export class QuotationsService {
       throw new BadRequestException('Convites só podem ser removidos em cotações com status DRAFT.')
     }
 
-    await this.db
-      .delete(quotationSuppliers)
+    const [before] = await this.db
+      .select()
+      .from(quotationSuppliers)
       .where(
         and(
           eq(quotationSuppliers.quotationId, quotationId),
           eq(quotationSuppliers.supplierId, supplierId),
         ),
       )
+      .limit(1)
+
+    if (!before) return { success: true }
+
+    await this.db.transaction(async (tx) => {
+      await tx
+        .delete(quotationSuppliers)
+        .where(
+          and(
+            eq(quotationSuppliers.quotationId, quotationId),
+            eq(quotationSuppliers.supplierId, supplierId),
+          ),
+        )
+
+      await tx.insert(auditLogs).values({
+        entity: 'QuotationSupplier',
+        entityId: before.id,
+        action: 'REMOVE_INVITE',
+        before,
+        after: null,
+        userId: user.id,
+        companyId: user.companyId,
+      })
+    })
 
     return { success: true }
   }

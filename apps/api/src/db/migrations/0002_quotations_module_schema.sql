@@ -9,10 +9,22 @@ ALTER TABLE "quotation_suppliers" ALTER COLUMN "status" SET DEFAULT 'INVITED';--
 ALTER TABLE "quotation_suppliers" ALTER COLUMN "status" SET DATA TYPE "public"."quotation_supplier_status" USING "status"::"public"."quotation_supplier_status";--> statement-breakpoint
 ALTER TABLE "quotation_suppliers" ADD COLUMN "invited_at" timestamp with time zone DEFAULT now() NOT NULL;--> statement-breakpoint
 ALTER TABLE "quotation_suppliers" DROP COLUMN "sent_at";--> statement-breakpoint
-ALTER TABLE "quotations" ADD COLUMN "number" varchar(20) NOT NULL;--> statement-breakpoint
+ALTER TABLE "quotations" ADD COLUMN "number" varchar(20);--> statement-breakpoint
+UPDATE "quotations" q SET "number" = sub.generated FROM (
+	SELECT "id",
+		'COT-' || to_char("created_at", 'YYYY') || '-' || lpad(
+			(row_number() OVER (
+				PARTITION BY "company_id", date_part('year', "created_at")
+				ORDER BY "created_at", "id"
+			))::text, 4, '0'
+		) AS generated
+	FROM "quotations"
+) sub WHERE q."id" = sub."id" AND q."number" IS NULL;--> statement-breakpoint
+ALTER TABLE "quotations" ALTER COLUMN "number" SET NOT NULL;--> statement-breakpoint
 ALTER TABLE "quotations" ADD COLUMN "payment_terms" text;--> statement-breakpoint
 ALTER TABLE "quotation_items" ADD COLUMN "notes" text;--> statement-breakpoint
 ALTER TABLE "quotation_items" ALTER COLUMN "product_id" DROP NOT NULL;--> statement-breakpoint
+UPDATE "quotation_items" SET "description" = '' WHERE "description" IS NULL;--> statement-breakpoint
 ALTER TABLE "quotation_items" ALTER COLUMN "description" SET NOT NULL;--> statement-breakpoint
 ALTER TABLE "quotation_items" ALTER COLUMN "unit" SET DATA TYPE varchar(20);--> statement-breakpoint
 ALTER TABLE "quotation_suppliers" ADD CONSTRAINT "quotation_suppliers_quotation_id_quotations_id_fk" FOREIGN KEY ("quotation_id") REFERENCES "public"."quotations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
