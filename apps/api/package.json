@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "tsc --noEmit",
-    "dev": "tsx watch src/main.ts",
+    "dev": "tsx watch --env-file=.env src/main.ts",
     "start": "node --import tsx src/main.ts",
     "lint": "biome check .",
     "test": "vitest run",
@@ -13,7 +13,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx src/db/seed.ts"
+    "db:seed": "tsx --env-file=.env src/db/seed.ts"
   },
   "dependencies": {
     "@casl/ability": "^7.0.0",

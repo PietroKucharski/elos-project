@@ -18,7 +18,8 @@ import { companies } from '../../db/schema'
 export class CompaniesService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB,
-    private readonly abilityFactory: AbilityFactory,
+    // @Inject explícito: tsx/esbuild não emite metadata de tipo para a DI.
+    @Inject(AbilityFactory) private readonly abilityFactory: AbilityFactory,
   ) {}
 
   // POST /v1/companies — SUPER_ADMIN

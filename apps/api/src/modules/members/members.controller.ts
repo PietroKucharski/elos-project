@@ -11,6 +11,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Param,
   Patch,
   Post,
@@ -29,7 +30,8 @@ import { MembersService } from './members.service'
 @UseGuards(AuthGuard)
 @Controller()
 export class MembersController {
-  constructor(private readonly membersService: MembersService) {}
+  // @Inject explícito: tsx/esbuild não emite metadata de tipo para a DI.
+  constructor(@Inject(MembersService) private readonly membersService: MembersService) {}
 
   // Rota de plataforma — sem cnpj no path; depende apenas de session.user.id.
   // @AllowPlatformRoute() libera o opt-in no AuthGuard (fail-closed por padrão).
