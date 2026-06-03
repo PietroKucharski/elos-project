@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 2 — Fornecedores e Produtos** · `Em andamento` (2.1 concluída) → próxima: **2.2 — Suppliers Module (API)**
+**Fase 2 — Fornecedores e Produtos** · `Em andamento` (2.1 e 2.2 concluídas) → próxima: **2.3 — Products Module (API)**
 
 ---
 
@@ -270,11 +270,35 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   - **Ajuste vs. spec:** ver Decisões Arquiteturais (2.1) — `export type UnitOfMeasure` removido de
     `product.ts` (colidia com o `UnitOfMeasure` já exportado por `enums.ts` no barrel)
 
+- [x] **2.2 — Suppliers Module (API)** — spec `13-suppliers-api-spec.md`
+  - Commit convencional esperado: `feat(api): add suppliers module with crud, approval and sub-resources`
+  - `apps/api/src/modules/suppliers/`: `suppliers.module.ts` (exporta `SuppliersService` para o
+    ProductsService de 2.3), `suppliers.controller.ts` (`@Controller('companies/:cnpj/suppliers')`:
+    GET/POST lista+criação, GET/PATCH `:id`, POST `:id/approve` e `:id/reject`, sub-recursos
+    `:id/contacts` e `:id/bank-accounts` com GET/POST/PATCH/DELETE; Swagger + `ZodValidationPipe` por rota),
+    `suppliers.service.ts` (findAll com filtros `status`/`search`/paginação, findOne com endereço,
+    create/update com upsert de endereço na mesma transação + dedup CNPJ/CPF, approve/reject com regra
+    de status PENDING, contatos e contas bancárias com `isMain`/`isPrimary` Y/N; CASL antes de cada
+    mutação e audit log em todas), `suppliers.service.spec.ts` (15 testes) e `suppliers.controller.spec.ts`
+    — **61 testes da API passando no total**
+  - `ability.factory.ts` — subject `Supplier` tagueado (`& ForcedSubject<'Supplier'>`) adicionado ao
+    union `Subjects` para suportar `subject('Supplier', row)` no Service (as regras de papel `Supplier`
+    já existiam desde a configuração inicial do AbilityFactory)
+  - `app.module.ts` — `SuppliersModule` importado
+  - **Verificado:** `vitest run` (61/61), `pnpm type-check` (3 workspaces) e `biome check` dos arquivos
+    novos verdes (só warnings `noNonNullAssertion` de `companyId!`, severidade `warn`, padrão do projeto).
+    Checklist de segurança coberto pelos testes: 403 sem permissão (read/create/update), 400 em
+    approve/reject fora de PENDING, 409 CNPJ/CPF duplicado, queries escopadas a `companyId`, audit log
+    em create/update/approve/reject
+  - **Ajustes vs. spec:** ver Decisões Arquiteturais (2.2) — `@Inject` explícito na DI, subject `Supplier`
+    tagueado, `findAll` com `| undefined` (exactOptionalPropertyTypes), `enqueue` envolve em array,
+    bracket-keys → dot (useLiteralKeys)
+
 ---
 
 ## Em Progresso
 
-- Nada ativo. **Fase 2.1 concluída**. Próximo: **2.2 — Suppliers Module (API)**.
+- Nada ativo. **Fase 2.2 concluída**. Próximo: **2.3 — Products Module (API)**.
 
 ---
 
@@ -490,6 +514,11 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | `type="button"` + `ROLE_BADGE.TRANSPORTADOR` (dot) (1.5) | Mesmo padrão de 1.4: `<button>` hand-rolled exigem `type="button"` (`useButtonType`); `ROLE_BADGE['TRANSPORTADOR']` trocado por acesso por ponto (`useLiteralKeys`). Ajustes de lint fora do snippet literal |
 | shadcn `table`/`badge`/`select` não instalados (1.5) | A seção 1 da spec manda instalar 5 componentes, mas só `sheet` e `alert-dialog` são importados — tabelas, badges e o select são inline/nativos (a própria checklist diz "tabela sem shadcn Table"). Instalados via CLI apenas os 2 usados; `globals.css` verificado intacto após o `add` |
 | `export type UnitOfMeasure` removido de `product.ts` (2.1) | A spec re-declara `export type UnitOfMeasure = (typeof unitOfMeasureValues)[number]` em `product.ts`, mas `enums.ts` (0.3) já exporta um `UnitOfMeasure` (const + type) com os mesmos 10 valores, e ambos passam pelo barrel `index.ts` → `error TS2308` (re-export ambíguo). Mantido `unitOfMeasureValues` (necessário p/ `z.enum`) e removida a re-declaração do tipo; o `UnitOfMeasure` canônico continua vindo de `enums.ts`. `z.enum(unitOfMeasureValues)` infere o mesmo union literal, sem perda de tipagem |
+| `@Inject` explícito no `SuppliersService`/`SuppliersController` (2.2) | O snippet da spec omite `@Inject(AbilityFactory)`/`@Inject(SuppliersService)`, mas o projeto roda com tsx/esbuild, que **não emite metadata de tipo** para a DI do Nest (mesma nota já documentada no `CompaniesService`/`Controller` de 1.2). Sem o `@Inject` explícito, a resolução do provider falharia em runtime. Adicionado, fiel ao padrão existente |
+| Subject `Supplier` tagueado no CASL em vez de reescrever as `case` (2.2) | A seção 1 da spec mostra adicionar regras `Supplier` por papel **e** o tipo tagueado ao union `Subjects`. As regras de papel (`read`/`create`/`update`/`approve`/`reject` de `Supplier`) **já existiam** no `AbilityFactory` desde a configuração inicial — reescrever as `case` seria redundante e regrediria as regras já mais completas. Aplicado **apenas** o que faltava: `(Supplier & ForcedSubject<'Supplier'>)` no union (mesmo padrão de `Company` 1.2 / `CompanyMember` 1.3), necessário para `subject('Supplier', existing)` no `update`/`approve`/`reject` tipar (sem ele, `error TS2345`) |
+| `findAll(query)` com campos `\| undefined` explícitos (2.2) | O controller passa `{ status: string \| undefined, ... }` (de `@Query()` opcional) ao Service, mas a assinatura da spec usava `{ status?: string }`. Sob `exactOptionalPropertyTypes` (do `tsconfig.base`), `status?: string` **não** aceita `undefined` explícito (`error TS2379`). Tipo do parâmetro ajustado para `status?: string \| undefined` (etc.), preservando a chamada do controller verbatim |
+| `enqueue` envolve o resultado em array no `suppliers.service.spec` (2.2) | O `enqueue(x)` da spec resolvia o thenable com o valor cru, mas o Service consome as queries como arrays (`const [row] = await …` e `.then((r) => r[0] ?? null)`). Com valor cru, `const [row] = undefined` lançava `TypeError` em vez de cair no `NotFoundException`. Corrigido para `resolve([result])`: `enqueue(undefined)` → linha ausente; `enqueue(obj)` → 1 linha — fazendo os 7 testes de guarda (Conflict/NotFound/BadRequest/Forbidden) passarem com as chamadas da spec intactas |
+| Bracket-keys → dot + `biome-ignore noThenProperty` (2.2) | `useLiteralKeys` (error do recommended) sinalizou os acessos `updateData['name']`/`qb['select']`/`service['findAll']` dos snippets — convertidos para acesso por ponto (`--fix --unsafe` do biome, todos identificadores válidos). O thenable de teste (`qb.then = …`) recebe 1 `// biome-ignore lint/suspicious/noThenProperty` (mesmo padrão dos specs de 1.2/1.3). `noNonNullAssertion` de `companyId!` mantidos como warning (severidade `warn`, presente em todos os Services existentes) |
 
 ---
 
@@ -572,3 +601,15 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   Ajustes vs. spec: `next/headers` dinâmico, `client()` importa `api`, `.json<T>()` tipado, `useForm<CreateCompanyDto>`
   + cast do resolver, null→undefined nos defaultValues, `htmlFor`/`id` nos campos — ver Decisões Arquiteturais (1.5).
   **Fase 1 — Auth e Empresas concluída.** Próximo: **Fase 2 — Fornecedores e Produtos**
+- **2.1 concluída**: schemas Zod de fornecedor e produto em `packages/shared` (`schemas/supplier.ts`,
+  `schemas/product.ts`), com `.superRefine` PJ/PF, sub-recursos (contatos, contas bancárias) e vínculo
+  produto↔fornecedor; tipos via `z.infer`, barrel atualizado. `build`/`type-check` verdes. Ajuste vs.
+  spec: `UnitOfMeasure` duplicado removido — ver Decisões Arquiteturais (2.1). Próximo: **2.2**
+- **2.2 concluída**: `SuppliersModule` NestJS (controller + service + module), rotas sob
+  `/v1/companies/:cnpj/suppliers` — CRUD, `approve`/`reject` (regra PENDING), sub-recursos `contacts` e
+  `bank-accounts` (CRUD), endereço via upsert na mesma transação, dedup CNPJ/CPF, CASL antes de cada
+  mutação e audit log em todas. Subject `Supplier` tagueado no `AbilityFactory`, `SuppliersModule` no
+  `app.module` (exporta o Service p/ 2.3). 61 testes da API passando, `type-check` (3 workspaces) e
+  `biome check` verdes. Ajustes vs. spec: `@Inject` explícito, subject tagueado, `findAll` com
+  `| undefined`, `enqueue` em array, bracket-keys→dot — ver Decisões Arquiteturais (2.2).
+  Próximo: **2.3 — Products Module (API)**

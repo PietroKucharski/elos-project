@@ -1,5 +1,9 @@
 # Feature Spec — 1.4 App Shell e Company Switcher (Frontend)
 
+> **Antes de qualquer coisa:** leia o arquivo `CLAUDE.md` na raiz do repositório.
+> Ele define sua persona, as invariantes inegociáveis e a ordem de leitura dos
+> context files que você deve seguir antes de implementar.
+
 **Fase:** 1 — Auth e Empresas  
 **Unidade:** 1.4  
 **Pré-requisito:** 1.3 concluído (endpoints `/v1/me/companies` e `/v1/companies/:cnpj`); 0.5 concluído (Next.js bootstrap, auth client, api client)  

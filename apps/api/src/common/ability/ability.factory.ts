@@ -6,6 +6,7 @@ import {
 } from '@casl/ability'
 import { Injectable } from '@nestjs/common'
 import type { Company, CompanyMember } from '../../db/schema/companies'
+import type { Supplier } from '../../db/schema/suppliers'
 import type { SessionUser } from '../types/session-user'
 
 export type Actions =
@@ -30,7 +31,10 @@ export type Subjects =
   // — ex.: can('read', 'CompanyMember', { companyId }) — sem cair em MongoQuery<never>
   | 'CompanyMember'
   | (CompanyMember & ForcedSubject<'CompanyMember'>)
+  // 'Supplier' tagueado (como 'Company') para suportar condições por objeto via
+  // subject('Supplier', row) no SuppliersService — sem cair em MongoQuery<never>
   | 'Supplier'
+  | (Supplier & ForcedSubject<'Supplier'>)
   | 'SupplierContact'
   | 'SupplierBankAccount'
   | 'Product'
