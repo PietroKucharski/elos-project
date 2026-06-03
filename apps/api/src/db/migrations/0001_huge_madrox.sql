@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX "products_company_id_code_unique" ON "products" USING btree ("company_id","code");--> statement-breakpoint
+ALTER TABLE "product_suppliers" ADD CONSTRAINT "product_suppliers_product_id_supplier_id_unique" UNIQUE("product_id","supplier_id");

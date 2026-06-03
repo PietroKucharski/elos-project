@@ -8,6 +8,13 @@
       "when": 1780237142851,
       "tag": "0000_stormy_blink",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1780490660677,
+      "tag": "0001_huge_madrox",
+      "breakpoints": true
     }
   ]
 }
