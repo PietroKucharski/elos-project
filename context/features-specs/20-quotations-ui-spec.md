@@ -910,7 +910,7 @@ export function QuotationsListClient({
 
 ## Rotas a Criar
 
-```
+```text
 apps/web/src/app/(app)/[cnpj]/quotations/
   page.tsx              ← lista de cotações (SSR + client filter)
   loading.tsx           ← skeleton

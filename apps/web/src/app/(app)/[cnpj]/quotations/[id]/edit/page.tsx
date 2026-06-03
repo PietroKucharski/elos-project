@@ -1,18 +1,28 @@
 // apps/web/src/app/(app)/[cnpj]/quotations/[id]/edit/page.tsx
 import { QuotationForm } from '@/components/domain/quotation-form'
-import { getQuotationServer } from '@/lib/api'
+import { getMyCompaniesServer, getQuotationServer } from '@/lib/api'
 import { notFound } from 'next/navigation'
 
 interface Props {
   params: Promise<{ cnpj: string; id: string }>
 }
 
+const MUTATE_ROLES = ['COMPRADOR', 'ADMIN_EMPRESA', 'SUPER_ADMIN']
+
 export default async function EditQuotationPage({ params }: Props) {
   const { cnpj, id } = await params
 
-  const quotation = await getQuotationServer(cnpj, id)
-  // Apenas cotações em DRAFT são editáveis — o backend bloqueia o restante.
-  if (!quotation || quotation.status !== 'DRAFT') notFound()
+  const [quotation, myCompanies] = await Promise.all([
+    getQuotationServer(cnpj, id),
+    getMyCompaniesServer(),
+  ])
+
+  const role = myCompanies.find((c) => c.cnpj === cnpj)?.role ?? ''
+  const canMutate = MUTATE_ROLES.includes(role)
+
+  // Editável apenas em DRAFT e somente por papéis com permissão de mutação
+  // (mesma regra de `canMutate` da página de detalhe).
+  if (!quotation || quotation.status !== 'DRAFT' || !canMutate) notFound()
 
   return (
     <div className="max-w-[720px]">
