@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 2 — Fornecedores e Produtos** · `Em andamento` (2.1, 2.2 e 2.3 concluídas) → próxima: **2.4 — Suppliers Management UI (Frontend)**
+**Fase 2 — Fornecedores e Produtos** · `Em andamento` (2.1, 2.2, 2.3 e 2.4 concluídas) → próxima: **2.5 — Products Management UI (Frontend)**
 
 ---
 
@@ -320,11 +320,42 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     dinâmico (`inArray` no topo) + `| undefined`, ternário `isActive` simplificado, `enqueue` em array,
     deactivate com escopo `companyId` no update
 
+- [x] **2.4 — Suppliers Management UI (Frontend)** — spec `15-suppliers-ui-spec.md`
+  - Commit convencional esperado: `feat(web): add suppliers ui with list, form, detail and approval`
+  - shadcn via CLI: `tabs` + `select` (pacote `radix-ui` unificado, `globals.css` intacto;
+    `alert-dialog`/`sheet` já vinham de 1.5). `select` instalado conforme a spec mas **não importado**
+    (o form usa `<select>` nativo, padrão de `invite-member-sheet`); `tabs` usado na página de detalhe
+  - `lib/api.ts` estendido: 4 funções server-side (`getSuppliersServer` com query `status`/`search`,
+    `getSupplierServer`, `getSupplierContactsServer`, `getSupplierBankAccountsServer`) + 12 client-side
+    (`createSupplier`/`updateSupplier`/`approveSupplier`/`rejectSupplier`, contatos `addContact`/
+    `updateContact`/`removeContact`, contas `addBankAccount`/`updateBankAccount`/`removeBankAccount`),
+    no padrão `sessionHeaders()` (server) e `client()` ky (client); imports de tipos de `@elos/shared`
+  - `components/domain/`: `supplier-status-badge.tsx` (badge por status), `supplier-form.tsx` (form
+    reutilizável create/edit, `type` PJ/PF só no create define CNPJ↔CPF, cnpj/cpf readonly no edit),
+    `suppliers-list-client.tsx` (Client Component: filtro de status por tabs + busca por nome client-side
+    + tabela com kebab menu — Ver/Editar sempre, Aprovar/Rejeitar só em PENDING e só se `canMutate`),
+    `approve-supplier-dialog.tsx` (rating opcional 1–5), `reject-supplier-dialog.tsx` (motivo obrigatório,
+    bloqueia submit < 5 chars), `supplier-contacts-panel.tsx` e `supplier-bank-accounts-panel.tsx`
+    (Client Components com estado local + AlertDialog de remoção), `add-contact-sheet.tsx` e
+    `add-bank-account-sheet.tsx` (Sheets create/edit no padrão de `invite-member-sheet`)
+  - Rotas `(app)/[cnpj]/suppliers/`: `page.tsx` (SSR lista + filtros via Client Component), `loading.tsx`
+    (skeleton), `error.tsx` (boundary), `new/page.tsx` (form create), `[id]/page.tsx` (detalhe + tabs
+    Info/Contatos/Contas Bancárias), `[id]/edit/page.tsx` (form edit). Sidebar (1.4) já tinha o item
+    "Fornecedores" — nenhuma mudança necessária
+  - **Verificado:** `pnpm --filter @elos/web type-check` (3 workspaces) verde; `biome check` dos arquivos
+    novos limpo (só 1 warning `noNonNullAssertion` em `supplier-form`, mesmo `supplierId!` que o `cnpj!`
+    de `company-form` — padrão do projeto); `pnpm --filter web build` **compila + gera as 4 rotas de
+    suppliers** (`page`/`new`/`[id]`/`[id]/edit` confirmados em `.next/server/app`). Passo `output:
+    'standalone'` falha por `EPERM` de symlink no Windows (mesma limitação de 0.5/1.4/1.5). Fluxo runtime
+    (criar/editar/aprovar/rejeitar, tabs, painéis de contato/conta) não exercitado — requer API + banco vivos
+  - **Ajustes vs. spec:** ver Decisões Arquiteturais (2.4) — role via membership (não `session.user.role`),
+    `Resolver` cast nos forms com `.default()`, narrowing em vez de `!` nos sheets, `console.error` nos catch
+
 ---
 
 ## Em Progresso
 
-- Nada ativo. **Fase 2.3 concluída**. Próximo: **2.4 — Suppliers Management UI (Frontend)**.
+- Nada ativo. **Fase 2.4 concluída**. Próximo: **2.5 — Products Management UI (Frontend)**.
 
 ---
 
@@ -552,6 +583,11 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | `enqueue` envolve em array + `deactivate` escopa `companyId` no update (2.3) | `enqueue` segue o padrão de 2.2 (`resolve([result])`) — o Service consome queries como arrays (`const [row] = …` / `.then((r) => r[0])`); valor cru lançaria `TypeError` em vez do `NotFoundException`. No `deactivate`, o `update` da spec filtrava só por `eq(products.id, id)`; adicionado `eq(products.companyId, …)` (invariante 8: toda query escopada ao tenant) — defesa em profundidade, embora o `existing` já tenha sido validado por `companyId` |
 | Constraints de unicidade no banco + catch `23505` (2.3, hardening pós-review) | As checagens select-then-insert de `code` (create/update) e do vínculo (linkSupplier) eram racy (duas requisições concorrentes passam pela checagem antes do insert). Adicionados: `uniqueIndex('products_company_id_code_unique')` em `(company_id, code)` (code nullable → NULLs distintos, produtos sem código não colidem) e `unique('product_suppliers_product_id_supplier_id_unique')` em `(product_id, supplier_id)`; migration `0001_huge_madrox.sql`. As pré-checagens viram otimistas (mensagem amigável no caso comum) e os writes ganham `try/catch` mapeando `isUniqueViolation` (PG `23505`) → `ConflictException` com as **mesmas mensagens** — corrida fecha em 409, sem vazar erro do driver nem duplicar |
 | Pré-query de `supplierId` escopada ao tenant via join (2.3, hardening pós-review) | O `findAll(supplierId)` montava `linkedProductIds` de `productSuppliers` filtrando só por `supplierId` (cross-tenant). O resultado final já era correto (a query principal tem `eq(products.companyId, …)`), mas a pré-query passou a `innerJoin(products)` + `eq(products.companyId, …)` — defesa em profundidade, ids de outro tenant nunca entram no `inArray` |
+| Role via membership, não `session.user.role` (2.4) | Os snippets da spec derivam `canMutate` de `session.user.role` (`auth.api.getSession`), mas no Elos o papel é **por empresa** — vive na membership, não no `user` global. O `AuthSession` de `lib/server-auth.ts` nem expõe `role`. As páginas (list/detail) seguem o padrão real já usado pelo `[cnpj]/layout.tsx`: `getMyCompaniesServer()` + `myCompanies.find((c) => c.cnpj === cnpj)?.role`. `canMutate = role ∈ {COMPRADOR, ADMIN_EMPRESA, SUPER_ADMIN}` |
+| `Resolver` cast nos forms com `.default()` (2.4) | `useForm<CreateSupplierContactDto>`/`<CreateSupplierBankAccountDto>` falhavam o type-check: `isMain`/`isPrimary`/`accountType` têm `.default()` no Zod, fazendo o tipo de **input** (opcional) divergir do **output** (obrigatório) que o react-hook-form usa nas duas pontas (TS2322/TS2345). `resolver: zodResolver(schema) as Resolver<T>` (mesmo padrão de `company-form` 1.5) reconcilia. O `supplier-form` usa o superset `CreateSupplierDto` com o schema trocando por modo |
+| Narrowing em vez de `!` nos sheets (2.4) | `add-contact-sheet`/`add-bank-account-sheet` usavam `isEdit ? update(…, contact!.id) : add(…)` — o `!` disparava `noNonNullAssertion` (warning, mas evitável). Trocado por `const saved = contact ? update(…, contact.id) : add(…)`: dentro do ramo truthy o TS estreita `contact`/`account` para não-nulo, eliminando o assert. `supplier-form` mantém `supplierId!` (idêntico ao `cnpj!` de `company-form`, warning aceito do projeto) |
+| `console.error` nos `catch` dos componentes (2.4) | Os snippets da spec usam `} catch {` só com `toast.error`. Invariante 5 ("nenhum `catch {}` vazio — sempre logar ou relançar") + o padrão de `company-form`/`members-table` (1.5) pedem log. Todos os catch ganharam `catch (error) { console.error('[Componente.handler]', error); toast.error(...) }` |
+| `select` do shadcn instalado mas não importado (2.4) | A seção 1 da spec manda `add tabs select`. `tabs` é usado na página de detalhe; `select` foi instalado (fidelidade ao escopo, e o `globals.css` foi verificado intacto após o `add`) mas **não importado** — o `supplier-form` e os sheets usam `<select>` nativo estilizado, mesmo padrão de `invite-member-sheet` (1.5). Sem perda funcional |
 
 ---
 
@@ -657,3 +693,15 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   `findAll` sem `import()` dinâmico (`inArray` no topo), ternário `isActive` simplificado, `enqueue` em
   array, deactivate escopa `companyId` — ver Decisões Arquiteturais (2.3). Próximo: **2.4 — Suppliers
   Management UI (Frontend)**
+- **2.4 concluída**: UI de gestão de fornecedores (frontend) — shadcn `tabs`+`select` via CLI (`select`
+  não importado; form usa `<select>` nativo), `lib/api.ts` estendido com 4 funções server-side + 12
+  client-side de suppliers/contacts/bank-accounts, `components/domain/` (`supplier-status-badge`,
+  `supplier-form`, `suppliers-list-client` com filtro de status por tabs + busca + kebab Aprovar/Rejeitar
+  só em PENDING, `approve`/`reject-supplier-dialog`, `supplier-contacts-panel`/`supplier-bank-accounts-panel`,
+  `add-contact-sheet`/`add-bank-account-sheet`), e rotas `[cnpj]/suppliers` (`page`/`loading`/`error`/`new`/
+  `[id]`/`[id]/edit`). Sidebar de 1.4 já tinha o item "Fornecedores". `type-check` (3 workspaces) verde,
+  `biome check` dos arquivos novos limpo (1 warning `noNonNullAssertion` esperado), `build` compila + gera
+  as 4 rotas de suppliers (passo `standalone` falha por `EPERM` de symlink no Windows — mesma limitação de
+  0.5/1.4/1.5). Ajustes vs. spec: role via membership (não `session.user.role`), `Resolver` cast nos forms
+  com `.default()`, narrowing em vez de `!` nos sheets, `console.error` nos catch — ver Decisões
+  Arquiteturais (2.4). Próximo: **2.5 — Products Management UI (Frontend)**
