@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 3 — Cotações e Lances** · `Em andamento` (3.2 concluída) → próxima unidade: **3.3 — Bids Module (API)**
+**Fase 3 — Cotações e Lances** · `Em andamento` (3.3 concluída) → próxima unidade: **3.4 — Quotations Management UI (Frontend)**
 
 ---
 
@@ -446,11 +446,44 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     exige TTY p/ prompts de rename, indisponível no ambiente), `enqueue` do service spec virou fila
     sequencial (a versão da spec sobrescrevia e quebrava o fluxo multi-select do inviteSupplier)
 
+- [x] **3.3 — Bids Module (API)** — spec `19-bids-api-spec.md`
+  - Commit convencional esperado: `feat(api): add bids module with crud, comparison and winner selection`
+  - `apps/api/src/modules/bids/`: `bids.module.ts` (exporta `BidsService`), `bids.controller.ts`
+    (`@Controller('companies/:cnpj/quotations/:quotationId')`: GET/POST `bids`, GET `bids/compare`
+    **registrado antes** de GET `bids/:bidId`, GET/PATCH/DELETE `bids/:bidId`, POST `bids/:bidId/submit`,
+    sub-recurso `bids/:bidId/items` GET/POST/PATCH/DELETE, POST `select-winner`; Swagger + `ZodValidationPipe`
+    por rota), `bids.service.ts` (findAll/findOne com `totalPrice` via subquery, create em nome do
+    fornecedor **convidado** com dedup de lance por cotação, update/remove só em DRAFT, submit DRAFT→SUBMITTED
+    exige ≥1 item e marca o convite como RESPONDED, itens 1:1 com `quotation_items` com dedup, compare em
+    matrix itens×fornecedores, selectWinner em cotação CLOSED marca SELECTED + rejeita os demais SUBMITTED;
+    CASL antes de cada mutação e audit log em create/update/delete/submit/select_winner + itens),
+    `bids.service.spec.ts` (14 testes) e `bids.controller.spec.ts` (7 testes) — **115 testes da API no total**
+  - `ability.factory.ts` — subject `Bid` tagueado (`& ForcedSubject<'Bid'>`) p/ `subject('Bid', existing)`
+    no update/remove/submit; COMPRADOR e ADMIN_EMPRESA com `read`/`create`/`update`/`delete` de `Bid`
+    escopado a `{ companyId }` (a regra antiga `read`+`select` do COMPRADOR foi substituída — selectWinner
+    usa `update`, não `select`); ALMOXARIFE/ANALISTA_FINANCEIRO/TRANSPORTADOR ganham `read` escopado
+  - `app.module.ts` — `BidsModule` importado
+  - **Mapeamento DB↔contrato:** a tabela `bids`/`bid_items` (gerada na 0.3) usa `observations`/`payment_terms`
+    e `numeric` p/ `unit_price`/`delivery_days`, enquanto o `@elos/shared` (3.1) expõe `notes` e
+    `deliveryDays: number`. Em vez de migrar o schema (fora do escopo "In" da 3.3), o service **mapeia**:
+    `dto.notes`↔coluna `observations`, `String(unitPrice)`/`String(deliveryDays)` no insert e
+    `${deliveryDays}::int` no select. O vencedor é `SELECTED` (enum canônico `bid_status`), não `ACCEPTED`
+  - **Verificado:** `vitest run` (115/115), `pnpm type-check` (3 workspaces) e `biome check` dos arquivos
+    novos verdes (só warnings `noNonNullAssertion` de `companyId!`, severidade `warn`, padrão do projeto).
+    Checklist de segurança coberto: 400 em create fora de OPEN, 400 fornecedor não convidado, 409 lance
+    duplicado, 400 submit sem itens, 400 select-winner fora de CLOSED, 400 lance não SUBMITTED, 409 já há
+    vencedor, `compare` não interpreta "compare" como `:bidId`, queries escopadas a `companyId`, audit log
+    em toda mutação. Banco vivo não executado — sem Supabase neste ambiente
+  - **Ajustes vs. spec:** ver Decisões Arquiteturais (3.3) — bids importados de `db/schema/quotations`
+    (não há `db/schema/bids.ts`), mapeamento `notes`↔`observations` + numeric→string, status `SELECTED`
+    (não `ACCEPTED`), `@Inject` explícito na DI, audit log adicionado a delete/itens, `enqueue` do service
+    spec como fila sequencial (a versão da spec sobrescrevia e quebrava os fluxos multi-select)
+
 ---
 
 ## Em Progresso
 
-- Nada ativo. **3.2 concluída**. Próximo: **3.3 — Bids Module (API)**.
+- Nada ativo. **3.3 concluída**. Próximo: **3.4 — Quotations Management UI (Frontend)**.
 
 ---
 
@@ -699,6 +732,11 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | `cancel` rejeita lances `NOT IN ('SELECTED','REJECTED')` (3.2) | O snippet usa `NOT IN ('ACCEPTED','REJECTED')`, mas o enum canônico `BidStatus`/`bid_status` (enums.ts + DB) não tem `ACCEPTED` — o estado "vencedor" é `SELECTED`. Usar `'ACCEPTED'` no `sql` cru falharia o cast de enum em runtime. Trocado para `SELECTED` (estados finais = SELECTED/REJECTED), consistente com a 3.1 |
 | `quantity` numeric→string + `set` explícito no item (3.2) | `quotation_items.quantity` é `numeric` (tipo de insert do Drizzle = `string`), mas `CreateQuotationItemDto.quantity` é `number`; `.values({ ...dto })` falharia o type-check. `addItem` monta os values explicitamente com `String(dto.quantity)` e `productId/notes ?? null`; `updateItem` monta o `set` campo-a-campo (padrão do `SuppliersService.updateContact`). No `create`/`update` da cotação o `deadline` (string) é destruturado p/ fora do spread antes de `new Date(...)`, evitando o conflito string×Date no `set`/`values` |
 | `@Inject` explícito + `enqueue` como fila no spec (3.2) | `@Inject(DRIZZLE)`/`@Inject(AbilityFactory)`/`@Inject(QuotationsService)` adicionados (tsx/esbuild não emite metadata de DI — padrão de 1.2/2.2/2.3). O `enqueue` do `quotations.service.spec` da spec **sobrescrevia** `qb.then` a cada chamada (só o último valor valia), quebrando o teste de `inviteSupplier` que encadeia 3 selects (cotação→fornecedor→convite duplicado); reescrito como **fila sequencial** (`resultsQueue.shift()`), fazendo cada `await` consumir o próximo resultado na ordem. 95/95 testes passam |
+| `bids`/`bid_items` importados de `db/schema/quotations` (3.3) | Mesmo motivo de 3.2: o snippet do service importa de `'../../db/schema/bids'`, arquivo que **não existe** — `bids`/`bidItems` vivem em `quotations.ts` (definidos na 0.3, referenciados por `purchase-orders.ts`/`relations.ts`). Service importa de `'../../db/schema/quotations'`, sem criar arquivo nem tocar a estrutura |
+| Mapeamento `notes`↔`observations` + numeric→string (3.3) | A tabela `bids`/`bid_items` (0.3) usa as colunas `observations`/`payment_terms` e `numeric` p/ `unit_price`/`delivery_days`, mas o contrato `@elos/shared` (3.1, fonte de verdade) expõe `notes` e `deliveryDays: number`. Como mexer no schema está fora do escopo "In" da 3.3 (só module/controller/service/ability/app), o service **mapeia** em vez de migrar: `dto.notes`→coluna `observations` no insert/update (`updateData.observations = dto.notes`) e `notes: bids.observations` no select; `String(dto.unitPrice)`/`String(dto.deliveryDays)` no insert (insert do Drizzle p/ numeric = `string`) e `${bidItems.deliveryDays}::int` no select (response exige `number`). `totalPrice` calculado por subquery `SUM(unit_price * quantity)::text` |
+| Vencedor = `SELECTED`, não `ACCEPTED` (3.3) | O snippet da spec usa `'ACCEPTED'` em toda a seleção de vencedor (set, dedup de vencedor existente, `isWinner` do compare), mas o enum canônico `BidStatus`/`bid_status` (enums.ts + DB) não tem `ACCEPTED` — o estado é `SELECTED` (mesma reconciliação já feita em 3.1/3.2). `selectWinner` grava `SELECTED`, o guard de vencedor existente filtra `eq(bids.status, 'SELECTED')` e `compare` marca `isWinner: bid.status === 'SELECTED'` |
+| Regras `Bid` do COMPRADOR substituídas + subject tagueado (3.3) | A 0.4/3.1 tinha `can('read','Bid')` + `can('select','Bid')` (sem escopo) p/ COMPRADOR; a spec 3.3 pede `read`/`create`/`update`/`delete` escopados a `{ companyId }`. Como `selectWinner` passou a usar `ability.cannot('update','Bid')` (não `'select'`), as duas regras antigas foram **substituídas** pelas 4 CRUD escopadas; ADMIN_EMPRESA (que não tinha regra `Bid`) ganhou as mesmas 4; ALMOXARIFE/ANALISTA_FINANCEIRO/TRANSPORTADOR ganham `read` escopado. `(Bid & ForcedSubject<'Bid'>)` adicionado ao union `Subjects` p/ `subject('Bid', existing)` tipar no update/remove/submit (mesmo padrão de Quotation 3.2). A action `'select'` ficou órfã no union `Actions` mas é inócua (mantida p/ minimizar churn) |
+| Audit log em delete/itens + `@Inject` + `enqueue` como fila (3.3) | `@Inject(DRIZZLE)`/`@Inject(AbilityFactory)`/`@Inject(BidsService)` adicionados (tsx/esbuild não emite metadata de DI — padrão desde 1.2). O snippet da spec **não** registrava audit log no `remove` nem nos itens de lance (só create/submit/select_winner) e fazia `delete` fora de transação; alinhado ao `QuotationsService` (invariante: toda mutação gera `audit_logs`), `remove`/`addBidItem`/`updateBidItem`/`removeBidItem` agora envolvem write+audit numa transação. O `enqueue` do `bids.service.spec` da spec **sobrescrevia** `qb.then` a cada chamada (quebrando os fluxos multi-select de create/submit/selectWinner/addBidItem); reescrito como **fila sequencial** (`resultsQueue.shift()`, padrão de 3.2). 115/115 testes passam |
 
 ---
 

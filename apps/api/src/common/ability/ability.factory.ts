@@ -7,7 +7,7 @@ import {
 import { Injectable } from '@nestjs/common'
 import type { Company, CompanyMember } from '../../db/schema/companies'
 import type { Product } from '../../db/schema/products'
-import type { Quotation } from '../../db/schema/quotations'
+import type { Bid, Quotation } from '../../db/schema/quotations'
 import type { Supplier } from '../../db/schema/suppliers'
 import type { SessionUser } from '../types/session-user'
 
@@ -50,7 +50,10 @@ export type Subjects =
   | (Quotation & ForcedSubject<'Quotation'>)
   | 'QuotationItem'
   | 'QuotationInvite'
+  // 'Bid' tagueado (como 'Quotation') para suportar condições por objeto via
+  // subject('Bid', row) no BidsService — sem cair em MongoQuery<never>
   | 'Bid'
+  | (Bid & ForcedSubject<'Bid'>)
   | 'BidItem'
   | 'PurchaseOrder'
   | 'PurchaseOrderItem'
@@ -93,6 +96,10 @@ export class AbilityFactory {
         can('manage', 'Product')
         can('manage', 'ProductSupplier')
         can('manage', 'Quotation')
+        can('read', 'Bid', { companyId })
+        can('create', 'Bid', { companyId })
+        can('update', 'Bid', { companyId })
+        can('delete', 'Bid', { companyId })
         can('manage', 'PurchaseOrder')
         can('manage', 'Warehouse')
         can('manage', 'Inventory')
@@ -117,8 +124,10 @@ export class AbilityFactory {
         can('manage', 'Quotation')
         can('manage', 'QuotationItem')
         can('manage', 'QuotationInvite')
-        can('read', 'Bid')
-        can('select', 'Bid')
+        can('read', 'Bid', { companyId })
+        can('create', 'Bid', { companyId })
+        can('update', 'Bid', { companyId })
+        can('delete', 'Bid', { companyId })
         can('manage', 'PurchaseOrder')
         can('approve', 'PurchaseOrder')
         can('read', 'Receipt')
@@ -132,6 +141,7 @@ export class AbilityFactory {
         can('read', 'CompanyMember', { companyId })
         can('read', 'Product')
         can('read', 'Quotation')
+        can('read', 'Bid', { companyId })
         can('read', 'PurchaseOrder')
         can('manage', 'Receipt')
         can('manage', 'Warehouse')
@@ -145,6 +155,7 @@ export class AbilityFactory {
         can('read', 'CompanyMember', { companyId })
         can('read', 'Product')
         can('read', 'Quotation')
+        can('read', 'Bid', { companyId })
         can('read', 'PurchaseOrder')
         can('read', 'Receipt')
         can('manage', 'Invoice')
@@ -156,6 +167,7 @@ export class AbilityFactory {
         can('read', 'CompanyMember', { companyId })
         can('read', 'Product')
         can('read', 'Quotation')
+        can('read', 'Bid', { companyId })
         can('read', 'PurchaseOrder')
         can('manage', 'Shipment')
         break
