@@ -35,7 +35,10 @@ export function ApproveSupplierDialog({
   const [rating, setRating] = useState('')
   const [loading, setLoading] = useState(false)
 
-  async function handleApprove() {
+  async function handleApprove(event: React.MouseEvent<HTMLButtonElement>) {
+    // Impede o auto-close padrão do Radix para que o estado de loading apareça
+    // e o dialog só feche após a aprovação concluir (ou falhar).
+    event.preventDefault()
     setLoading(true)
     try {
       await approveSupplier(cnpj, supplierId, {

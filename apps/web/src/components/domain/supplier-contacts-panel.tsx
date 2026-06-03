@@ -41,8 +41,13 @@ export function SupplierContactsPanel({
 
   function handleSaved(saved: SupplierContactResponse) {
     setContacts((prev) => {
-      const exists = prev.some((c) => c.id === saved.id)
-      return exists ? prev.map((c) => (c.id === saved.id ? saved : c)) : [...prev, saved]
+      // Espelha a regra do servidor: só um contato principal. Se o salvo é
+      // principal, zera isMain dos demais para não exibir múltiplos badges.
+      const base = saved.isMain
+        ? prev.map((c) => (c.id === saved.id ? c : { ...c, isMain: false }))
+        : prev
+      const exists = base.some((c) => c.id === saved.id)
+      return exists ? base.map((c) => (c.id === saved.id ? saved : c)) : [...base, saved]
     })
   }
 
