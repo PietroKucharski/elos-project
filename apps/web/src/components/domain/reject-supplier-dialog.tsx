@@ -67,11 +67,8 @@ export function RejectSupplierDialog({
             para rastreabilidade.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <div style={{ padding: '0 0 8px' }}>
-          <label
-            htmlFor="reject-notes"
-            style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}
-          >
+        <div className="pb-2">
+          <label htmlFor="reject-notes" className="mb-1.5 block text-[13px] font-medium">
             Motivo da rejeição *
           </label>
           <textarea
@@ -80,14 +77,7 @@ export function RejectSupplierDialog({
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
             placeholder="Descreva o motivo..."
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              fontSize: 13,
-              resize: 'vertical',
-              border: '1px solid hsl(214 32% 91%)',
-              borderRadius: '0.375rem',
-            }}
+            className="w-full resize-y rounded-md border border-input px-3 py-2 text-[13px]"
           />
         </div>
         <AlertDialogFooter>
@@ -95,7 +85,7 @@ export function RejectSupplierDialog({
           <AlertDialogAction
             onClick={handleReject}
             disabled={loading}
-            style={{ background: 'hsl(0 84% 60%)', color: 'white' }}
+            className="bg-destructive text-white hover:bg-destructive/90"
           >
             {loading ? 'Rejeitando...' : 'Rejeitar'}
           </AlertDialogAction>

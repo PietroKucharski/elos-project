@@ -24,7 +24,7 @@ export default async function CompanyLayout({ children, params }: Props) {
   if (!membership) notFound() // AuthGuard da API já garantiu acesso; isso é proteção extra no SSR
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+    <div className="flex h-screen flex-col overflow-hidden">
       <Topbar
         companyName={company.name}
         companyCnpj={cnpj}
@@ -32,12 +32,10 @@ export default async function CompanyLayout({ children, params }: Props) {
         userName={session.user.name}
         userEmail={session.user.email}
       />
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div className="flex flex-1 overflow-hidden">
         <Sidebar cnpj={cnpj} role={membership.role} />
-        <main style={{ flex: 1, overflowY: 'auto', background: 'hsl(210 40% 98%)' }}>
-          <div style={{ padding: 24, maxWidth: 1320, margin: '0 auto' }} className="page-enter">
-            {children}
-          </div>
+        <main className="flex-1 overflow-y-auto bg-background">
+          <div className="page-enter mx-auto max-w-[1320px] p-6">{children}</div>
         </main>
       </div>
     </div>

@@ -17,28 +17,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!isSuperAdmin) redirect('/')
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+    <div className="flex h-screen flex-col overflow-hidden">
       {/* Shell simplificada para área de plataforma — sem sidebar de empresa */}
-      <header
-        style={{
-          height: 64,
-          flexShrink: 0,
-          background: 'hsl(0 0% 100%)',
-          borderBottom: '1px solid hsl(214 32% 91%)',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 20px',
-          gap: 14,
-        }}
-      >
+      <header className="flex h-16 shrink-0 items-center gap-3.5 border-b border-border bg-card px-5">
         <Logo size={18} />
-        <div style={{ width: 1, height: 26, background: 'hsl(214 32% 91%)' }} />
-        <span style={{ fontSize: 13.5, color: 'hsl(215 16% 47%)' }}>
-          Administração da Plataforma
-        </span>
+        <div className="h-[26px] w-px bg-border" />
+        <span className="text-[13.5px] text-muted-foreground">Administração da Plataforma</span>
       </header>
-      <main style={{ flex: 1, overflowY: 'auto', background: 'hsl(210 40% 98%)' }}>
-        <div style={{ padding: 24, maxWidth: 1320, margin: '0 auto' }}>{children}</div>
+      <main className="flex-1 overflow-y-auto bg-background">
+        <div className="mx-auto max-w-[1320px] p-6">{children}</div>
       </main>
     </div>
   )

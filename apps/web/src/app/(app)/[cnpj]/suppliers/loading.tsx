@@ -2,16 +2,12 @@
 export default function SuppliersLoading() {
   return (
     <div>
-      <div
-        className="skeleton"
-        style={{ height: 28, width: 180, marginBottom: 24, borderRadius: 6 }}
-      />
+      <div className="skeleton mb-6 h-7 w-[180px] rounded-md" />
       {Array.from({ length: 5 }).map((_, i) => (
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: skeleton estático sem identidade própria
           key={i}
-          className="skeleton"
-          style={{ height: 48, marginBottom: 8, borderRadius: 6 }}
+          className="skeleton mb-2 h-12 rounded-md"
         />
       ))}
     </div>

@@ -16,10 +16,8 @@ export default function SuppliersError({
   }, [error])
 
   return (
-    <div style={{ padding: '28px 32px', textAlign: 'center' }}>
-      <p style={{ fontSize: 15, color: 'hsl(0 84% 60%)', marginBottom: 16 }}>
-        Erro ao carregar fornecedores.
-      </p>
+    <div className="px-8 py-7 text-center">
+      <p className="mb-4 text-[15px] text-destructive">Erro ao carregar fornecedores.</p>
       <Button variant="outline" onClick={reset}>
         Tentar novamente
       </Button>

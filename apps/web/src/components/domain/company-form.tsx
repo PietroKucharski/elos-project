@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { createCompany, updateCompany } from '@/lib/api'
+import { cn } from '@/lib/utils'
 import { createCompanySchema, updateCompanySchema } from '@elos/shared'
 import type { CompanyResponse, CreateCompanyDto, UpdateCompanyDto } from '@elos/shared'
 // apps/web/src/components/domain/company-form.tsx
@@ -21,44 +22,14 @@ interface CompanyFormProps {
   onSuccess?: (company: CompanyResponse) => void
 }
 
-// Estilos reutilizáveis alinhados ao protótipo
-const fieldStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6 }
-const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 500, color: 'hsl(217 33% 17%)' }
-const inputStyle: React.CSSProperties = {
-  height: 38,
-  padding: '0 12px',
-  fontSize: 13.5,
-  borderRadius: '0.375rem',
-  border: '1px solid hsl(214 32% 91%)',
-  background: 'hsl(0 0% 100%)',
-  color: 'hsl(222 47% 11%)',
-  outline: 'none',
-  transition: 'border .15s, box-shadow .15s',
-  width: '100%',
-}
-const inputReadonlyStyle: React.CSSProperties = {
-  ...inputStyle,
-  background: 'hsl(210 40% 96.1%)',
-  fontFamily: 'monospace',
-  cursor: 'not-allowed',
-}
-const errorStyle: React.CSSProperties = { fontSize: 12, color: 'hsl(0 72% 51%)' }
-const sectionTitle: React.CSSProperties = {
-  fontSize: 15.5,
-  fontWeight: 600,
-  color: 'hsl(222 47% 11%)',
-  marginBottom: 14,
-  marginTop: 4,
-}
-
-function inputFocus(e: React.FocusEvent<HTMLInputElement>) {
-  e.target.style.borderColor = 'hsl(243 75% 59%)'
-  e.target.style.boxShadow = '0 0 0 3px hsl(243 75% 59% / 0.13)'
-}
-function inputBlur(e: React.FocusEvent<HTMLInputElement>) {
-  e.target.style.borderColor = 'hsl(214 32% 91%)'
-  e.target.style.boxShadow = 'none'
-}
+// Classes reutilizáveis alinhadas ao protótipo
+const FIELD = 'flex flex-col gap-1.5'
+const LABEL = 'text-[13px] font-medium text-foreground-2'
+const INPUT =
+  'h-[38px] w-full rounded-md border border-input bg-card px-3 text-[13.5px] text-foreground outline-none transition-[border-color,box-shadow] focus:border-ring focus:ring-3 focus:ring-ring/[0.13]'
+const INPUT_READONLY = cn(INPUT, 'cursor-not-allowed bg-muted font-mono')
+const ERROR = 'text-xs text-destructive'
+const SECTION_TITLE = 'mt-1 mb-3.5 text-[15.5px] font-semibold text-foreground'
 
 export function CompanyForm({ mode, cnpj, defaultValues, onSuccess }: CompanyFormProps) {
   const router = useRouter()
@@ -98,66 +69,49 @@ export function CompanyForm({ mode, cnpj, defaultValues, onSuccess }: CompanyFor
   }
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 780 }}
-    >
+    <form onSubmit={handleSubmit(onSubmit)} className="flex max-w-[780px] flex-col gap-5">
       {/* ── Identificação ────────────────────────────────────── */}
       <div>
-        <div style={sectionTitle}>Identificação</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <div style={{ ...fieldStyle, gridColumn: '1 / -1' }}>
-            <label htmlFor="company-name" style={labelStyle}>
-              Razão Social <span style={{ color: 'hsl(0 72% 51%)' }}>*</span>
+        <div className={SECTION_TITLE}>Identificação</div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className={cn(FIELD, 'col-span-2')}>
+            <label htmlFor="company-name" className={LABEL}>
+              Razão Social <span className="text-destructive">*</span>
             </label>
-            <input
-              id="company-name"
-              {...register('name')}
-              style={inputStyle}
-              onFocus={inputFocus}
-              onBlur={inputBlur}
-            />
+            <input id="company-name" {...register('name')} className={INPUT} />
             {errors.name && (
-              <span style={errorStyle} role="alert">
+              <span className={ERROR} role="alert">
                 {errors.name.message}
               </span>
             )}
           </div>
-          <div style={fieldStyle}>
-            <label htmlFor="company-tradeName" style={labelStyle}>
+          <div className={FIELD}>
+            <label htmlFor="company-tradeName" className={LABEL}>
               Nome Fantasia
             </label>
-            <input
-              id="company-tradeName"
-              {...register('tradeName')}
-              style={inputStyle}
-              onFocus={inputFocus}
-              onBlur={inputBlur}
-            />
+            <input id="company-tradeName" {...register('tradeName')} className={INPUT} />
           </div>
-          <div style={fieldStyle}>
-            <label htmlFor="company-cnpj" style={labelStyle}>
-              CNPJ {mode === 'create' && <span style={{ color: 'hsl(0 72% 51%)' }}>*</span>}
+          <div className={FIELD}>
+            <label htmlFor="company-cnpj" className={LABEL}>
+              CNPJ {mode === 'create' && <span className="text-destructive">*</span>}
             </label>
             {mode === 'create' ? (
               <>
                 <input
                   id="company-cnpj"
                   {...register('cnpj')}
-                  style={inputStyle}
+                  className={INPUT}
                   placeholder="14 dígitos sem formatação"
                   maxLength={14}
-                  onFocus={inputFocus}
-                  onBlur={inputBlur}
                 />
                 {errors.cnpj && (
-                  <span style={errorStyle} role="alert">
+                  <span className={ERROR} role="alert">
                     {errors.cnpj.message}
                   </span>
                 )}
               </>
             ) : (
-              <input id="company-cnpj" value={cnpj} readOnly style={inputReadonlyStyle} />
+              <input id="company-cnpj" value={cnpj} readOnly className={INPUT_READONLY} />
             )}
           </div>
         </div>
@@ -165,108 +119,64 @@ export function CompanyForm({ mode, cnpj, defaultValues, onSuccess }: CompanyFor
 
       {/* ── Contato ──────────────────────────────────────────── */}
       <div>
-        <div style={sectionTitle}>Contato</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <div style={fieldStyle}>
-            <label htmlFor="company-email" style={labelStyle}>
+        <div className={SECTION_TITLE}>Contato</div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className={FIELD}>
+            <label htmlFor="company-email" className={LABEL}>
               E-mail
             </label>
-            <input
-              id="company-email"
-              type="email"
-              {...register('email')}
-              style={inputStyle}
-              onFocus={inputFocus}
-              onBlur={inputBlur}
-            />
+            <input id="company-email" type="email" {...register('email')} className={INPUT} />
             {errors.email && (
-              <span style={errorStyle} role="alert">
+              <span className={ERROR} role="alert">
                 {errors.email.message}
               </span>
             )}
           </div>
-          <div style={fieldStyle}>
-            <label htmlFor="company-phone" style={labelStyle}>
+          <div className={FIELD}>
+            <label htmlFor="company-phone" className={LABEL}>
               Telefone
             </label>
-            <input
-              id="company-phone"
-              {...register('phone')}
-              style={inputStyle}
-              onFocus={inputFocus}
-              onBlur={inputBlur}
-            />
+            <input id="company-phone" {...register('phone')} className={INPUT} />
           </div>
         </div>
       </div>
 
       {/* ── Endereço ─────────────────────────────────────────── */}
       <div>
-        <div style={sectionTitle}>Endereço</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 16 }}>
-          <div style={{ ...fieldStyle, gridColumn: 'span 4' }}>
-            <label htmlFor="company-street" style={labelStyle}>
+        <div className={SECTION_TITLE}>Endereço</div>
+        <div className="grid grid-cols-6 gap-4">
+          <div className={cn(FIELD, 'col-span-4')}>
+            <label htmlFor="company-street" className={LABEL}>
               Logradouro
             </label>
-            <input
-              id="company-street"
-              {...register('street')}
-              style={inputStyle}
-              onFocus={inputFocus}
-              onBlur={inputBlur}
-            />
+            <input id="company-street" {...register('street')} className={INPUT} />
           </div>
-          <div style={{ ...fieldStyle, gridColumn: 'span 2' }}>
-            <label htmlFor="company-number" style={labelStyle}>
+          <div className={cn(FIELD, 'col-span-2')}>
+            <label htmlFor="company-number" className={LABEL}>
               Número
             </label>
-            <input
-              id="company-number"
-              {...register('number')}
-              style={inputStyle}
-              onFocus={inputFocus}
-              onBlur={inputBlur}
-            />
+            <input id="company-number" {...register('number')} className={INPUT} />
           </div>
-          <div style={{ ...fieldStyle, gridColumn: 'span 3' }}>
-            <label htmlFor="company-complement" style={labelStyle}>
+          <div className={cn(FIELD, 'col-span-3')}>
+            <label htmlFor="company-complement" className={LABEL}>
               Complemento
             </label>
-            <input
-              id="company-complement"
-              {...register('complement')}
-              style={inputStyle}
-              onFocus={inputFocus}
-              onBlur={inputBlur}
-            />
+            <input id="company-complement" {...register('complement')} className={INPUT} />
           </div>
-          <div style={{ ...fieldStyle, gridColumn: 'span 3' }}>
-            <label htmlFor="company-city" style={labelStyle}>
+          <div className={cn(FIELD, 'col-span-3')}>
+            <label htmlFor="company-city" className={LABEL}>
               Cidade
             </label>
-            <input
-              id="company-city"
-              {...register('city')}
-              style={inputStyle}
-              onFocus={inputFocus}
-              onBlur={inputBlur}
-            />
+            <input id="company-city" {...register('city')} className={INPUT} />
           </div>
-          <div style={{ ...fieldStyle, gridColumn: 'span 1' }}>
-            <label htmlFor="company-state" style={labelStyle}>
+          <div className={cn(FIELD, 'col-span-1')}>
+            <label htmlFor="company-state" className={LABEL}>
               UF
             </label>
-            <input
-              id="company-state"
-              {...register('state')}
-              maxLength={2}
-              style={inputStyle}
-              onFocus={inputFocus}
-              onBlur={inputBlur}
-            />
+            <input id="company-state" {...register('state')} maxLength={2} className={INPUT} />
           </div>
-          <div style={{ ...fieldStyle, gridColumn: 'span 2' }}>
-            <label htmlFor="company-zipCode" style={labelStyle}>
+          <div className={cn(FIELD, 'col-span-2')}>
+            <label htmlFor="company-zipCode" className={LABEL}>
               CEP
             </label>
             <input
@@ -274,9 +184,7 @@ export function CompanyForm({ mode, cnpj, defaultValues, onSuccess }: CompanyFor
               {...register('zipCode')}
               maxLength={8}
               placeholder="8 dígitos"
-              style={inputStyle}
-              onFocus={inputFocus}
-              onBlur={inputBlur}
+              className={INPUT}
             />
           </div>
         </div>
@@ -284,9 +192,7 @@ export function CompanyForm({ mode, cnpj, defaultValues, onSuccess }: CompanyFor
 
       <div>
         <Button type="submit" disabled={loading}>
-          {loading && (
-            <Loader2 size={15} style={{ marginRight: 6, animation: 'spin 1s linear infinite' }} />
-          )}
+          {loading && <Loader2 size={15} className="mr-1.5 animate-spin" />}
           {mode === 'create' ? 'Criar Empresa' : 'Salvar Alterações'}
         </Button>
       </div>

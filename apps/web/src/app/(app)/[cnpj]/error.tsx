@@ -16,44 +16,15 @@ export default function CompanyError({
   }, [error])
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        height: '100%',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
-      }}
-    >
-      <div style={{ maxWidth: 420, width: '100%' }}>
-        <div
-          style={{
-            background: 'hsl(0 86% 97%)',
-            border: '1px solid hsl(0 80% 89%)',
-            borderRadius: '0.5rem',
-            padding: '14px 16px',
-            display: 'flex',
-            gap: 12,
-            marginBottom: 16,
-          }}
-        >
-          <AlertCircle
-            size={18}
-            strokeWidth={1.6}
-            style={{ color: 'hsl(0 72% 51%)', flexShrink: 0, marginTop: 1 }}
-          />
+    <div className="flex h-full items-center justify-center p-6">
+      <div className="w-full max-w-[420px]">
+        <div className="mb-4 flex gap-3 rounded-lg border border-destructive-border bg-destructive-soft px-4 py-3.5">
+          <AlertCircle size={18} strokeWidth={1.6} className="mt-px shrink-0 text-destructive" />
           <div>
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: 'hsl(222 47% 11%)',
-                marginBottom: 4,
-              }}
-            >
+            <div className="mb-1 text-sm font-semibold text-foreground">
               Erro ao carregar a página
             </div>
-            <div style={{ fontSize: 13, color: 'hsl(215 16% 47%)' }}>
+            <div className="text-[13px] text-muted-foreground">
               Ocorreu um problema inesperado. Tente novamente ou entre em contato com o suporte.
             </div>
           </div>

@@ -5,6 +5,7 @@
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { addBankAccount, updateBankAccount } from '@/lib/api'
+import { cn } from '@/lib/utils'
 import { createSupplierBankAccountSchema } from '@elos/shared'
 import type { CreateSupplierBankAccountDto, SupplierBankAccountResponse } from '@elos/shared'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -13,20 +14,12 @@ import { useEffect } from 'react'
 import { type Resolver, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
-const inputStyle: React.CSSProperties = {
-  height: 38,
-  padding: '0 12px',
-  fontSize: 13.5,
-  borderRadius: '0.375rem',
-  border: '1px solid hsl(214 32% 91%)',
-  background: 'hsl(0 0% 100%)',
-  color: 'hsl(222 47% 11%)',
-  outline: 'none',
-  width: '100%',
-}
-const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 500, color: 'hsl(217 33% 17%)' }
-const fieldStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6 }
-const errorStyle: React.CSSProperties = { fontSize: 12, color: 'hsl(0 72% 51%)' }
+const FIELD = 'flex flex-col gap-1.5'
+const LABEL = 'text-[13px] font-medium text-foreground-2'
+const INPUT =
+  'h-[38px] w-full rounded-md border border-input bg-card px-3 text-[13.5px] text-foreground outline-none transition-[border-color,box-shadow] focus:border-ring focus:ring-3 focus:ring-ring/[0.13]'
+const SELECT = cn(INPUT, 'cursor-pointer')
+const ERROR = 'text-xs text-destructive'
 
 interface AddBankAccountSheetProps {
   open: boolean
@@ -88,110 +81,99 @@ export function AddBankAccountSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent style={{ width: 440, display: 'flex', flexDirection: 'column' }}>
+      <SheetContent className="flex w-[440px] flex-col">
         <SheetHeader>
-          <SheetTitle style={{ fontSize: 17, fontWeight: 600 }}>
+          <SheetTitle className="text-[17px] font-semibold">
             {isEdit ? 'Editar conta bancária' : 'Adicionar conta bancária'}
           </SheetTitle>
-          <p style={{ fontSize: 13, color: 'hsl(215 16% 47%)', marginTop: 3 }}>
+          <p className="mt-[3px] text-[13px] text-muted-foreground">
             Dados bancários para pagamento do fornecedor.
           </p>
         </SheetHeader>
 
         <form
           onSubmit={handleSubmit(onSubmit)}
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '22px 0',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 18,
-          }}
+          className="flex flex-1 flex-col gap-[18px] overflow-y-auto py-[22px]"
         >
-          <div style={fieldStyle}>
-            <label htmlFor="bank-bank" style={labelStyle}>
-              Banco <span style={{ color: 'hsl(0 72% 51%)' }}>*</span>
+          <div className={FIELD}>
+            <label htmlFor="bank-bank" className={LABEL}>
+              Banco <span className="text-destructive">*</span>
             </label>
             <input
               id="bank-bank"
               {...register('bank')}
               placeholder="Ex: Banco do Brasil"
-              style={inputStyle}
+              className={INPUT}
             />
             {errors.bank && (
-              <span style={errorStyle} role="alert">
+              <span className={ERROR} role="alert">
                 {errors.bank.message}
               </span>
             )}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <div style={fieldStyle}>
-              <label htmlFor="bank-agency" style={labelStyle}>
-                Agência <span style={{ color: 'hsl(0 72% 51%)' }}>*</span>
+          <div className="grid grid-cols-2 gap-4">
+            <div className={FIELD}>
+              <label htmlFor="bank-agency" className={LABEL}>
+                Agência <span className="text-destructive">*</span>
               </label>
               <input
                 id="bank-agency"
                 {...register('agency')}
                 placeholder="0001"
-                style={inputStyle}
+                className={INPUT}
               />
               {errors.agency && (
-                <span style={errorStyle} role="alert">
+                <span className={ERROR} role="alert">
                   {errors.agency.message}
                 </span>
               )}
             </div>
-            <div style={fieldStyle}>
-              <label htmlFor="bank-account" style={labelStyle}>
-                Conta <span style={{ color: 'hsl(0 72% 51%)' }}>*</span>
+            <div className={FIELD}>
+              <label htmlFor="bank-account" className={LABEL}>
+                Conta <span className="text-destructive">*</span>
               </label>
               <input
                 id="bank-account"
                 {...register('account')}
                 placeholder="12345-6"
-                style={inputStyle}
+                className={INPUT}
               />
               {errors.account && (
-                <span style={errorStyle} role="alert">
+                <span className={ERROR} role="alert">
                   {errors.account.message}
                 </span>
               )}
             </div>
           </div>
 
-          <div style={fieldStyle}>
-            <label htmlFor="bank-accountType" style={labelStyle}>
-              Tipo de conta <span style={{ color: 'hsl(0 72% 51%)' }}>*</span>
+          <div className={FIELD}>
+            <label htmlFor="bank-accountType" className={LABEL}>
+              Tipo de conta <span className="text-destructive">*</span>
             </label>
-            <select
-              id="bank-accountType"
-              {...register('accountType')}
-              style={{ ...inputStyle, cursor: 'pointer' }}
-            >
+            <select id="bank-accountType" {...register('accountType')} className={SELECT}>
               <option value="CHECKING">Conta Corrente</option>
               <option value="SAVINGS">Conta Poupança</option>
             </select>
             {errors.accountType && (
-              <span style={errorStyle} role="alert">
+              <span className={ERROR} role="alert">
                 {errors.accountType.message}
               </span>
             )}
           </div>
 
-          <div style={fieldStyle}>
-            <label htmlFor="bank-pixKey" style={labelStyle}>
+          <div className={FIELD}>
+            <label htmlFor="bank-pixKey" className={LABEL}>
               Chave PIX
             </label>
             <input
               id="bank-pixKey"
               {...register('pixKey')}
               placeholder="CPF, CNPJ, e-mail ou aleatória"
-              style={inputStyle}
+              className={INPUT}
             />
             {errors.pixKey && (
-              <span style={errorStyle} role="alert">
+              <span className={ERROR} role="alert">
                 {errors.pixKey.message}
               </span>
             )}
@@ -199,28 +181,14 @@ export function AddBankAccountSheet({
 
           <label
             htmlFor="bank-isPrimary"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              fontSize: 13.5,
-              cursor: 'pointer',
-            }}
+            className="flex cursor-pointer items-center gap-2 text-[13.5px]"
           >
             <input id="bank-isPrimary" type="checkbox" {...register('isPrimary')} />
             Definir como conta principal
           </label>
         </form>
 
-        <SheetFooter
-          style={{
-            padding: '16px 0 0',
-            borderTop: '1px solid hsl(214 32% 91%)',
-            display: 'flex',
-            gap: 10,
-            justifyContent: 'flex-end',
-          }}
-        >
+        <SheetFooter className="flex justify-end gap-2.5 border-t border-border pt-4">
           <Button
             type="button"
             variant="outline"
@@ -230,9 +198,7 @@ export function AddBankAccountSheet({
             Cancelar
           </Button>
           <Button type="button" onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>
-            {isSubmitting && (
-              <Loader2 size={15} style={{ marginRight: 6, animation: 'spin 1s linear infinite' }} />
-            )}
+            {isSubmitting && <Loader2 size={15} className="mr-1.5 animate-spin" />}
             {isEdit ? 'Salvar' : 'Adicionar'}
           </Button>
         </SheetFooter>

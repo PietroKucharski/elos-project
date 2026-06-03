@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { inviteMember } from '@/lib/api'
+import { cn } from '@/lib/utils'
 import { inviteMemberSchema } from '@elos/shared'
 import type { InviteMemberDto } from '@elos/shared'
 // apps/web/src/components/domain/invite-member-sheet.tsx
@@ -38,30 +39,12 @@ interface InviteMemberSheetProps {
   cnpj: string
 }
 
-const inputStyle: React.CSSProperties = {
-  height: 38,
-  padding: '0 12px',
-  fontSize: 13.5,
-  borderRadius: '0.375rem',
-  border: '1px solid hsl(214 32% 91%)',
-  background: 'hsl(0 0% 100%)',
-  color: 'hsl(222 47% 11%)',
-  outline: 'none',
-  transition: 'border .15s, box-shadow .15s',
-  width: '100%',
-}
-const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 500, color: 'hsl(217 33% 17%)' }
-const fieldStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6 }
-const errorStyle: React.CSSProperties = { fontSize: 12, color: 'hsl(0 72% 51%)' }
-
-function inputFocus(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) {
-  e.target.style.borderColor = 'hsl(243 75% 59%)'
-  e.target.style.boxShadow = '0 0 0 3px hsl(243 75% 59% / 0.13)'
-}
-function inputBlur(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) {
-  e.target.style.borderColor = 'hsl(214 32% 91%)'
-  e.target.style.boxShadow = 'none'
-}
+const FIELD = 'flex flex-col gap-1.5'
+const LABEL = 'text-[13px] font-medium text-foreground-2'
+const INPUT =
+  'h-[38px] w-full rounded-md border border-input bg-card px-3 text-[13.5px] text-foreground outline-none transition-[border-color,box-shadow] focus:border-ring focus:ring-3 focus:ring-ring/[0.13]'
+const SELECT = cn(INPUT, 'cursor-pointer appearance-none pr-8')
+const ERROR = 'text-xs text-destructive'
 
 export function InviteMemberSheet({ cnpj }: InviteMemberSheetProps) {
   const router = useRouter()
@@ -98,88 +81,65 @@ export function InviteMemberSheet({ cnpj }: InviteMemberSheetProps) {
   return (
     <>
       <Button type="button" onClick={() => setOpen(true)}>
-        <UserPlus size={15} strokeWidth={1.5} style={{ marginRight: 6 }} />
+        <UserPlus size={15} strokeWidth={1.5} className="mr-1.5" />
         Convidar usuário
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent style={{ width: 440, display: 'flex', flexDirection: 'column' }}>
+        <SheetContent className="flex w-[440px] flex-col">
           <SheetHeader>
-            <SheetTitle style={{ fontSize: 17, fontWeight: 600 }}>Convidar usuário</SheetTitle>
-            <p style={{ fontSize: 13, color: 'hsl(215 16% 47%)', marginTop: 3 }}>
+            <SheetTitle className="text-[17px] font-semibold">Convidar usuário</SheetTitle>
+            <p className="mt-[3px] text-[13px] text-muted-foreground">
               O usuário receberá acesso imediato com a senha definida pelo administrador.
             </p>
           </SheetHeader>
 
           <form
             onSubmit={handleSubmit(onSubmit)}
-            style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '22px 0',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 18,
-            }}
+            className="flex flex-1 flex-col gap-[18px] overflow-y-auto py-[22px]"
           >
-            <div style={fieldStyle}>
-              <label htmlFor="invite-name" style={labelStyle}>
-                Nome <span style={{ color: 'hsl(0 72% 51%)' }}>*</span>
+            <div className={FIELD}>
+              <label htmlFor="invite-name" className={LABEL}>
+                Nome <span className="text-destructive">*</span>
               </label>
               <input
                 id="invite-name"
                 {...register('name')}
                 placeholder="Nome completo"
-                style={inputStyle}
-                onFocus={inputFocus}
-                onBlur={inputBlur}
+                className={INPUT}
               />
               {errors.name && (
-                <span style={errorStyle} role="alert">
+                <span className={ERROR} role="alert">
                   {errors.name.message}
                 </span>
               )}
             </div>
 
-            <div style={fieldStyle}>
-              <label htmlFor="invite-email" style={labelStyle}>
-                E-mail <span style={{ color: 'hsl(0 72% 51%)' }}>*</span>
+            <div className={FIELD}>
+              <label htmlFor="invite-email" className={LABEL}>
+                E-mail <span className="text-destructive">*</span>
               </label>
               <input
                 id="invite-email"
                 type="email"
                 {...register('email')}
                 placeholder="pessoa@empresa.com.br"
-                style={inputStyle}
-                onFocus={inputFocus}
-                onBlur={inputBlur}
+                className={INPUT}
               />
               {errors.email && (
-                <span style={errorStyle} role="alert">
+                <span className={ERROR} role="alert">
                   {errors.email.message}
                 </span>
               )}
             </div>
 
-            <div style={fieldStyle}>
-              <label htmlFor="invite-role" style={labelStyle}>
-                Papel na empresa <span style={{ color: 'hsl(0 72% 51%)' }}>*</span>
+            <div className={FIELD}>
+              <label htmlFor="invite-role" className={LABEL}>
+                Papel na empresa <span className="text-destructive">*</span>
               </label>
               {/* Select nativo estilizado — igual ao protótipo ui.jsx Select */}
-              <div style={{ position: 'relative' }}>
-                <select
-                  id="invite-role"
-                  {...register('role')}
-                  style={{
-                    ...inputStyle,
-                    appearance: 'none',
-                    padding: '0 32px 0 12px',
-                    cursor: 'pointer',
-                  }}
-                  onFocus={inputFocus}
-                  onBlur={inputBlur}
-                  defaultValue=""
-                >
+              <div className="relative">
+                <select id="invite-role" {...register('role')} className={SELECT} defaultValue="">
                   <option value="" disabled>
                     Selecione um papel
                   </option>
@@ -197,20 +157,13 @@ export function InviteMemberSheet({ cnpj }: InviteMemberSheetProps) {
                   stroke="currentColor"
                   strokeWidth="2"
                   aria-hidden="true"
-                  style={{
-                    position: 'absolute',
-                    right: 10,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    color: 'hsl(215 16% 47%)',
-                    pointerEvents: 'none',
-                  }}
+                  className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-muted-foreground"
                 >
                   <path d="M6 9l6 6 6-6" />
                 </svg>
               </div>
               {errors.role && (
-                <span style={errorStyle} role="alert">
+                <span className={ERROR} role="alert">
                   {errors.role.message}
                 </span>
               )}
@@ -218,40 +171,17 @@ export function InviteMemberSheet({ cnpj }: InviteMemberSheetProps) {
 
             {/* Card de preview das permissões do papel */}
             {permissions.length > 0 && (
-              <div
-                style={{
-                  background: 'hsl(210 40% 96.1%)',
-                  borderRadius: '0.375rem',
-                  padding: 14,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 12.5,
-                    fontWeight: 600,
-                    marginBottom: 8,
-                    color: 'hsl(222 47% 11%)',
-                  }}
-                >
+              <div className="rounded-md bg-muted p-3.5">
+                <div className="mb-2 text-[12.5px] font-semibold text-foreground">
                   Permissões do papel
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div className="flex flex-col gap-1.5">
                   {permissions.map((p) => (
                     <div
                       key={p}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        fontSize: 12.5,
-                        color: 'hsl(217 33% 17%)',
-                      }}
+                      className="flex items-center gap-2 text-[12.5px] text-foreground-2"
                     >
-                      <Check
-                        size={14}
-                        strokeWidth={2}
-                        style={{ color: 'hsl(142 71% 40%)', flexShrink: 0 }}
-                      />
+                      <Check size={14} strokeWidth={2} className="shrink-0 text-success" />
                       {p}
                     </div>
                   ))}
@@ -260,15 +190,7 @@ export function InviteMemberSheet({ cnpj }: InviteMemberSheetProps) {
             )}
           </form>
 
-          <SheetFooter
-            style={{
-              padding: '16px 0 0',
-              borderTop: '1px solid hsl(214 32% 91%)',
-              display: 'flex',
-              gap: 10,
-              justifyContent: 'flex-end',
-            }}
-          >
+          <SheetFooter className="flex justify-end gap-2.5 border-t border-border pt-4">
             <Button
               type="button"
               variant="outline"
@@ -278,12 +200,7 @@ export function InviteMemberSheet({ cnpj }: InviteMemberSheetProps) {
               Cancelar
             </Button>
             <Button type="button" onClick={handleSubmit(onSubmit)} disabled={loading}>
-              {loading && (
-                <Loader2
-                  size={15}
-                  style={{ marginRight: 6, animation: 'spin 1s linear infinite' }}
-                />
-              )}
+              {loading && <Loader2 size={15} className="mr-1.5 animate-spin" />}
               Enviar convite
             </Button>
           </SheetFooter>
