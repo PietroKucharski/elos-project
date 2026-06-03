@@ -7,6 +7,7 @@ import {
 import { Injectable } from '@nestjs/common'
 import type { Company, CompanyMember } from '../../db/schema/companies'
 import type { Product } from '../../db/schema/products'
+import type { Quotation } from '../../db/schema/quotations'
 import type { Supplier } from '../../db/schema/suppliers'
 import type { SessionUser } from '../types/session-user'
 
@@ -43,7 +44,10 @@ export type Subjects =
   | 'Product'
   | (Product & ForcedSubject<'Product'>)
   | 'ProductSupplier'
+  // 'Quotation' tagueado (como 'Supplier') para suportar condições por objeto via
+  // subject('Quotation', row) no QuotationsService — sem cair em MongoQuery<never>
   | 'Quotation'
+  | (Quotation & ForcedSubject<'Quotation'>)
   | 'QuotationItem'
   | 'QuotationInvite'
   | 'Bid'
@@ -127,6 +131,7 @@ export class AbilityFactory {
         can('read', 'Company', { id: companyId })
         can('read', 'CompanyMember', { companyId })
         can('read', 'Product')
+        can('read', 'Quotation')
         can('read', 'PurchaseOrder')
         can('manage', 'Receipt')
         can('manage', 'Warehouse')
@@ -139,6 +144,7 @@ export class AbilityFactory {
         can('read', 'Company', { id: companyId })
         can('read', 'CompanyMember', { companyId })
         can('read', 'Product')
+        can('read', 'Quotation')
         can('read', 'PurchaseOrder')
         can('read', 'Receipt')
         can('manage', 'Invoice')
@@ -149,6 +155,7 @@ export class AbilityFactory {
         can('read', 'Company', { id: companyId })
         can('read', 'CompanyMember', { companyId })
         can('read', 'Product')
+        can('read', 'Quotation')
         can('read', 'PurchaseOrder')
         can('manage', 'Shipment')
         break

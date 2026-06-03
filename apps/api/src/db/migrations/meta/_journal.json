@@ -15,6 +15,13 @@
       "when": 1780490660677,
       "tag": "0001_huge_madrox",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780490660678,
+      "tag": "0002_quotations_module_schema",
+      "breakpoints": true
     }
   ]
 }

@@ -8,7 +8,7 @@ import { ncAttachments, ncComments, nonConformities } from './non-conformities'
 import { paymentInstallments, payments } from './payments'
 import { productSuppliers, products } from './products'
 import { purchaseOrderItems, purchaseOrders } from './purchase-orders'
-import { bidItems, bids, quotationInvites, quotationItems, quotations } from './quotations'
+import { bidItems, bids, quotationItems, quotationSuppliers, quotations } from './quotations'
 import { receiptItems, receipts } from './receipts'
 import { supplierAddresses, supplierBankAccounts, supplierContacts, suppliers } from './suppliers'
 import { inventory, stockMovements, warehouses } from './warehouses'
@@ -58,7 +58,7 @@ export const suppliersRelations = relations(suppliers, ({ one, many }) => ({
   addresses: many(supplierAddresses),
   products: many(productSuppliers),
   bids: many(bids),
-  invites: many(quotationInvites),
+  quotationSuppliers: many(quotationSuppliers),
 }))
 
 export const supplierContactsRelations = relations(supplierContacts, ({ one }) => ({
@@ -93,9 +93,9 @@ export const productSuppliersRelations = relations(productSuppliers, ({ one }) =
 
 export const quotationsRelations = relations(quotations, ({ one, many }) => ({
   company: one(companies, { fields: [quotations.companyId], references: [companies.id] }),
-  createdBy: one(users, { fields: [quotations.createdById], references: [users.id] }),
+  createdBy: one(users, { fields: [quotations.createdBy], references: [users.id] }),
   items: many(quotationItems),
-  invites: many(quotationInvites),
+  quotationSuppliers: many(quotationSuppliers),
   bids: many(bids),
 }))
 
@@ -105,12 +105,12 @@ export const quotationItemsRelations = relations(quotationItems, ({ one, many })
   bidItems: many(bidItems),
 }))
 
-export const quotationInvitesRelations = relations(quotationInvites, ({ one }) => ({
+export const quotationSuppliersRelations = relations(quotationSuppliers, ({ one }) => ({
   quotation: one(quotations, {
-    fields: [quotationInvites.quotationId],
+    fields: [quotationSuppliers.quotationId],
     references: [quotations.id],
   }),
-  supplier: one(suppliers, { fields: [quotationInvites.supplierId], references: [suppliers.id] }),
+  supplier: one(suppliers, { fields: [quotationSuppliers.supplierId], references: [suppliers.id] }),
 }))
 
 export const bidsRelations = relations(bids, ({ one, many }) => ({
