@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 2 — Fornecedores e Produtos** · `Em andamento` (2.1, 2.2, 2.3 e 2.4 concluídas) → próxima: **2.5 — Products Management UI (Frontend)**
+**Fase 2 — Fornecedores e Produtos** · `Concluída` (2.1, 2.2, 2.3, 2.4 e 2.5 concluídas) → próxima fase: **Fase 3**
 
 ---
 
@@ -351,11 +351,41 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   - **Ajustes vs. spec:** ver Decisões Arquiteturais (2.4) — role via membership (não `session.user.role`),
     `Resolver` cast nos forms com `.default()`, narrowing em vez de `!` nos sheets, `console.error` nos catch
 
+- [x] **2.5 — Products Management UI (Frontend)** — spec `16-products-ui-spec.md`
+  - Commit convencional esperado: `feat(web): add products ui with list, form, detail and supplier links`
+  - `lib/api.ts` estendido: 2 funções server-side (`getProductsServer` com query `search`/`isActive`/`unit`,
+    `getProductServer`) + 6 client-side (`createProduct`/`updateProduct`/`deactivateProduct`,
+    `linkSupplierToProduct`/`updateProductSupplierLink`/`unlinkSupplierFromProduct`), no padrão
+    `sessionHeaders()` (server) e `client()` ky (client); imports de tipos de `@elos/shared`
+    (`CreateProductDto`/`UpdateProductDto`/`ProductResponse`/`LinkProductSupplierDto`/
+    `UpdateProductSupplierDto`/`ProductSupplierResponse`)
+  - `components/domain/`: `product-form.tsx` (form reutilizável create/edit, inline styles, select nativo de
+    unidade, `minStock` decimal `step="0.001"`, checkbox "ativo" só no edit), `products-list-client.tsx`
+    (Client Component: tabs Ativos/Inativos + filtro de unidade + busca por nome/código client-side, tabela
+    com kebab menu — Ver/Editar e Desativar só em produtos ativos e só se `canMutate`, linha esmaecida
+    `opacity 0.5` + badge "Inativo", `AlertDialog` antes de desativar), `product-suppliers-panel.tsx`
+    (Client Component com estado local, toggle de preferido via Star, `AlertDialog` de desvínculo) e
+    `link-supplier-sheet.tsx` (Sheet 440px com select de fornecedor APPROVED, preview do selecionado)
+  - Rotas `(app)/[cnpj]/products/`: `page.tsx` (SSR lista + filtros via Client Component), `loading.tsx`
+    (skeleton), `error.tsx` (boundary com `console.error`), `new/page.tsx` (form create), `[id]/page.tsx`
+    (detalhe + painel de fornecedores vinculados), `[id]/edit/page.tsx` (form edit). Sidebar (1.4) já tinha
+    o item "Produtos" — nenhuma mudança necessária
+  - **Verificado:** `pnpm --filter web type-check` + `pnpm --filter @elos/shared type-check` verdes;
+    `biome lint` dos arquivos novos limpo (só warnings `noNonNullAssertion` — `productId!` em `product-form`,
+    idêntico ao `cnpj!`/`supplierId!` dos outros forms, e o `API_URL` pré-existente — severidade `warn`,
+    padrão do projeto); `pnpm --filter web build` **compila + checa tipos + gera as rotas de products**
+    (✓ Compiled successfully, ✓ 9/9 static pages). Passo `output: 'standalone'` falha por `EPERM` de symlink
+    no Windows (mesma limitação de 0.5/1.4/1.5/2.4). Fluxo runtime (criar/editar/desativar, vincular/
+    desvincular fornecedor, toggle preferido) não exercitado — requer API + banco vivos
+  - **Ajustes vs. spec:** ver Decisões Arquiteturais (2.5) — role via membership (não `session.user.role`),
+    lista busca ativos+inativos em paralelo para filtro client-side, `Resolver` cast no `link-supplier-sheet`,
+    sem o wrapper de `padding` extra (o `[cnpj]/layout` já aplica), `error.tsx` com `console.error`
+
 ---
 
 ## Em Progresso
 
-- Nada ativo. **Fase 2.4 concluída**. Próximo: **2.5 — Products Management UI (Frontend)**.
+- Nada ativo. **Fase 2 concluída** (2.1–2.5). Próximo: **Fase 3**.
 
 ---
 
@@ -588,6 +618,12 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | Narrowing em vez de `!` nos sheets (2.4) | `add-contact-sheet`/`add-bank-account-sheet` usavam `isEdit ? update(…, contact!.id) : add(…)` — o `!` disparava `noNonNullAssertion` (warning, mas evitável). Trocado por `const saved = contact ? update(…, contact.id) : add(…)`: dentro do ramo truthy o TS estreita `contact`/`account` para não-nulo, eliminando o assert. `supplier-form` mantém `supplierId!` (idêntico ao `cnpj!` de `company-form`, warning aceito do projeto) |
 | `console.error` nos `catch` dos componentes (2.4) | Os snippets da spec usam `} catch {` só com `toast.error`. Invariante 5 ("nenhum `catch {}` vazio — sempre logar ou relançar") + o padrão de `company-form`/`members-table` (1.5) pedem log. Todos os catch ganharam `catch (error) { console.error('[Componente.handler]', error); toast.error(...) }` |
 | `select` do shadcn instalado mas não importado (2.4) | A seção 1 da spec manda `add tabs select`. `tabs` é usado na página de detalhe; `select` foi instalado (fidelidade ao escopo, e o `globals.css` foi verificado intacto após o `add`) mas **não importado** — o `supplier-form` e os sheets usam `<select>` nativo estilizado, mesmo padrão de `invite-member-sheet` (1.5). Sem perda funcional |
+| Role via membership, não `session.user.role` (2.5) | Mesmo motivo de 2.4: os snippets da spec derivam `canMutate` de `auth.api.getSession().user.role`, mas no Elos o papel é **por empresa** (vive na membership, não no `user` global; `AuthSession` nem expõe `role`). As páginas (list/detail) usam o padrão real do `[cnpj]/layout.tsx`: `getMyCompaniesServer()` + `myCompanies.find((c) => c.cnpj === cnpj)?.role`, com `MUTATE_ROLES = {COMPRADOR, ADMIN_EMPRESA, SUPER_ADMIN}` |
+| Lista busca ativos **e** inativos em paralelo p/ filtro client-side (2.5) | A API (`GET /products`) filtra por `isActive` com **default `true`** e não tem opção "todos" (`isActive !== 'false'`). A checklist da spec exige filtro padrão só-ativos **e** exibir inativos esmaecidos quando alternado. Para manter o padrão de filtro client-side puro do `SuppliersListClient` (estado de `initialProducts` + `useMemo`), a `page.tsx` faz `Promise.all` de `getProductsServer({isActive:'true'})` + `getProductsServer({isActive:'false'})` e concatena; o Client Component default mostra só ativos e alterna sem novo round-trip |
+| Sem wrapper de `padding` extra nas páginas (2.5) | Os snippets da spec envolvem cada página em `padding: '28px 32px'`, mas o `(app)/[cnpj]/layout.tsx` (1.4) já aplica `padding: 24` + `maxWidth` ao `<main>`. Replicar o padding causaria espaçamento duplo, inconsistente com as páginas de suppliers (2.4), que também o omitem. Mantidos só os `maxWidth` por página (720 form, 960 detalhe), fiéis ao layout real |
+| `Resolver` cast no `link-supplier-sheet` (2.5) | `useForm<LinkProductSupplierDto>` falhava o type-check: `isPreferred` tem `.default(false)` no `linkProductSupplierSchema`, divergindo o tipo de **input** (opcional) do **output** (obrigatório) que o react-hook-form usa nas duas pontas (TS2322/TS2345). `resolver: zodResolver(linkProductSupplierSchema) as Resolver<LinkProductSupplierDto>` (mesmo padrão de `company-form` 1.5 / forms de 2.4) reconcilia. O `product-form` usa `zodResolver(createProductSchema) as never` (o `createProductSchema` também tem `isActive.default(true)`) |
+| Coluna "Fornecedores" mostra "—" na lista (2.5) | A tabela da spec inclui a coluna "Fornecedores", mas o endpoint de **lista** (`findAll`) retorna produtos sem o array `suppliers` (presente só no `GET :id` via `innerJoin`). A célula renderiza `product.suppliers?.length` quando presente, senão "—" — sem fetch extra por linha (contagem por produto fica para uma agregação futura no endpoint de lista, fora do escopo desta unidade) |
+| `console.error` no `error.tsx` + nos catch dos componentes (2.5) | Invariante 5 ("nenhum `catch {}` vazio — sempre logar ou relançar") + precedente de 2.4. Os snippets da spec usam `} catch {` só com `toast.error`; todos os catch dos handlers client (`product-form.onSubmit`, `products-list-client.handleDeactivate`, `product-suppliers-panel.handleUnlink`/`handleTogglePreferred`, `link-supplier-sheet.onSubmit`) ganharam `catch (error) { console.error('[Componente.handler]', error); toast.error(...) }`. O `error.tsx` segue o boundary de suppliers (`useEffect` + `console.error('[ProductsError]', error)`) |
 
 ---
 
@@ -705,3 +741,16 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   0.5/1.4/1.5). Ajustes vs. spec: role via membership (não `session.user.role`), `Resolver` cast nos forms
   com `.default()`, narrowing em vez de `!` nos sheets, `console.error` nos catch — ver Decisões
   Arquiteturais (2.4). Próximo: **2.5 — Products Management UI (Frontend)**
+- **2.5 concluída**: UI de gestão de produtos (frontend) — `lib/api.ts` estendido com 2 funções server-side
+  (`getProductsServer`/`getProductServer`) + 6 client-side (`createProduct`/`updateProduct`/`deactivateProduct`,
+  `linkSupplierToProduct`/`updateProductSupplierLink`/`unlinkSupplierFromProduct`), `components/domain/`
+  (`product-form` com select de unidade + `minStock` decimal, `products-list-client` com tabs Ativos/Inativos +
+  filtro de unidade + busca + kebab Desativar só em ativos + linha esmaecida/badge "Inativo" + `AlertDialog`,
+  `product-suppliers-panel` com toggle de preferido via Star + desvínculo, `link-supplier-sheet` com select de
+  fornecedor APPROVED + preview), e rotas `[cnpj]/products` (`page`/`loading`/`error`/`new`/`[id]`/`[id]/edit`).
+  Sidebar de 1.4 já tinha o item "Produtos". `type-check` (3 workspaces) verde, `biome lint` dos arquivos novos
+  limpo (só warnings `noNonNullAssertion` esperados), `build` compila + gera as rotas de products (✓ 9/9; passo
+  `standalone` falha por `EPERM` de symlink no Windows — mesma limitação de 0.5/1.4/1.5/2.4). Ajustes vs. spec:
+  role via membership, lista busca ativos+inativos em paralelo p/ filtro client-side, `Resolver` cast no
+  `link-supplier-sheet`, sem padding extra (layout já aplica), `console.error` nos catch — ver Decisões
+  Arquiteturais (2.5). **Fase 2 — Fornecedores e Produtos concluída.** Próximo: **Fase 3**

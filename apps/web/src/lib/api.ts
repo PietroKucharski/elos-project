@@ -2,18 +2,24 @@ import type {
   ApproveSupplierDto,
   CompanyResponse,
   CreateCompanyDto,
+  CreateProductDto,
   CreateSupplierBankAccountDto,
   CreateSupplierContactDto,
   CreateSupplierDto,
   InviteMemberDto,
+  LinkProductSupplierDto,
   MemberResponse,
   MyCompany,
+  ProductResponse,
+  ProductSupplierResponse,
   RejectSupplierDto,
   SupplierBankAccountResponse,
   SupplierContactResponse,
   SupplierResponse,
   UpdateCompanyDto,
   UpdateMemberRoleDto,
+  UpdateProductDto,
+  UpdateProductSupplierDto,
   UpdateSupplierBankAccountDto,
   UpdateSupplierContactDto,
   UpdateSupplierDto,
@@ -262,5 +268,88 @@ export async function removeBankAccount(
 ): Promise<void> {
   await (await client()).delete(
     `v1/companies/${cnpj}/suppliers/${supplierId}/bank-accounts/${accountId}`,
+  )
+}
+
+// ── Products (server-side) ──────────────────────────────────────────────────
+
+export async function getProductsServer(
+  cnpj: string,
+  params?: { search?: string; isActive?: string; unit?: string },
+): Promise<ProductResponse[]> {
+  const url = new URL(`${API_URL}/v1/companies/${cnpj}/products`)
+  if (params?.search) url.searchParams.set('search', params.search)
+  if (params?.isActive) url.searchParams.set('isActive', params.isActive)
+  if (params?.unit) url.searchParams.set('unit', params.unit)
+  const res = await fetch(url.toString(), {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  return res.json() as Promise<ProductResponse[]>
+}
+
+export async function getProductServer(cnpj: string, id: string): Promise<ProductResponse | null> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/products/${id}`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return null
+  return res.json() as Promise<ProductResponse>
+}
+
+// ── Products (client-side) ──────────────────────────────────────────────────
+
+export async function createProduct(
+  cnpj: string,
+  data: CreateProductDto,
+): Promise<ProductResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/products`, { json: data })
+    .json<ProductResponse>()
+}
+
+export async function updateProduct(
+  cnpj: string,
+  id: string,
+  data: UpdateProductDto,
+): Promise<ProductResponse> {
+  return (await client())
+    .patch(`v1/companies/${cnpj}/products/${id}`, { json: data })
+    .json<ProductResponse>()
+}
+
+export async function deactivateProduct(cnpj: string, id: string): Promise<void> {
+  await (await client()).delete(`v1/companies/${cnpj}/products/${id}`)
+}
+
+export async function linkSupplierToProduct(
+  cnpj: string,
+  productId: string,
+  data: LinkProductSupplierDto,
+): Promise<ProductSupplierResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/products/${productId}/suppliers`, { json: data })
+    .json<ProductSupplierResponse>()
+}
+
+export async function updateProductSupplierLink(
+  cnpj: string,
+  productId: string,
+  supplierId: string,
+  data: UpdateProductSupplierDto,
+): Promise<ProductSupplierResponse> {
+  return (await client())
+    .patch(`v1/companies/${cnpj}/products/${productId}/suppliers/${supplierId}`, { json: data })
+    .json<ProductSupplierResponse>()
+}
+
+export async function unlinkSupplierFromProduct(
+  cnpj: string,
+  productId: string,
+  supplierId: string,
+): Promise<void> {
+  await (await client()).delete(
+    `v1/companies/${cnpj}/products/${productId}/suppliers/${supplierId}`,
   )
 }
