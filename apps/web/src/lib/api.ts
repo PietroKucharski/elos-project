@@ -3,15 +3,21 @@ import type {
   CompanyResponse,
   CreateCompanyDto,
   CreateProductDto,
+  CreateQuotationDto,
+  CreateQuotationItemDto,
   CreateSupplierBankAccountDto,
   CreateSupplierContactDto,
   CreateSupplierDto,
   InviteMemberDto,
+  InviteSupplierToQuotationDto,
   LinkProductSupplierDto,
   MemberResponse,
   MyCompany,
   ProductResponse,
   ProductSupplierResponse,
+  QuotationItemResponse,
+  QuotationResponse,
+  QuotationSupplierResponse,
   RejectSupplierDto,
   SupplierBankAccountResponse,
   SupplierContactResponse,
@@ -20,6 +26,8 @@ import type {
   UpdateMemberRoleDto,
   UpdateProductDto,
   UpdateProductSupplierDto,
+  UpdateQuotationDto,
+  UpdateQuotationItemDto,
   UpdateSupplierBankAccountDto,
   UpdateSupplierContactDto,
   UpdateSupplierDto,
@@ -351,5 +359,148 @@ export async function unlinkSupplierFromProduct(
 ): Promise<void> {
   await (await client()).delete(
     `v1/companies/${cnpj}/products/${productId}/suppliers/${supplierId}`,
+  )
+}
+
+// ── Quotations (server-side) ────────────────────────────────────────────────
+
+export async function getQuotationsServer(
+  cnpj: string,
+  params?: { status?: string; search?: string },
+): Promise<QuotationResponse[]> {
+  const url = new URL(`${API_URL}/v1/companies/${cnpj}/quotations`)
+  if (params?.status) url.searchParams.set('status', params.status)
+  if (params?.search) url.searchParams.set('search', params.search)
+  const res = await fetch(url.toString(), {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  return res.json() as Promise<QuotationResponse[]>
+}
+
+export async function getQuotationServer(
+  cnpj: string,
+  id: string,
+): Promise<QuotationResponse | null> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/quotations/${id}`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return null
+  return res.json() as Promise<QuotationResponse>
+}
+
+export async function getQuotationItemsServer(
+  cnpj: string,
+  quotationId: string,
+): Promise<QuotationItemResponse[]> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/quotations/${quotationId}/items`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  return res.json() as Promise<QuotationItemResponse[]>
+}
+
+export async function getQuotationSuppliersServer(
+  cnpj: string,
+  quotationId: string,
+): Promise<QuotationSupplierResponse[]> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/quotations/${quotationId}/suppliers`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  return res.json() as Promise<QuotationSupplierResponse[]>
+}
+
+// ── Quotations (client-side) ────────────────────────────────────────────────
+
+export async function createQuotation(
+  cnpj: string,
+  data: CreateQuotationDto,
+): Promise<QuotationResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/quotations`, { json: data })
+    .json<QuotationResponse>()
+}
+
+export async function updateQuotation(
+  cnpj: string,
+  id: string,
+  data: UpdateQuotationDto,
+): Promise<QuotationResponse> {
+  return (await client())
+    .patch(`v1/companies/${cnpj}/quotations/${id}`, { json: data })
+    .json<QuotationResponse>()
+}
+
+export async function publishQuotation(cnpj: string, id: string): Promise<QuotationResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/quotations/${id}/publish`)
+    .json<QuotationResponse>()
+}
+
+export async function closeQuotation(cnpj: string, id: string): Promise<QuotationResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/quotations/${id}/close`)
+    .json<QuotationResponse>()
+}
+
+export async function cancelQuotation(cnpj: string, id: string): Promise<void> {
+  await (await client()).post(`v1/companies/${cnpj}/quotations/${id}/cancel`)
+}
+
+// ── Quotation Items (client-side) ───────────────────────────────────────────
+
+export async function addQuotationItem(
+  cnpj: string,
+  quotationId: string,
+  data: CreateQuotationItemDto,
+): Promise<QuotationItemResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/quotations/${quotationId}/items`, { json: data })
+    .json<QuotationItemResponse>()
+}
+
+export async function updateQuotationItem(
+  cnpj: string,
+  quotationId: string,
+  itemId: string,
+  data: UpdateQuotationItemDto,
+): Promise<QuotationItemResponse> {
+  return (await client())
+    .patch(`v1/companies/${cnpj}/quotations/${quotationId}/items/${itemId}`, { json: data })
+    .json<QuotationItemResponse>()
+}
+
+export async function removeQuotationItem(
+  cnpj: string,
+  quotationId: string,
+  itemId: string,
+): Promise<void> {
+  await (await client()).delete(`v1/companies/${cnpj}/quotations/${quotationId}/items/${itemId}`)
+}
+
+// ── Quotation Suppliers / convites (client-side) ────────────────────────────
+
+export async function inviteSupplierToQuotation(
+  cnpj: string,
+  quotationId: string,
+  data: InviteSupplierToQuotationDto,
+): Promise<QuotationSupplierResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/quotations/${quotationId}/suppliers`, { json: data })
+    .json<QuotationSupplierResponse>()
+}
+
+export async function removeSupplierFromQuotation(
+  cnpj: string,
+  quotationId: string,
+  supplierId: string,
+): Promise<void> {
+  await (await client()).delete(
+    `v1/companies/${cnpj}/quotations/${quotationId}/suppliers/${supplierId}`,
   )
 }
