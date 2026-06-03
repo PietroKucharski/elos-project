@@ -10,6 +10,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Param,
   Patch,
   Post,
@@ -27,7 +28,8 @@ import { CompaniesService } from './companies.service'
 @UseGuards(AuthGuard)
 @Controller('companies')
 export class CompaniesController {
-  constructor(private readonly companiesService: CompaniesService) {}
+  // @Inject explícito: tsx/esbuild não emite metadata de tipo para a DI.
+  constructor(@Inject(CompaniesService) private readonly companiesService: CompaniesService) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)

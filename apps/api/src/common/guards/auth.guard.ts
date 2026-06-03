@@ -22,7 +22,9 @@ import { IS_PUBLIC_KEY } from '../decorators/public.decorator'
 export class AuthGuard implements CanActivate {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB,
-    private readonly reflector: Reflector,
+    // @Inject explícito: o runtime tsx/esbuild não emite `emitDecoratorMetadata`,
+    // então a DI por tipo (sem token) resolveria `undefined`.
+    @Inject(Reflector) private readonly reflector: Reflector,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

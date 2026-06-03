@@ -20,7 +20,8 @@ import { auth } from '../auth/better-auth'
 export class MembersService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB,
-    private readonly abilityFactory: AbilityFactory,
+    // @Inject explícito: tsx/esbuild não emite metadata de tipo para a DI.
+    @Inject(AbilityFactory) private readonly abilityFactory: AbilityFactory,
   ) {}
 
   // GET /v1/companies/:cnpj/members
