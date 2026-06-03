@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 1 — Auth e Empresas** · `Em andamento` (1.1, 1.2, 1.3, 1.4 e 1.5 concluídas) → Fase 1 concluída; próxima: **Fase 2**
+**Fase 2 — Fornecedores e Produtos** · `Em andamento` (2.1 concluída) → próxima: **2.2 — Suppliers Module (API)**
 
 ---
 
@@ -249,11 +249,32 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     Fluxo runtime (settings/members/admin) não exercitado — requer API + banco vivos
   - **Ajustes vs. spec:** ver Decisões Arquiteturais (1.5)
 
+- [x] **2.1 — Shared Schemas: Fornecedores e Produtos** — spec `12-shared-schemas-suppliers-product-spec.md`
+  - Commit convencional esperado: `feat(shared): add supplier and product zod schemas`
+  - `packages/shared/src/schemas/supplier.ts` — `supplierAddressSchema` (endereço inline),
+    `createSupplierSchema` (`.superRefine` cruzando type↔documento: PJ exige CNPJ, PF exige CPF),
+    `updateSupplierSchema` (sem `type` — imutável), `approveSupplierSchema` (rating 1–5),
+    `rejectSupplierSchema` (motivo obrigatório, min 5), `supplierResponseSchema` (nullable + address
+    aninhado); contatos (`create/update/responseSupplierContactSchema`) e contas bancárias
+    (`bankAccountTypeValues` CHECKING/SAVINGS, `create/update/responseSupplierBankAccountSchema`) + tipos via `z.infer`
+  - `packages/shared/src/schemas/product.ts` — `unitOfMeasureValues` (10 unidades),
+    `createProductSchema` (`minStock` number no create), `updateProductSchema` (`.partial()`),
+    `productResponseSchema` (`minStock` string nullable, `suppliers[]` opcional só no GET :id),
+    vínculo produto↔fornecedor (`link/update/responseProductSupplierSchema`) + tipos via `z.infer`
+  - Barrel `packages/shared/src/index.ts` re-exporta `./schemas/product` e `./schemas/supplier`
+  - **Verificado:** `pnpm --filter @elos/shared build`, `pnpm type-check` (3 workspaces) verdes;
+    `biome check` dos 2 arquivos novos limpo; 4 `safeParse` da spec confirmados (PJ sem CNPJ falha,
+    PJ com CNPJ passa, produto válido passa, produto inválido falha). `pnpm lint` na raiz do pacote
+    reporta apenas ruído CRLF pré-existente em arquivos não tocados (normalizado pelo `--write` do
+    pre-commit / Linux no CI)
+  - **Ajuste vs. spec:** ver Decisões Arquiteturais (2.1) — `export type UnitOfMeasure` removido de
+    `product.ts` (colidia com o `UnitOfMeasure` já exportado por `enums.ts` no barrel)
+
 ---
 
 ## Em Progresso
 
-- Nada ativo. **Fase 1.5 concluída → Fase 1 (Auth e Empresas) concluída**. Próximo: **Fase 2 — Fornecedores e Produtos**.
+- Nada ativo. **Fase 2.1 concluída**. Próximo: **2.2 — Suppliers Module (API)**.
 
 ---
 
@@ -364,7 +385,7 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | ---- | ------------------------------- | ------------- |
 | 0    | Fundação                        | Concluída     |
 | 1    | Auth e Empresas                 | Concluída     |
-| 2    | Fornecedores e Produtos         | Não iniciada  |
+| 2    | Fornecedores e Produtos         | Em andamento  |
 | 3    | Cotações e Lances               | Não iniciada  |
 | 4    | Pedidos de Compra               | Não iniciada  |
 | 5    | Recebimento e Estoque           | Não iniciada  |
@@ -468,6 +489,7 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | `htmlFor`/`id` em todos os campos de formulário (1.5) | Os snippets da spec usam `<label>` sem associação, o que dispara `a11y/noLabelWithoutControl` (erro do Biome) e contraria a própria checklist de acessibilidade ("todo campo com `<label>` associado"). Adicionados pares `htmlFor`/`id` em `company-form` (11 campos) e `invite-member-sheet` (nome/email/papel) |
 | `type="button"` + `ROLE_BADGE.TRANSPORTADOR` (dot) (1.5) | Mesmo padrão de 1.4: `<button>` hand-rolled exigem `type="button"` (`useButtonType`); `ROLE_BADGE['TRANSPORTADOR']` trocado por acesso por ponto (`useLiteralKeys`). Ajustes de lint fora do snippet literal |
 | shadcn `table`/`badge`/`select` não instalados (1.5) | A seção 1 da spec manda instalar 5 componentes, mas só `sheet` e `alert-dialog` são importados — tabelas, badges e o select são inline/nativos (a própria checklist diz "tabela sem shadcn Table"). Instalados via CLI apenas os 2 usados; `globals.css` verificado intacto após o `add` |
+| `export type UnitOfMeasure` removido de `product.ts` (2.1) | A spec re-declara `export type UnitOfMeasure = (typeof unitOfMeasureValues)[number]` em `product.ts`, mas `enums.ts` (0.3) já exporta um `UnitOfMeasure` (const + type) com os mesmos 10 valores, e ambos passam pelo barrel `index.ts` → `error TS2308` (re-export ambíguo). Mantido `unitOfMeasureValues` (necessário p/ `z.enum`) e removida a re-declaração do tipo; o `UnitOfMeasure` canônico continua vindo de `enums.ts`. `z.enum(unitOfMeasureValues)` infere o mesmo union literal, sem perda de tipagem |
 
 ---
 
