@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 3 — Cotações e Lances** · `Em andamento` (3.3 concluída) → próxima unidade: **3.4 — Quotations Management UI (Frontend)**
+**Fase 3 — Cotações e Lances** · `Em andamento` (3.4 concluída) → próxima unidade: **3.5 — Lances e Comparativo UI (Frontend)**
 
 ---
 
@@ -479,11 +479,53 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     (não `ACCEPTED`), `@Inject` explícito na DI, audit log adicionado a delete/itens, `enqueue` do service
     spec como fila sequencial (a versão da spec sobrescrevia e quebrava os fluxos multi-select)
 
+- [x] **3.4 — Quotations Management UI (Frontend)** — spec `20-quotations-ui-spec.md`
+  - Commit convencional esperado: `feat(web): add quotations ui with list, form and detail`
+  - `lib/api.ts` estendido: 4 funções server-side (`getQuotationsServer` com query `status`/`search`,
+    `getQuotationServer`, `getQuotationItemsServer`, `getQuotationSuppliersServer`) + 10 client-side
+    (`createQuotation`/`updateQuotation`/`publishQuotation`/`closeQuotation`/`cancelQuotation`, itens
+    `addQuotationItem`/`updateQuotationItem`/`removeQuotationItem`, convites `inviteSupplierToQuotation`/
+    `removeSupplierFromQuotation`), no padrão `sessionHeaders()` (server) e `client()` ky (client);
+    imports de tipos de `@elos/shared`
+  - `components/domain/`: `quotation-status-badge.tsx` (badge por status via tokens semânticos —
+    DRAFT→muted, OPEN→success, CLOSED→info, CANCELLED→destructive), `quotation-form.tsx` (form
+    reutilizável create/edit, `deadline` via `datetime-local` convertido p/ ISO no submit e ISO→local
+    no default de edit), `quotation-items-panel.tsx` (Client Component com estado local + form inline
+    de adição + remoção), `quotation-suppliers-panel.tsx` (convites com select de fornecedor APPROVED
+    ainda não convidado + remoção), `quotations-list-client.tsx` (tabs de status + busca por título/
+    número client-side + tabela com kebab menu — Ver/Editar/Cancelar conforme status e `canMutate`,
+    `AlertDialog` antes de cancelar) e `quotation-actions.tsx` (Publicar em DRAFT, Fechar Recebimento e
+    Cancelar via `AlertDialog` de confirmação)
+  - Rotas `(app)/[cnpj]/quotations/`: `page.tsx` (SSR lista + filtros via Client Component), `loading.tsx`
+    (skeleton), `error.tsx` (boundary com `console.error`), `new/page.tsx` (form create), `[id]/page.tsx`
+    (detalhe: header + grid de info + painel de itens + painel de fornecedores + ações de status,
+    link "Ver lances/comparativo →" p/ a futura 3.5 em OPEN/CLOSED), `[id]/loading.tsx`, `[id]/error.tsx`,
+    `[id]/edit/page.tsx` (form edit, **404 se a cotação não for DRAFT**). Sidebar (1.4) já tinha o item
+    "Cotações" (`ClipboardList`) — nenhuma mudança necessária
+  - **Verificado:** `pnpm --filter web type-check` (3 workspaces) verde; `biome lint` dos arquivos novos
+    limpo (só o warning `noNonNullAssertion` pré-existente em `API_URL` de `lib/api.ts`); `pnpm --filter
+    web build` **compila + checa tipos + gera as rotas de quotations** (`page`/`new`/`[id]`/`[id]/edit`
+    confirmados em `.next/server/app`, ✓ 9/9 static pages). Passo `output: 'standalone'` falha por `EPERM`
+    de symlink no Windows (mesma limitação de 0.5/1.4/1.5/2.4/2.5). Fluxo runtime (criar/editar/publicar/
+    fechar/cancelar, adicionar/remover item, convidar/remover fornecedor) não exercitado — requer API +
+    banco vivos
+  - **Ajustes vs. spec:** implementação seguiu as convenções reais do codebase (suppliers 2.4 / products
+    2.5) em vez do código literal da spec: (a) **Tailwind utility classes + tokens semânticos** em vez dos
+    inline styles com `var(--color-*)`/hex da spec — consistência visual com o resto do app; (b) assinaturas
+    server-side `getXServer(cnpj, params?)` (a spec usava uma variável `cnpj` indefinida e `(params?)`); as
+    páginas chamam com `cnpj` como 1º arg; (c) `params: Promise<{...}>` + `await params` (Next.js 15);
+    (d) **sem `getServerSession` por página** — o `(app)/[cnpj]/layout.tsx` (1.4) já faz o guard de sessão/
+    membership (a spec importava `getServerSession` de `@/lib/server-auth`, que exporta `auth`, não essa
+    função); (e) role via `getMyCompaniesServer()` (não `session.user.role`); (f) `deadline` `datetime-local`
+    → ISO via `setValueAs`/`toISOString` no submit e helper `isoToDatetimeLocal` no default de edit (o
+    contrato exige `z.string().datetime()`); (g) cancelar usa `AlertDialog` (não `confirm()`); (h) badge por
+    tokens semânticos (não hex hardcoded — não existe `--radius-full` no token set)
+
 ---
 
 ## Em Progresso
 
-- Nada ativo. **3.3 concluída**. Próximo: **3.4 — Quotations Management UI (Frontend)**.
+- Nada ativo. **3.4 concluída**. Próximo: **3.5 — Lances e Comparativo UI (Frontend)**.
 
 ---
 
