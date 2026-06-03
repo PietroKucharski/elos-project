@@ -35,7 +35,10 @@ export function RejectSupplierDialog({
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
 
-  async function handleReject() {
+  async function handleReject(event: React.MouseEvent<HTMLButtonElement>) {
+    // Impede o auto-close padrão do Radix — sem isso o dialog fecharia mesmo
+    // quando a validação abaixo barra o envio (motivo < 5 caracteres).
+    event.preventDefault()
     if (notes.trim().length < 5) {
       toast.error('Informe o motivo da rejeição (mínimo 5 caracteres).')
       return
