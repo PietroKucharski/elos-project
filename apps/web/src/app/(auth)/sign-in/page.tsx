@@ -198,7 +198,7 @@ export default function SignInPage() {
               )}
             </div>
 
-            <div className="flex items-center justify-between text-[13px]">
+            <div className="flex items-center text-[13px]">
               <label className="flex cursor-pointer items-center gap-[7px] text-muted-foreground">
                 <input
                   type="checkbox"
@@ -207,9 +207,6 @@ export default function SignInPage() {
                 />
                 Manter conectado
               </label>
-              <Link href="/sign-in" className="font-medium text-primary">
-                Esqueci a senha
-              </Link>
             </div>
 
             <Button type="submit" disabled={loading} className="h-[42px] w-full text-[14.5px]">
