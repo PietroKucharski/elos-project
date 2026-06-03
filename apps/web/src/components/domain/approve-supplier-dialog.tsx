@@ -65,11 +65,8 @@ export function ApproveSupplierDialog({
             vinculado a produtos e convidado para cotações.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <div style={{ padding: '0 0 8px' }}>
-          <label
-            htmlFor="approve-rating"
-            style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}
-          >
+        <div className="pb-2">
+          <label htmlFor="approve-rating" className="mb-1.5 block text-[13px] font-medium">
             Avaliação inicial (1–5, opcional)
           </label>
           <input
@@ -80,14 +77,7 @@ export function ApproveSupplierDialog({
             value={rating}
             onChange={(e) => setRating(e.target.value)}
             placeholder="Ex: 4"
-            style={{
-              width: 80,
-              height: 36,
-              padding: '0 10px',
-              fontSize: 13,
-              border: '1px solid hsl(214 32% 91%)',
-              borderRadius: '0.375rem',
-            }}
+            className="h-9 w-20 rounded-md border border-input px-2.5 text-[13px]"
           />
         </div>
         <AlertDialogFooter>
@@ -95,7 +85,7 @@ export function ApproveSupplierDialog({
           <AlertDialogAction
             onClick={handleApprove}
             disabled={loading}
-            style={{ background: 'hsl(142 71% 45%)', color: 'white' }}
+            className="bg-success text-white hover:bg-success/90"
           >
             {loading ? 'Aprovando...' : 'Aprovar'}
           </AlertDialogAction>

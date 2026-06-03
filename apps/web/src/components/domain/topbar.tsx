@@ -31,56 +31,25 @@ export function Topbar({
   }
 
   return (
-    <header
-      style={{
-        height: 64,
-        flexShrink: 0,
-        background: 'hsl(0 0% 100%)',
-        borderBottom: '1px solid hsl(214 32% 91%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 18px 0 20px',
-        gap: 16,
-        zIndex: 30,
-      }}
-    >
+    <header className="z-30 flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-card pr-[18px] pl-5">
       {/* Esquerda: toggle + logo + company switcher */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div className="flex items-center gap-3.5">
         <button
           type="button"
           onClick={toggleSidebar}
           aria-label="Alternar menu lateral"
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: '0.375rem',
-            border: 'none',
-            background: 'transparent',
-            color: 'hsl(215 16% 47%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            transition: 'background .15s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'hsl(210 40% 96.1%)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent'
-          }}
+          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted"
         >
           <PanelLeft size={19} strokeWidth={1.6} />
         </button>
 
         {/* Separador */}
-        <div style={{ width: 1, height: 26, background: 'hsl(214 32% 91%)' }} />
+        <div className="h-[26px] w-px bg-border" />
 
         <Logo size={18} />
 
         {/* Separador */}
-        <div style={{ width: 1, height: 26, background: 'hsl(214 32% 91%)', margin: '0 2px' }} />
+        <div className="mx-0.5 h-[26px] w-px bg-border" />
 
         <CompanySwitcher
           currentCnpj={companyCnpj}
@@ -90,48 +59,18 @@ export function Topbar({
       </div>
 
       {/* Direita: notificações + user menu */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="flex items-center gap-2">
         <button
           type="button"
           aria-label="Notificações"
-          style={{
-            position: 'relative',
-            width: 38,
-            height: 38,
-            borderRadius: '0.375rem',
-            border: 'none',
-            background: 'transparent',
-            color: 'hsl(215 16% 47%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            transition: 'background .15s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'hsl(210 40% 96.1%)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent'
-          }}
+          className="relative flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted"
         >
           <Bell size={19} strokeWidth={1.6} />
           {/* Ponto de notificação */}
-          <span
-            style={{
-              position: 'absolute',
-              top: 8,
-              right: 9,
-              width: 7,
-              height: 7,
-              borderRadius: 99,
-              background: 'hsl(0 72% 51%)',
-              border: '1.5px solid hsl(0 0% 100%)',
-            }}
-          />
+          <span className="absolute top-2 right-[9px] h-[7px] w-[7px] rounded-full border-[1.5px] border-card bg-destructive" />
         </button>
 
-        <div style={{ width: 1, height: 26, background: 'hsl(214 32% 91%)', margin: '0 4px' }} />
+        <div className="mx-1 h-[26px] w-px bg-border" />
 
         <UserMenu name={userName} email={userEmail} currentCnpj={companyCnpj} />
       </div>

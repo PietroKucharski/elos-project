@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { removeMember, updateMemberRole } from '@/lib/api'
+import { cn } from '@/lib/utils'
 // apps/web/src/components/domain/members-table.tsx
 import type { MemberResponse } from '@elos/shared'
 import { MoreHorizontal, Pencil, Shield, XCircle } from 'lucide-react'
@@ -18,38 +19,14 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
-// Cores de badge por papel — fiel ao STATUS_MAP do protótipo
-const ROLE_BADGE: Record<string, { fg: string; bg: string; bd: string }> = {
-  SUPER_ADMIN: {
-    fg: 'var(--color-primary)',
-    bg: 'var(--color-primary-soft)',
-    bd: 'var(--color-primary-soft-border)',
-  },
-  ADMIN_EMPRESA: {
-    fg: 'var(--color-primary)',
-    bg: 'var(--color-primary-soft)',
-    bd: 'var(--color-primary-soft-border)',
-  },
-  COMPRADOR: {
-    fg: 'var(--color-info)',
-    bg: 'var(--color-info-soft)',
-    bd: 'var(--color-info-border)',
-  },
-  ALMOXARIFE: {
-    fg: 'var(--color-info)',
-    bg: 'var(--color-info-soft)',
-    bd: 'var(--color-info-border)',
-  },
-  ANALISTA_FINANCEIRO: {
-    fg: 'var(--color-info)',
-    bg: 'var(--color-info-soft)',
-    bd: 'var(--color-info-border)',
-  },
-  TRANSPORTADOR: {
-    fg: 'var(--color-muted-foreground)',
-    bg: 'var(--color-muted)',
-    bd: 'var(--color-border)',
-  },
+// Classes de badge por papel — fiel ao STATUS_MAP do protótipo
+const ROLE_BADGE: Record<string, string> = {
+  SUPER_ADMIN: 'text-primary bg-primary-soft border-primary-soft-border',
+  ADMIN_EMPRESA: 'text-primary bg-primary-soft border-primary-soft-border',
+  COMPRADOR: 'text-info bg-info-soft border-info-border',
+  ALMOXARIFE: 'text-info bg-info-soft border-info-border',
+  ANALISTA_FINANCEIRO: 'text-info bg-info-soft border-info-border',
+  TRANSPORTADOR: 'text-muted-foreground bg-muted border-border',
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -91,6 +68,11 @@ function getInitials(name: string) {
     .toUpperCase()
 }
 
+const TH =
+  'border-b border-border px-4 pb-2.5 text-left text-[11.5px] font-semibold tracking-[0.04em] text-muted-foreground uppercase'
+const MENU_ITEM =
+  'flex w-full cursor-pointer items-center gap-[9px] rounded-md px-[9px] py-2 text-left text-[13.5px] transition-colors'
+
 interface MembersTableProps {
   cnpj: string
   members: MemberResponse[]
@@ -128,31 +110,8 @@ function RoleEditor({
   }
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 'calc(100% + 4px)',
-        right: 0,
-        zIndex: 60,
-        width: 210,
-        background: 'hsl(0 0% 100%)',
-        border: '1px solid hsl(214 32% 91%)',
-        borderRadius: '0.5rem',
-        boxShadow: '0 4px 16px -2px hsl(222 47% 11% / 0.12)',
-        padding: 5,
-        animation: 'popIn .14s ease',
-      }}
-    >
-      <div
-        style={{
-          padding: '7px 9px 5px',
-          fontSize: 11,
-          fontWeight: 600,
-          color: 'hsl(215 16% 47%)',
-          textTransform: 'uppercase',
-          letterSpacing: '.04em',
-        }}
-      >
+    <div className="absolute top-[calc(100%+4px)] right-0 z-[60] w-[210px] rounded-lg border border-border bg-card p-[5px] shadow-pop [animation:popIn_0.14s_ease]">
+      <div className="px-[9px] pt-[7px] pb-[5px] text-[11px] font-semibold tracking-[0.04em] text-muted-foreground uppercase">
         Alterar papel
       </div>
       {ASSIGNABLE_ROLES.map((role) => (
@@ -161,29 +120,10 @@ function RoleEditor({
           type="button"
           onClick={() => change(role)}
           disabled={loading}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            width: '100%',
-            padding: '8px 9px',
-            borderRadius: '0.375rem',
-            border: 'none',
-            background: 'transparent',
-            textAlign: 'left',
-            fontSize: 13.5,
-            color: 'hsl(222 47% 11%)',
-            cursor: 'pointer',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'hsl(210 40% 96.1%)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent'
-          }}
+          className="flex w-full cursor-pointer items-center justify-between rounded-md px-[9px] py-2 text-left text-[13.5px] text-foreground transition-colors hover:bg-muted disabled:opacity-50"
         >
           {ROLE_LABELS[role]}
-          {role === currentRole && <Shield size={13} style={{ color: 'hsl(243 75% 59%)' }} />}
+          {role === currentRole && <Shield size={13} className="text-primary" />}
         </button>
       ))}
     </div>
@@ -213,40 +153,21 @@ export function MembersTable({ cnpj, members, currentUserId }: MembersTableProps
     }
   }
 
-  const thStyle: React.CSSProperties = {
-    textAlign: 'left',
-    padding: '0 16px 10px',
-    fontSize: 11.5,
-    fontWeight: 600,
-    color: 'hsl(215 16% 47%)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.04em',
-    borderBottom: '1px solid hsl(214 32% 91%)',
-  }
-
   return (
     <>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-[13.5px]">
           <thead>
             <tr>
-              <th style={thStyle}>Usuário</th>
-              <th style={thStyle}>Papel</th>
-              <th style={{ ...thStyle, textAlign: 'right', width: 48 }} />
+              <th className={TH}>Usuário</th>
+              <th className={TH}>Papel</th>
+              <th className={cn(TH, 'w-12 text-right')} />
             </tr>
           </thead>
           <tbody>
             {members.length === 0 && (
               <tr>
-                <td
-                  colSpan={3}
-                  style={{
-                    textAlign: 'center',
-                    padding: '48px 16px',
-                    color: 'hsl(215 16% 47%)',
-                    fontSize: 14,
-                  }}
-                >
+                <td colSpan={3} className="px-4 py-12 text-center text-sm text-muted-foreground">
                   Nenhum membro encontrado.
                 </td>
               </tr>
@@ -261,88 +182,53 @@ export function MembersTable({ cnpj, members, currentUserId }: MembersTableProps
               return (
                 <tr
                   key={member.id}
-                  style={{
-                    borderBottom: '1px solid hsl(214 32% 91%)',
-                    animation: `rowIn .3s ease ${Math.min(index * 0.025, 0.3)}s both`,
-                  }}
+                  className="border-b border-border [animation:rowIn_.3s_ease_both]"
+                  style={{ animationDelay: `${Math.min(index * 0.025, 0.3)}s` }}
                 >
                   {/* Usuário: avatar + nome + email */}
-                  <td style={{ padding: '12px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-[11px]">
                       <div
+                        className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full border text-[13px] font-semibold"
                         style={{
-                          width: 34,
-                          height: 34,
-                          borderRadius: 999,
-                          flexShrink: 0,
                           background: `hsl(${color} / 0.13)`,
                           color: `hsl(${color})`,
-                          border: `1px solid hsl(${color} / 0.2)`,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 13,
-                          fontWeight: 600,
+                          borderColor: `hsl(${color} / 0.2)`,
                         }}
                       >
                         {getInitials(member.user.name)}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600, color: 'hsl(222 47% 11%)' }}>
+                        <div className="font-semibold text-foreground">
                           {member.user.name}
                           {isSelf && (
-                            <span
-                              style={{
-                                fontSize: 11,
-                                color: 'hsl(215 16% 47%)',
-                                fontWeight: 400,
-                                marginLeft: 6,
-                              }}
-                            >
+                            <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">
                               (você)
                             </span>
                           )}
                         </div>
-                        <div style={{ fontSize: 12, color: 'hsl(215 16% 47%)' }}>
-                          {member.user.email}
-                        </div>
+                        <div className="text-xs text-muted-foreground">{member.user.email}</div>
                       </div>
                     </div>
                   </td>
 
                   {/* Badge de papel */}
-                  <td style={{ padding: '12px 16px' }}>
+                  <td className="px-4 py-3">
                     <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 5,
-                        height: 22,
-                        padding: '0 8px',
-                        borderRadius: 999,
-                        background: `hsl(${badge!.bg})`,
-                        color: `hsl(${badge!.fg})`,
-                        border: `1px solid hsl(${badge!.bd})`,
-                        fontSize: 11.5,
-                        fontWeight: 600,
-                      }}
+                      className={cn(
+                        'inline-flex h-[22px] items-center gap-[5px] rounded-full border px-2 text-[11.5px] font-semibold',
+                        badge,
+                      )}
                     >
-                      <span
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: 99,
-                          background: `hsl(${badge!.fg})`,
-                        }}
-                      />
+                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
                       {ROLE_LABELS[member.role]}
                     </span>
                   </td>
 
                   {/* Kebab menu */}
-                  <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                  <td className="px-4 py-3 text-right">
                     {!isSuperAdmin && (
-                      <div style={{ position: 'relative', display: 'inline-block' }}>
+                      <div className="relative inline-block">
                         <button
                           type="button"
                           onClick={() =>
@@ -350,45 +236,13 @@ export function MembersTable({ cnpj, members, currentUserId }: MembersTableProps
                           }
                           disabled={isLoading}
                           aria-label={`Ações para ${member.user.name}`}
-                          style={{
-                            width: 30,
-                            height: 30,
-                            borderRadius: '0.375rem',
-                            border: 'none',
-                            background: 'transparent',
-                            color: 'hsl(215 16% 47%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            transition: 'background .12s',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'hsl(210 40% 96.1%)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent'
-                          }}
+                          className="flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
                         >
                           <MoreHorizontal size={16} strokeWidth={1.6} />
                         </button>
 
                         {menuOpen === member.userId && (
-                          <div
-                            style={{
-                              position: 'absolute',
-                              top: 'calc(100% + 4px)',
-                              right: 0,
-                              zIndex: 50,
-                              width: 210,
-                              background: 'hsl(0 0% 100%)',
-                              border: '1px solid hsl(214 32% 91%)',
-                              borderRadius: '0.5rem',
-                              boxShadow: '0 4px 16px -2px hsl(222 47% 11% / 0.12)',
-                              padding: 5,
-                              animation: 'popIn .14s ease',
-                            }}
-                          >
+                          <div className="absolute top-[calc(100%+4px)] right-0 z-50 w-[210px] rounded-lg border border-border bg-card p-[5px] shadow-pop [animation:popIn_0.14s_ease]">
                             {!isSelf && (
                               <button
                                 type="button"
@@ -396,30 +250,12 @@ export function MembersTable({ cnpj, members, currentUserId }: MembersTableProps
                                   setMenuOpen(null)
                                   setEditRole(member.userId)
                                 }}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 9,
-                                  width: '100%',
-                                  padding: '8px 9px',
-                                  borderRadius: '0.375rem',
-                                  border: 'none',
-                                  background: 'transparent',
-                                  fontSize: 13.5,
-                                  color: 'hsl(222 47% 11%)',
-                                  cursor: 'pointer',
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = 'hsl(210 40% 96.1%)'
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = 'transparent'
-                                }}
+                                className={cn(MENU_ITEM, 'text-foreground hover:bg-muted')}
                               >
                                 <Pencil
                                   size={15}
                                   strokeWidth={1.6}
-                                  style={{ color: 'hsl(215 16% 47%)' }}
+                                  className="text-muted-foreground"
                                 />
                                 Editar papel
                               </button>
@@ -430,25 +266,10 @@ export function MembersTable({ cnpj, members, currentUserId }: MembersTableProps
                                 setMenuOpen(null)
                                 setRemoveTarget({ userId: member.userId, name: member.user.name })
                               }}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 9,
-                                width: '100%',
-                                padding: '8px 9px',
-                                borderRadius: '0.375rem',
-                                border: 'none',
-                                background: 'transparent',
-                                fontSize: 13.5,
-                                color: 'hsl(0 72% 51%)',
-                                cursor: 'pointer',
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'hsl(0 86% 97%)'
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'transparent'
-                              }}
+                              className={cn(
+                                MENU_ITEM,
+                                'text-destructive hover:bg-destructive-soft',
+                              )}
                             >
                               <XCircle size={15} strokeWidth={1.6} /> Remover da empresa
                             </button>
@@ -488,7 +309,7 @@ export function MembersTable({ cnpj, members, currentUserId }: MembersTableProps
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRemove}
-              style={{ background: 'hsl(0 72% 51%)', color: '#fff' }}
+              className="bg-destructive text-white hover:bg-destructive/90"
             >
               Remover
             </AlertDialogAction>

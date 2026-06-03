@@ -1,34 +1,22 @@
 export default function CompanyLoading() {
   return (
-    <div style={{ padding: 24 }}>
+    <div className="p-6">
       {/* Skeleton de page header */}
-      <div style={{ marginBottom: 22 }}>
-        <div className="skeleton" style={{ width: 200, height: 28, marginBottom: 8 }} />
-        <div className="skeleton" style={{ width: 320, height: 18 }} />
+      <div className="mb-[22px]">
+        <div className="skeleton mb-2 h-7 w-[200px]" />
+        <div className="skeleton h-[18px] w-[320px]" />
       </div>
       {/* Skeleton de tabela */}
-      <div
-        style={{
-          background: 'white',
-          border: '1px solid hsl(214 32% 91%)',
-          borderRadius: '0.5rem',
-          overflow: 'hidden',
-        }}
-      >
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             // biome-ignore lint/suspicious/noArrayIndexKey: skeleton estático sem identidade própria
             key={i}
-            style={{
-              display: 'flex',
-              gap: 16,
-              padding: '14px 16px',
-              borderBottom: i < 4 ? '1px solid hsl(214 32% 91%)' : 'none',
-            }}
+            className={`flex gap-4 px-4 py-3.5 ${i < 4 ? 'border-b border-border' : ''}`}
           >
-            <div className="skeleton" style={{ width: 160, height: 16 }} />
-            <div className="skeleton" style={{ width: 100, height: 16 }} />
-            <div className="skeleton" style={{ width: 80, height: 16, marginLeft: 'auto' }} />
+            <div className="skeleton h-4 w-40" />
+            <div className="skeleton h-4 w-[100px]" />
+            <div className="skeleton ml-auto h-4 w-20" />
           </div>
         ))}
       </div>

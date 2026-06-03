@@ -27,25 +27,18 @@ const signUpSchema = z
   })
 type SignUpForm = z.infer<typeof signUpSchema>
 
+const FIELD = 'flex flex-col gap-1.5'
+const LABEL = 'text-[13px] font-medium text-foreground-2'
+const ICON =
+  'pointer-events-none absolute top-1/2 left-[11px] -translate-y-1/2 text-subtle-foreground'
+
 // Reutilizar o BrandPanel como componente local (mesmo código do sign-in)
 function BrandPanel() {
   return (
-    <div className="auth-brand" style={{ flex: 1, display: 'flex' }}>
-      <div
-        style={{
-          position: 'relative',
-          flex: 1,
-          background: 'hsl(243 72% 22%)',
-          color: '#fff',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          padding: '48px 52px',
-        }}
-      >
+    <div className="auth-brand flex flex-1">
+      <div className="relative flex flex-1 flex-col justify-between overflow-hidden bg-[hsl(243_72%_22%)] px-[52px] py-12 text-white">
         <svg
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.5 }}
+          className="absolute inset-0 h-full w-full opacity-50"
           preserveAspectRatio="xMidYMid slice"
           aria-hidden="true"
         >
@@ -82,37 +75,19 @@ function BrandPanel() {
           <rect width="100%" height="100%" fill="url(#bgg2)" />
           <rect width="100%" height="100%" fill="url(#chains2)" />
         </svg>
-        <div
-          style={{
-            position: 'absolute',
-            width: 420,
-            height: 420,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, hsl(243 80% 60% / 0.35), transparent 70%)',
-            top: -120,
-            right: -120,
-          }}
-        />
-        <div style={{ position: 'relative' }}>
+        <div className="absolute -top-[120px] -right-[120px] h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,hsl(243_80%_60%/0.35),transparent_70%)]" />
+        <div className="relative">
           <Logo size={22} light />
         </div>
-        <div style={{ position: 'relative', maxWidth: 440 }}>
-          <h1
-            style={{
-              fontSize: 34,
-              fontWeight: 700,
-              lineHeight: 1.15,
-              letterSpacing: '-0.02em',
-              color: '#fff',
-            }}
-          >
+        <div className="relative max-w-[440px]">
+          <h1 className="text-[34px] font-bold leading-[1.15] tracking-[-0.02em] text-white">
             Comece a conectar sua cadeia de suprimentos.
           </h1>
-          <p style={{ fontSize: 15.5, color: 'hsl(243 40% 86%)', marginTop: 18, lineHeight: 1.6 }}>
+          <p className="mt-[18px] text-[15.5px] leading-relaxed text-[hsl(243_40%_86%)]">
             Crie sua conta e convide sua equipe para gerenciar fornecedores, cotações e pedidos em
             um único lugar.
           </p>
-          <div style={{ display: 'flex', gap: 26, marginTop: 36 }}>
+          <div className="mt-9 flex gap-[26px]">
             {[
               { label: 'Fornecedores', Icon: Building2 },
               { label: 'Cotações', Icon: FileText },
@@ -120,20 +95,14 @@ function BrandPanel() {
             ].map(({ label, Icon }) => (
               <div
                 key={label}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 9,
-                  fontSize: 13.5,
-                  color: 'hsl(243 40% 88%)',
-                }}
+                className="flex items-center gap-[9px] text-[13.5px] text-[hsl(243_40%_88%)]"
               >
                 <Icon size={17} strokeWidth={1.5} /> {label}
               </div>
             ))}
           </div>
         </div>
-        <div style={{ position: 'relative', fontSize: 12.5, color: 'hsl(243 35% 75%)' }}>
+        <div className="relative text-[12.5px] text-[hsl(243_35%_75%)]">
           © 2026 Elos · Gestão de cadeia de suprimentos
         </div>
       </div>
@@ -174,151 +143,110 @@ export default function SignUpPage() {
     }
   }
 
-  // Reutilizar o mesmo campo estilizado de sign-in
-  const fieldStyle = { display: 'flex', flexDirection: 'column' as const, gap: 6 }
-  const labelStyle = { fontSize: 13, fontWeight: 500, color: 'hsl(217 33% 17%)' }
-  const iconStyle = {
-    position: 'absolute' as const,
-    left: 11,
-    top: '50%',
-    transform: 'translateY(-50%)',
-    color: 'hsl(215 20% 65%)',
-    pointerEvents: 'none' as const,
-  }
-
   return (
-    <div style={{ display: 'flex', height: '100%', background: 'white' }}>
+    <div className="flex h-full bg-card">
       <BrandPanel />
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 32,
-          overflowY: 'auto',
-        }}
-      >
-        <div style={{ width: '100%', maxWidth: 380 }}>
-          <div className="auth-mobile-logo" style={{ display: 'none', marginBottom: 30 }}>
+      <div className="flex flex-1 items-center justify-center overflow-y-auto p-8">
+        <div className="w-full max-w-[380px]">
+          <div className="auth-mobile-logo mb-[30px] hidden">
             <Logo size={22} />
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.01em' }}>
-            Criar sua conta
-          </h1>
-          <p style={{ fontSize: 14, color: 'hsl(215 16% 47%)', marginTop: 6, marginBottom: 28 }}>
+          <h1 className="text-2xl font-semibold tracking-[-0.01em]">Criar sua conta</h1>
+          <p className="mt-1.5 mb-7 text-sm text-muted-foreground">
             Comece a organizar sua cadeia de suprimentos.
           </p>
-          <form
-            onSubmit={handleSubmit(onSubmit)}
-            style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
-          >
-            <div style={fieldStyle}>
-              <Label htmlFor="name" style={labelStyle}>
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+            <div className={FIELD}>
+              <Label htmlFor="name" className={LABEL}>
                 Nome completo
               </Label>
-              <div style={{ position: 'relative' }}>
-                <User size={15} strokeWidth={1.5} style={iconStyle} />
+              <div className="relative">
+                <User size={15} strokeWidth={1.5} className={ICON} />
                 <Input
                   id="name"
                   placeholder="Seu nome"
-                  style={{ paddingLeft: 34 }}
+                  className="pl-[34px]"
                   {...register('name')}
                 />
               </div>
               {errors.name && (
-                <span style={{ fontSize: 12, color: 'hsl(0 72% 51%)' }} role="alert">
+                <span className="text-xs text-destructive" role="alert">
                   {errors.name.message}
                 </span>
               )}
             </div>
-            <div style={fieldStyle}>
-              <Label htmlFor="email" style={labelStyle}>
+            <div className={FIELD}>
+              <Label htmlFor="email" className={LABEL}>
                 E-mail corporativo
               </Label>
-              <div style={{ position: 'relative' }}>
-                <Mail size={15} strokeWidth={1.5} style={iconStyle} />
+              <div className="relative">
+                <Mail size={15} strokeWidth={1.5} className={ICON} />
                 <Input
                   id="email"
                   type="email"
                   placeholder="voce@empresa.com.br"
-                  style={{ paddingLeft: 34 }}
+                  className="pl-[34px]"
                   {...register('email')}
                 />
               </div>
               {errors.email && (
-                <span style={{ fontSize: 12, color: 'hsl(0 72% 51%)' }} role="alert">
+                <span className="text-xs text-destructive" role="alert">
                   {errors.email.message}
                 </span>
               )}
             </div>
-            <div style={fieldStyle}>
-              <Label htmlFor="password" style={labelStyle}>
+            <div className={FIELD}>
+              <Label htmlFor="password" className={LABEL}>
                 Senha
               </Label>
-              <div style={{ position: 'relative' }}>
-                <Lock size={15} strokeWidth={1.5} style={iconStyle} />
+              <div className="relative">
+                <Lock size={15} strokeWidth={1.5} className={ICON} />
                 <Input
                   id="password"
                   type="password"
                   placeholder="Mínimo de 8 caracteres"
-                  style={{ paddingLeft: 34 }}
+                  className="pl-[34px]"
                   {...register('password')}
                 />
               </div>
               {errors.password && (
-                <span style={{ fontSize: 12, color: 'hsl(0 72% 51%)' }} role="alert">
+                <span className="text-xs text-destructive" role="alert">
                   {errors.password.message}
                 </span>
               )}
             </div>
-            <div style={fieldStyle}>
-              <Label htmlFor="confirmPassword" style={labelStyle}>
+            <div className={FIELD}>
+              <Label htmlFor="confirmPassword" className={LABEL}>
                 Confirmar senha
               </Label>
-              <div style={{ position: 'relative' }}>
-                <Lock size={15} strokeWidth={1.5} style={iconStyle} />
+              <div className="relative">
+                <Lock size={15} strokeWidth={1.5} className={ICON} />
                 <Input
                   id="confirmPassword"
                   type="password"
                   placeholder="Repita a senha"
-                  style={{ paddingLeft: 34 }}
+                  className="pl-[34px]"
                   {...register('confirmPassword')}
                 />
               </div>
               {errors.confirmPassword && (
-                <span style={{ fontSize: 12, color: 'hsl(0 72% 51%)' }} role="alert">
+                <span className="text-xs text-destructive" role="alert">
                   {errors.confirmPassword.message}
                 </span>
               )}
             </div>
-            <Button type="submit" disabled={loading} className="w-full h-[42px] text-[14.5px]">
-              {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            <Button type="submit" disabled={loading} className="h-[42px] w-full text-[14.5px]">
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Criar conta
             </Button>
           </form>
-          <p
-            style={{
-              fontSize: 12,
-              color: 'hsl(215 16% 47%)',
-              marginTop: 16,
-              lineHeight: 1.5,
-              textAlign: 'center',
-            }}
-          >
+          <p className="mt-4 text-center text-xs leading-normal text-muted-foreground">
             Ao criar a conta, você concorda com os Termos de Uso e a Política de Privacidade do
             Elos.
           </p>
-          <div
-            style={{
-              textAlign: 'center',
-              fontSize: 13.5,
-              color: 'hsl(215 16% 47%)',
-              marginTop: 18,
-            }}
-          >
+          <div className="mt-[18px] text-center text-[13.5px] text-muted-foreground">
             Já tem conta?{' '}
-            <Link href="/sign-in" style={{ color: 'hsl(243 75% 59%)', fontWeight: 600 }}>
+            <Link href="/sign-in" className="font-semibold text-primary">
               Entrar
             </Link>
           </div>

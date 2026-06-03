@@ -1,5 +1,6 @@
 'use client'
 
+import { cn } from '@/lib/utils'
 import type { Role } from '@elos/shared'
 import {
   AlertTriangle,
@@ -160,38 +161,16 @@ export function Sidebar({ cnpj, role }: SidebarProps) {
     <aside
       id="elos-sidebar"
       data-collapsed="false"
-      style={{
-        width: 'var(--sidebar-w, 240px)',
-        flexShrink: 0,
-        background: 'hsl(210 40% 98%)',
-        borderRight: '1px solid hsl(214 32% 91%)',
-        display: 'flex',
-        flexDirection: 'column',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        transition: 'width .2s ease',
-        padding: '14px 12px',
-      }}
+      className="flex w-[var(--sidebar-w,240px)] shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-border bg-background px-3 py-3.5 transition-[width] duration-200 ease-in-out"
     >
       {NAV_GROUPS.map((section) => {
         const visible = section.items.filter((item) => item.roles.includes(role))
         if (visible.length === 0) return null
 
         return (
-          <div key={section.group} style={{ marginBottom: 6 }}>
+          <div key={section.group} className="mb-1.5">
             {/* Label do grupo — oculto quando colapsado via CSS calc */}
-            <div
-              style={{
-                padding: '10px 10px 6px',
-                fontSize: 10.5,
-                fontWeight: 700,
-                color: 'hsl(215 20% 65%)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                overflow: 'hidden',
-                whiteSpace: 'nowrap',
-              }}
-            >
+            <div className="overflow-hidden px-2.5 pt-2.5 pb-1.5 text-[10.5px] font-bold tracking-[0.06em] whitespace-nowrap text-subtle-foreground uppercase">
               {section.group}
             </div>
 
@@ -204,72 +183,21 @@ export function Sidebar({ cnpj, role }: SidebarProps) {
                 <Link
                   key={item.key}
                   href={href}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 11,
-                    width: '100%',
-                    height: 38,
-                    padding: '0 10px',
-                    borderRadius: '0.375rem',
-                    position: 'relative',
-                    marginBottom: 2,
-                    textDecoration: 'none',
-                    background: isActive ? 'hsl(243 75% 96%)' : 'transparent',
-                    color: isActive ? 'hsl(243 75% 59%)' : 'hsl(217 33% 17%)',
-                    fontSize: 13.5,
-                    fontWeight: isActive ? 600 : 500,
-                    transition: 'background .12s, color .12s',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isActive)
-                      (e.currentTarget as HTMLElement).style.background = 'hsl(210 40% 96.1%)'
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'
-                  }}
+                  className={cn(
+                    'relative mb-0.5 flex h-[38px] w-full items-center gap-[11px] rounded-md px-2.5 text-[13.5px] no-underline transition-colors',
+                    isActive
+                      ? 'bg-primary-soft font-semibold text-primary'
+                      : 'font-medium text-foreground-2 hover:bg-muted',
+                  )}
                 >
                   {/* Indicador de item ativo: barra vertical esquerda */}
                   {isActive && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        left: -12,
-                        top: 7,
-                        bottom: 7,
-                        width: 3,
-                        background: 'hsl(243 75% 59%)',
-                        borderRadius: '0 3px 3px 0',
-                      }}
-                    />
+                    <span className="absolute top-[7px] bottom-[7px] -left-3 w-[3px] rounded-r-[3px] bg-primary" />
                   )}
-                  <Icon size={19} strokeWidth={isActive ? 1.9 : 1.6} style={{ flexShrink: 0 }} />
-                  <span
-                    style={{
-                      flex: 1,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {item.label}
-                  </span>
+                  <Icon size={19} strokeWidth={isActive ? 1.9 : 1.6} className="shrink-0" />
+                  <span className="flex-1 truncate">{item.label}</span>
                   {item.badge != null && (
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 600,
-                        minWidth: 19,
-                        height: 19,
-                        padding: '0 5px',
-                        borderRadius: 99,
-                        background: 'hsl(0 72% 51%)',
-                        color: '#fff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
+                    <span className="flex h-[19px] min-w-[19px] items-center justify-center rounded-full bg-destructive px-[5px] text-[11px] font-semibold text-white">
                       {item.badge}
                     </span>
                   )}
@@ -281,29 +209,16 @@ export function Sidebar({ cnpj, role }: SidebarProps) {
       })}
 
       {/* Card de ajuda no rodapé */}
-      <div style={{ marginTop: 'auto', padding: 12 }}>
-        <div
-          style={{
-            background: 'hsl(210 40% 96.1%)',
-            borderRadius: '0.5rem',
-            padding: '12px 13px',
-            display: 'flex',
-            gap: 10,
-            alignItems: 'flex-start',
-          }}
-        >
+      <div className="mt-auto p-3">
+        <div className="flex items-start gap-2.5 rounded-lg bg-muted px-[13px] py-3">
           <HelpCircle
             size={17}
             strokeWidth={1.5}
-            style={{ color: 'hsl(215 16% 47%)', marginTop: 1, flexShrink: 0 }}
+            className="mt-px shrink-0 text-muted-foreground"
           />
           <div>
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: 'hsl(222 47% 11%)' }}>
-              Central de ajuda
-            </div>
-            <div style={{ fontSize: 11.5, color: 'hsl(215 16% 47%)', marginTop: 1 }}>
-              Guias e atalhos do Elos
-            </div>
+            <div className="text-[12.5px] font-semibold text-foreground">Central de ajuda</div>
+            <div className="mt-px text-[11.5px] text-muted-foreground">Guias e atalhos do Elos</div>
           </div>
         </div>
       </div>

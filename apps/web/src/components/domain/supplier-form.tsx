@@ -4,6 +4,7 @@
 
 import { Button } from '@/components/ui/button'
 import { createSupplier, updateSupplier } from '@/lib/api'
+import { cn } from '@/lib/utils'
 import { createSupplierSchema, updateSupplierSchema } from '@elos/shared'
 import type { CreateSupplierDto, SupplierResponse, UpdateSupplierDto } from '@elos/shared'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -13,26 +14,15 @@ import { useState } from 'react'
 import { type Resolver, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
-// Estilos reutilizáveis (mesmos de company-form.tsx)
-const fieldStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6 }
-const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 500, color: 'hsl(217 33% 17%)' }
-const inputStyle: React.CSSProperties = {
-  height: 38,
-  padding: '0 12px',
-  fontSize: 13.5,
-  borderRadius: '0.375rem',
-  border: '1px solid hsl(214 32% 91%)',
-  background: 'hsl(0 0% 100%)',
-  color: 'hsl(222 47% 11%)',
-  outline: 'none',
-  width: '100%',
-}
-const inputReadonlyStyle: React.CSSProperties = {
-  ...inputStyle,
-  background: 'hsl(210 40% 96.1%)',
-  cursor: 'not-allowed',
-}
-const errorStyle: React.CSSProperties = { fontSize: 12, color: 'hsl(0 72% 51%)' }
+// Classes reutilizáveis (mesmas de company-form.tsx)
+const FIELD = 'flex flex-col gap-1.5'
+const LABEL = 'text-[13px] font-medium text-foreground-2'
+const INPUT =
+  'h-[38px] w-full rounded-md border border-input bg-card px-3 text-[13.5px] text-foreground outline-none transition-[border-color,box-shadow] focus:border-ring focus:ring-3 focus:ring-ring/[0.13]'
+const INPUT_READONLY = cn(INPUT, 'cursor-not-allowed bg-muted')
+const SELECT = cn(INPUT, 'cursor-pointer')
+const TEXTAREA = cn(INPUT, 'h-auto resize-y py-2')
+const ERROR = 'text-xs text-destructive'
 
 interface SupplierFormProps {
   mode: 'create' | 'edit'
@@ -94,187 +84,175 @@ export function SupplierForm({
   }
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      style={{ display: 'flex', flexDirection: 'column', gap: 20 }}
-    >
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
       {/* Tipo de fornecedor — apenas no modo create */}
       {mode === 'create' && (
-        <div style={fieldStyle}>
-          <label htmlFor="type" style={labelStyle}>
+        <div className={FIELD}>
+          <label htmlFor="type" className={LABEL}>
             Tipo de pessoa *
           </label>
-          <select id="type" {...register('type')} style={{ ...inputStyle, cursor: 'pointer' }}>
+          <select id="type" {...register('type')} className={SELECT}>
             <option value="PJ">Pessoa Jurídica (PJ)</option>
             <option value="PF">Pessoa Física (PF)</option>
           </select>
-          {errors.type && <span style={errorStyle}>{errors.type.message}</span>}
+          {errors.type && <span className={ERROR}>{errors.type.message}</span>}
         </div>
       )}
 
       {/* Nome / Razão Social */}
-      <div style={fieldStyle}>
-        <label htmlFor="name" style={labelStyle}>
+      <div className={FIELD}>
+        <label htmlFor="name" className={LABEL}>
           {supplierType === 'PF' ? 'Nome completo' : 'Razão social'} *
         </label>
         <input
           id="name"
           {...register('name')}
-          style={inputStyle}
+          className={INPUT}
           placeholder={supplierType === 'PF' ? 'João da Silva' : 'Empresa Ltda'}
         />
-        {errors.name && <span style={errorStyle}>{errors.name.message}</span>}
+        {errors.name && <span className={ERROR}>{errors.name.message}</span>}
       </div>
 
       {/* CNPJ / CPF */}
       {(mode === 'create' ? supplierType !== 'PF' : defaultValues?.type !== 'PF') ? (
-        <div style={fieldStyle}>
-          <label htmlFor="cnpj" style={labelStyle}>
+        <div className={FIELD}>
+          <label htmlFor="cnpj" className={LABEL}>
             CNPJ *
           </label>
           <input
             id="cnpj"
             {...register('cnpj')}
-            style={mode === 'edit' ? inputReadonlyStyle : inputStyle}
+            className={mode === 'edit' ? INPUT_READONLY : INPUT}
             readOnly={mode === 'edit'}
             placeholder="00000000000000"
             maxLength={14}
           />
-          {errors.cnpj && <span style={errorStyle}>{errors.cnpj.message}</span>}
+          {errors.cnpj && <span className={ERROR}>{errors.cnpj.message}</span>}
         </div>
       ) : (
-        <div style={fieldStyle}>
-          <label htmlFor="cpf" style={labelStyle}>
+        <div className={FIELD}>
+          <label htmlFor="cpf" className={LABEL}>
             CPF *
           </label>
           <input
             id="cpf"
             {...register('cpf')}
-            style={mode === 'edit' ? inputReadonlyStyle : inputStyle}
+            className={mode === 'edit' ? INPUT_READONLY : INPUT}
             readOnly={mode === 'edit'}
             placeholder="00000000000"
             maxLength={11}
           />
-          {errors.cpf && <span style={errorStyle}>{errors.cpf.message}</span>}
+          {errors.cpf && <span className={ERROR}>{errors.cpf.message}</span>}
         </div>
       )}
 
       {/* E-mail */}
-      <div style={fieldStyle}>
-        <label htmlFor="email" style={labelStyle}>
+      <div className={FIELD}>
+        <label htmlFor="email" className={LABEL}>
           E-mail
         </label>
         <input
           id="email"
           type="email"
           {...register('email')}
-          style={inputStyle}
+          className={INPUT}
           placeholder="contato@fornecedor.com"
         />
-        {errors.email && <span style={errorStyle}>{errors.email.message}</span>}
+        {errors.email && <span className={ERROR}>{errors.email.message}</span>}
       </div>
 
       {/* Telefone */}
-      <div style={fieldStyle}>
-        <label htmlFor="phone" style={labelStyle}>
+      <div className={FIELD}>
+        <label htmlFor="phone" className={LABEL}>
           Telefone
         </label>
-        <input id="phone" {...register('phone')} style={inputStyle} placeholder="(11) 99999-9999" />
-        {errors.phone && <span style={errorStyle}>{errors.phone.message}</span>}
+        <input id="phone" {...register('phone')} className={INPUT} placeholder="(11) 99999-9999" />
+        {errors.phone && <span className={ERROR}>{errors.phone.message}</span>}
       </div>
 
       {/* Observações */}
-      <div style={fieldStyle}>
-        <label htmlFor="notes" style={labelStyle}>
+      <div className={FIELD}>
+        <label htmlFor="notes" className={LABEL}>
           Observações
         </label>
         <textarea
           id="notes"
           {...register('notes')}
           rows={3}
-          style={{ ...inputStyle, height: 'auto', padding: '8px 12px', resize: 'vertical' }}
+          className={TEXTAREA}
           placeholder="Informações adicionais sobre o fornecedor..."
         />
-        {errors.notes && <span style={errorStyle}>{errors.notes.message}</span>}
+        {errors.notes && <span className={ERROR}>{errors.notes.message}</span>}
       </div>
 
       {/* ─── Endereço ──────────────────────────────────────────── */}
-      <div style={{ borderTop: '1px solid hsl(214 32% 91%)', paddingTop: 20 }}>
-        <p
-          style={{
-            fontSize: 14,
-            fontWeight: 600,
-            marginBottom: 16,
-            color: 'hsl(222 47% 11%)',
-          }}
-        >
-          Endereço (opcional)
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <div style={{ ...fieldStyle, gridColumn: '1 / -1' }}>
-            <label htmlFor="address.street" style={labelStyle}>
+      <div className="border-t border-border pt-5">
+        <p className="mb-4 text-sm font-semibold text-foreground">Endereço (opcional)</p>
+        <div className="grid grid-cols-2 gap-4">
+          <div className={cn(FIELD, 'col-span-2')}>
+            <label htmlFor="address.street" className={LABEL}>
               Logradouro
             </label>
             <input
               id="address.street"
               {...register('address.street')}
-              style={inputStyle}
+              className={INPUT}
               placeholder="Rua, Avenida, Alameda..."
             />
           </div>
-          <div style={fieldStyle}>
-            <label htmlFor="address.number" style={labelStyle}>
+          <div className={FIELD}>
+            <label htmlFor="address.number" className={LABEL}>
               Número
             </label>
             <input
               id="address.number"
               {...register('address.number')}
-              style={inputStyle}
+              className={INPUT}
               placeholder="123"
             />
           </div>
-          <div style={fieldStyle}>
-            <label htmlFor="address.complement" style={labelStyle}>
+          <div className={FIELD}>
+            <label htmlFor="address.complement" className={LABEL}>
               Complemento
             </label>
             <input
               id="address.complement"
               {...register('address.complement')}
-              style={inputStyle}
+              className={INPUT}
               placeholder="Sala 4, Apto 10..."
             />
           </div>
-          <div style={fieldStyle}>
-            <label htmlFor="address.city" style={labelStyle}>
+          <div className={FIELD}>
+            <label htmlFor="address.city" className={LABEL}>
               Cidade
             </label>
             <input
               id="address.city"
               {...register('address.city')}
-              style={inputStyle}
+              className={INPUT}
               placeholder="São Paulo"
             />
           </div>
-          <div style={fieldStyle}>
-            <label htmlFor="address.state" style={labelStyle}>
+          <div className={FIELD}>
+            <label htmlFor="address.state" className={LABEL}>
               UF
             </label>
             <input
               id="address.state"
               {...register('address.state')}
-              style={inputStyle}
+              className={INPUT}
               placeholder="SP"
               maxLength={2}
             />
           </div>
-          <div style={fieldStyle}>
-            <label htmlFor="address.zipCode" style={labelStyle}>
+          <div className={FIELD}>
+            <label htmlFor="address.zipCode" className={LABEL}>
               CEP
             </label>
             <input
               id="address.zipCode"
               {...register('address.zipCode')}
-              style={inputStyle}
+              className={INPUT}
               placeholder="00000000"
               maxLength={8}
             />
@@ -283,21 +261,12 @@ export function SupplierForm({
       </div>
 
       {/* Submit */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 8 }}>
+      <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="outline" onClick={() => router.back()}>
           Cancelar
         </Button>
         <Button type="submit" disabled={loading}>
-          {loading && (
-            <Loader2
-              style={{
-                width: 14,
-                height: 14,
-                marginRight: 6,
-                animation: 'spin 1s linear infinite',
-              }}
-            />
-          )}
+          {loading && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
           {mode === 'create' ? 'Criar fornecedor' : 'Salvar alterações'}
         </Button>
       </div>

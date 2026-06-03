@@ -30,25 +30,17 @@ export default async function ProductsPage({ params }: Props) {
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 24,
-          gap: 16,
-        }}
-      >
+      <div className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 600, color: 'hsl(222 47% 11%)' }}>Produtos</h1>
-          <p style={{ fontSize: 13, color: 'hsl(215 16% 47%)', marginTop: 4 }}>
+          <h1 className="text-[22px] font-semibold text-foreground">Produtos</h1>
+          <p className="mt-1 text-[13px] text-muted-foreground">
             Catálogo de produtos de {company?.name ?? cnpj}
           </p>
         </div>
         {canMutate && (
           <Link href={`/${cnpj}/products/new`}>
             <Button>
-              <Plus style={{ width: 15, height: 15, marginRight: 6 }} />
+              <Plus className="mr-1.5 h-[15px] w-[15px]" />
               Novo produto
             </Button>
           </Link>

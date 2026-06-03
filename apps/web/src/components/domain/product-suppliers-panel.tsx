@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { unlinkSupplierFromProduct, updateProductSupplierLink } from '@/lib/api'
+import { cn } from '@/lib/utils'
 import type { SupplierResponse } from '@elos/shared'
 import { Plus, Star, Trash2 } from 'lucide-react'
 import { useState } from 'react'
@@ -80,24 +81,10 @@ export function ProductSuppliersPanel({
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 16,
-        }}
-      >
-        <h2 style={{ fontSize: 16, fontWeight: 600, color: 'hsl(222 47% 11%)' }}>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-base font-semibold text-foreground">
           Fornecedores vinculados
-          <span
-            style={{
-              fontSize: 13,
-              fontWeight: 400,
-              color: 'hsl(215 16% 47%)',
-              marginLeft: 8,
-            }}
-          >
+          <span className="ml-2 text-[13px] font-normal text-muted-foreground">
             ({links.length})
           </span>
         </h2>
@@ -109,89 +96,54 @@ export function ProductSuppliersPanel({
             onClick={() => setSheetOpen(true)}
             disabled={unlinkedSuppliers.length === 0}
           >
-            <Plus style={{ width: 14, height: 14, marginRight: 6 }} />
+            <Plus className="mr-1.5 h-3.5 w-3.5" />
             Vincular fornecedor
           </Button>
         )}
       </div>
 
       {links.length === 0 ? (
-        <div
-          style={{
-            background: 'white',
-            borderRadius: '0.5rem',
-            border: '1px solid hsl(214 32% 91%)',
-            padding: '32px 24px',
-            textAlign: 'center',
-          }}
-        >
-          <p style={{ fontSize: 14, color: 'hsl(215 16% 47%)' }}>
+        <div className="rounded-lg border border-border bg-card px-6 py-8 text-center">
+          <p className="text-sm text-muted-foreground">
             Nenhum fornecedor vinculado a este produto.
           </p>
           {canMutate && (
-            <p style={{ fontSize: 13, color: 'hsl(215 16% 47%)', marginTop: 6 }}>
+            <p className="mt-1.5 text-[13px] text-muted-foreground">
               Vincule um fornecedor aprovado para usá-lo em cotações.
             </p>
           )}
         </div>
       ) : (
-        <div
-          style={{
-            background: 'white',
-            borderRadius: '0.5rem',
-            border: '1px solid hsl(214 32% 91%)',
-            overflow: 'hidden',
-          }}
-        >
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
           {links.map((link, idx) => (
             <div
               key={link.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '12px 20px',
-                borderTop: idx > 0 ? '1px solid hsl(214 32% 91%)' : 'none',
-              }}
+              className={cn('flex items-center px-5 py-3', idx > 0 && 'border-t border-border')}
             >
               {/* Ícone de preferido */}
               <button
                 type="button"
                 disabled={!canMutate}
                 onClick={() => handleTogglePreferred(link)}
-                style={{
-                  marginRight: 12,
-                  cursor: canMutate ? 'pointer' : 'default',
-                  background: 'none',
-                  border: 'none',
-                  padding: 2,
-                  color: link.isPreferred ? 'hsl(38 92% 50%)' : 'hsl(214 32% 91%)',
-                }}
+                className={cn(
+                  'mr-3 p-0.5',
+                  link.isPreferred ? 'text-warning' : 'text-border',
+                  canMutate ? 'cursor-pointer' : 'cursor-default',
+                )}
                 title={link.isPreferred ? 'Remover preferência' : 'Definir como preferido'}
               >
-                <Star
-                  style={{
-                    width: 16,
-                    height: 16,
-                    fill: link.isPreferred ? 'currentColor' : 'none',
-                  }}
-                />
+                <Star className={cn('h-4 w-4', link.isPreferred && 'fill-current')} />
               </button>
 
               {/* Nome do fornecedor */}
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 14, fontWeight: 500, color: 'hsl(222 47% 11%)' }}>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">
                   {link.supplierName}
                   {link.isPreferred && (
-                    <span style={{ fontSize: 11, color: 'hsl(38 92% 50%)', marginLeft: 8 }}>
-                      Preferido
-                    </span>
+                    <span className="ml-2 text-[11px] text-warning">Preferido</span>
                   )}
                 </p>
-                {link.notes && (
-                  <p style={{ fontSize: 12, color: 'hsl(215 16% 47%)', marginTop: 2 }}>
-                    {link.notes}
-                  </p>
-                )}
+                {link.notes && <p className="mt-0.5 text-xs text-muted-foreground">{link.notes}</p>}
               </div>
 
               {/* Ação de desvincular */}
@@ -199,16 +151,10 @@ export function ProductSuppliersPanel({
                 <button
                   type="button"
                   onClick={() => setRemovingId(link.id)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 6,
-                    color: 'hsl(215 16% 47%)',
-                  }}
+                  className="cursor-pointer p-1.5 text-muted-foreground"
                   title="Desvincular fornecedor"
                 >
-                  <Trash2 style={{ width: 15, height: 15 }} />
+                  <Trash2 className="h-[15px] w-[15px]" />
                 </button>
               )}
             </div>
@@ -232,7 +178,7 @@ export function ProductSuppliersPanel({
                 const link = links.find((l) => l.id === removingId)
                 if (link) handleUnlink(link)
               }}
-              style={{ background: 'hsl(0 84% 60%)', color: 'white' }}
+              className="bg-destructive text-white hover:bg-destructive/90"
             >
               Desvincular
             </AlertDialogAction>

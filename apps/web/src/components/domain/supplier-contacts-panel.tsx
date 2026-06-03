@@ -20,6 +20,9 @@ import { Mail, Pencil, Phone, Plus, Star, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+const ICON_BTN =
+  'flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-border bg-card transition-colors hover:bg-muted'
+
 interface SupplierContactsPanelProps {
   cnpj: string
   supplierId: string
@@ -68,16 +71,9 @@ export function SupplierContactsPanel({
   }
 
   return (
-    <div style={{ marginTop: 16 }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 16,
-        }}
-      >
-        <p style={{ fontSize: 13, color: 'hsl(215 16% 47%)' }}>
+    <div className="mt-4">
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-[13px] text-muted-foreground">
           {contacts.length} contato{contacts.length === 1 ? '' : 's'}
         </p>
         {canMutate && (
@@ -89,88 +85,44 @@ export function SupplierContactsPanel({
               setSheetOpen(true)
             }}
           >
-            <Plus style={{ width: 15, height: 15, marginRight: 6 }} />
+            <Plus className="mr-1.5 h-[15px] w-[15px]" />
             Adicionar contato
           </Button>
         )}
       </div>
 
       {contacts.length === 0 ? (
-        <div
-          style={{
-            background: 'hsl(0 0% 100%)',
-            border: '1px dashed hsl(214 32% 91%)',
-            borderRadius: '0.5rem',
-            padding: '40px 24px',
-            textAlign: 'center',
-            color: 'hsl(215 16% 47%)',
-            fontSize: 14,
-          }}
-        >
+        <div className="rounded-lg border border-dashed border-border bg-card px-6 py-10 text-center text-sm text-muted-foreground">
           Nenhum contato cadastrado.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="flex flex-col gap-2.5">
           {contacts.map((contact) => (
             <div
               key={contact.id}
-              style={{
-                background: 'hsl(0 0% 100%)',
-                border: '1px solid hsl(214 32% 91%)',
-                borderRadius: '0.5rem',
-                padding: '14px 16px',
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                gap: 16,
-              }}
+              className="flex items-start justify-between gap-4 rounded-lg border border-border bg-card px-4 py-3.5"
             >
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: 'hsl(222 47% 11%)' }}>
-                    {contact.name}
-                  </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-foreground">{contact.name}</span>
                   {contact.isMain && (
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        color: 'hsl(38 92% 40%)',
-                        background: 'hsl(38 92% 95%)',
-                        padding: '2px 8px',
-                        borderRadius: 9999,
-                      }}
-                    >
-                      <Star size={11} fill="hsl(38 92% 50%)" stroke="hsl(38 92% 40%)" />
+                    <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-semibold text-warning">
+                      <Star size={11} className="fill-current" />
                       Principal
                     </span>
                   )}
                 </div>
                 {contact.role && (
-                  <p style={{ fontSize: 12.5, color: 'hsl(215 16% 47%)', marginTop: 2 }}>
-                    {contact.role}
-                  </p>
+                  <p className="mt-0.5 text-[12.5px] text-muted-foreground">{contact.role}</p>
                 )}
-                <div
-                  style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 16,
-                    marginTop: 8,
-                    fontSize: 12.5,
-                    color: 'hsl(215 16% 47%)',
-                  }}
-                >
+                <div className="mt-2 flex flex-wrap gap-4 text-[12.5px] text-muted-foreground">
                   {contact.email && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <span className="inline-flex items-center gap-[5px]">
                       <Mail size={13} strokeWidth={1.6} /> {contact.email}
                     </span>
                   )}
                   {contact.phone && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <span className="inline-flex items-center gap-[5px]">
                       <Phone size={13} strokeWidth={1.6} /> {contact.phone}
                     </span>
                   )}
@@ -178,7 +130,7 @@ export function SupplierContactsPanel({
               </div>
 
               {canMutate && (
-                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                <div className="flex shrink-0 gap-1">
                   <button
                     type="button"
                     aria-label={`Editar ${contact.name}`}
@@ -186,17 +138,17 @@ export function SupplierContactsPanel({
                       setEditTarget(contact)
                       setSheetOpen(true)
                     }}
-                    style={iconButtonStyle}
+                    className={ICON_BTN}
                   >
-                    <Pencil size={15} strokeWidth={1.6} style={{ color: 'hsl(215 16% 47%)' }} />
+                    <Pencil size={15} strokeWidth={1.6} className="text-muted-foreground" />
                   </button>
                   <button
                     type="button"
                     aria-label={`Remover ${contact.name}`}
                     onClick={() => setRemoveTarget(contact)}
-                    style={iconButtonStyle}
+                    className={ICON_BTN}
                   >
-                    <Trash2 size={15} strokeWidth={1.6} style={{ color: 'hsl(0 72% 51%)' }} />
+                    <Trash2 size={15} strokeWidth={1.6} className="text-destructive" />
                   </button>
                 </div>
               )}
@@ -230,7 +182,7 @@ export function SupplierContactsPanel({
             <AlertDialogAction
               onClick={handleRemove}
               disabled={removing}
-              style={{ background: 'hsl(0 72% 51%)', color: '#fff' }}
+              className="bg-destructive text-white hover:bg-destructive/90"
             >
               {removing ? 'Removendo...' : 'Remover'}
             </AlertDialogAction>
@@ -239,16 +191,4 @@ export function SupplierContactsPanel({
       </AlertDialog>
     </div>
   )
-}
-
-const iconButtonStyle: React.CSSProperties = {
-  width: 32,
-  height: 32,
-  borderRadius: '0.375rem',
-  border: '1px solid hsl(214 32% 91%)',
-  background: 'hsl(0 0% 100%)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  cursor: 'pointer',
 }

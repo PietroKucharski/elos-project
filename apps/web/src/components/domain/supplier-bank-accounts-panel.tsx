@@ -25,6 +25,9 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
   SAVINGS: 'Conta Poupança',
 }
 
+const ICON_BTN =
+  'flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-border bg-card transition-colors hover:bg-muted'
+
 interface SupplierBankAccountsPanelProps {
   cnpj: string
   supplierId: string
@@ -68,16 +71,9 @@ export function SupplierBankAccountsPanel({
   }
 
   return (
-    <div style={{ marginTop: 16 }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 16,
-        }}
-      >
-        <p style={{ fontSize: 13, color: 'hsl(215 16% 47%)' }}>
+    <div className="mt-4">
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-[13px] text-muted-foreground">
           {accounts.length} conta{accounts.length === 1 ? '' : 's'} bancária
           {accounts.length === 1 ? '' : 's'}
         </p>
@@ -90,95 +86,49 @@ export function SupplierBankAccountsPanel({
               setSheetOpen(true)
             }}
           >
-            <Plus style={{ width: 15, height: 15, marginRight: 6 }} />
+            <Plus className="mr-1.5 h-[15px] w-[15px]" />
             Adicionar conta
           </Button>
         )}
       </div>
 
       {accounts.length === 0 ? (
-        <div
-          style={{
-            background: 'hsl(0 0% 100%)',
-            border: '1px dashed hsl(214 32% 91%)',
-            borderRadius: '0.5rem',
-            padding: '40px 24px',
-            textAlign: 'center',
-            color: 'hsl(215 16% 47%)',
-            fontSize: 14,
-          }}
-        >
+        <div className="rounded-lg border border-dashed border-border bg-card px-6 py-10 text-center text-sm text-muted-foreground">
           Nenhuma conta bancária cadastrada.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="flex flex-col gap-2.5">
           {accounts.map((acc) => (
             <div
               key={acc.id}
-              style={{
-                background: 'hsl(0 0% 100%)',
-                border: '1px solid hsl(214 32% 91%)',
-                borderRadius: '0.5rem',
-                padding: '14px 16px',
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                gap: 16,
-              }}
+              className="flex items-start justify-between gap-4 rounded-lg border border-border bg-card px-4 py-3.5"
             >
-              <div style={{ display: 'flex', gap: 12 }}>
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: '0.5rem',
-                    background: 'hsl(210 40% 96.1%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <Landmark size={18} strokeWidth={1.6} style={{ color: 'hsl(215 16% 47%)' }} />
+              <div className="flex gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                  <Landmark size={18} strokeWidth={1.6} className="text-muted-foreground" />
                 </div>
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: 'hsl(222 47% 11%)' }}>
-                      {acc.bank}
-                    </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-foreground">{acc.bank}</span>
                     {acc.isPrimary && (
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          color: 'hsl(38 92% 40%)',
-                          background: 'hsl(38 92% 95%)',
-                          padding: '2px 8px',
-                          borderRadius: 9999,
-                        }}
-                      >
-                        <Star size={11} fill="hsl(38 92% 50%)" stroke="hsl(38 92% 40%)" />
+                      <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-semibold text-warning">
+                        <Star size={11} className="fill-current" />
                         Principal
                       </span>
                     )}
                   </div>
-                  <p style={{ fontSize: 12.5, color: 'hsl(215 16% 47%)', marginTop: 2 }}>
+                  <p className="mt-0.5 text-[12.5px] text-muted-foreground">
                     {ACCOUNT_TYPE_LABELS[acc.accountType] ?? acc.accountType} · Ag. {acc.agency} ·
                     Conta {acc.account}
                   </p>
                   {acc.pixKey && (
-                    <p style={{ fontSize: 12.5, color: 'hsl(215 16% 47%)', marginTop: 2 }}>
-                      PIX: {acc.pixKey}
-                    </p>
+                    <p className="mt-0.5 text-[12.5px] text-muted-foreground">PIX: {acc.pixKey}</p>
                   )}
                 </div>
               </div>
 
               {canMutate && (
-                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                <div className="flex shrink-0 gap-1">
                   <button
                     type="button"
                     aria-label={`Editar conta ${acc.bank}`}
@@ -186,17 +136,17 @@ export function SupplierBankAccountsPanel({
                       setEditTarget(acc)
                       setSheetOpen(true)
                     }}
-                    style={iconButtonStyle}
+                    className={ICON_BTN}
                   >
-                    <Pencil size={15} strokeWidth={1.6} style={{ color: 'hsl(215 16% 47%)' }} />
+                    <Pencil size={15} strokeWidth={1.6} className="text-muted-foreground" />
                   </button>
                   <button
                     type="button"
                     aria-label={`Remover conta ${acc.bank}`}
                     onClick={() => setRemoveTarget(acc)}
-                    style={iconButtonStyle}
+                    className={ICON_BTN}
                   >
-                    <Trash2 size={15} strokeWidth={1.6} style={{ color: 'hsl(0 72% 51%)' }} />
+                    <Trash2 size={15} strokeWidth={1.6} className="text-destructive" />
                   </button>
                 </div>
               )}
@@ -230,7 +180,7 @@ export function SupplierBankAccountsPanel({
             <AlertDialogAction
               onClick={handleRemove}
               disabled={removing}
-              style={{ background: 'hsl(0 72% 51%)', color: '#fff' }}
+              className="bg-destructive text-white hover:bg-destructive/90"
             >
               {removing ? 'Removendo...' : 'Remover'}
             </AlertDialogAction>
@@ -239,16 +189,4 @@ export function SupplierBankAccountsPanel({
       </AlertDialog>
     </div>
   )
-}
-
-const iconButtonStyle: React.CSSProperties = {
-  width: 32,
-  height: 32,
-  borderRadius: '0.375rem',
-  border: '1px solid hsl(214 32% 91%)',
-  background: 'hsl(0 0% 100%)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  cursor: 'pointer',
 }

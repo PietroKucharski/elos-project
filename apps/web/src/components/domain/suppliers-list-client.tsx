@@ -5,6 +5,7 @@
 import { ApproveSupplierDialog } from '@/components/domain/approve-supplier-dialog'
 import { RejectSupplierDialog } from '@/components/domain/reject-supplier-dialog'
 import { SupplierStatusBadge } from '@/components/domain/supplier-status-badge'
+import { cn } from '@/lib/utils'
 import type { SupplierResponse } from '@elos/shared'
 import { CheckCircle, Eye, MoreHorizontal, Pencil, Search, XCircle } from 'lucide-react'
 import Link from 'next/link'
@@ -28,31 +29,10 @@ interface SuppliersListClientProps {
   canMutate: boolean
 }
 
-const thStyle: React.CSSProperties = {
-  textAlign: 'left',
-  padding: '0 16px 10px',
-  fontSize: 11.5,
-  fontWeight: 600,
-  color: 'hsl(215 16% 47%)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-  borderBottom: '1px solid hsl(214 32% 91%)',
-}
-
-const menuItemStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 9,
-  width: '100%',
-  padding: '8px 9px',
-  borderRadius: '0.375rem',
-  border: 'none',
-  background: 'transparent',
-  fontSize: 13.5,
-  color: 'hsl(222 47% 11%)',
-  cursor: 'pointer',
-  textDecoration: 'none',
-}
+const TH =
+  'border-b border-border px-4 pb-2.5 text-left text-[11.5px] font-semibold tracking-[0.04em] text-muted-foreground uppercase'
+const MENU_ITEM =
+  'flex w-full cursor-pointer items-center gap-[9px] rounded-md px-[9px] py-2 text-left text-[13.5px] no-underline transition-colors'
 
 export function SuppliersListClient({
   initialSuppliers,
@@ -78,25 +58,8 @@ export function SuppliersListClient({
   return (
     <>
       {/* Filtros: tabs de status + busca */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 16,
-          marginBottom: 16,
-          flexWrap: 'wrap',
-        }}
-      >
-        <div
-          style={{
-            display: 'inline-flex',
-            gap: 4,
-            background: 'hsl(210 40% 96.1%)',
-            padding: 4,
-            borderRadius: '0.5rem',
-          }}
-        >
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <div className="inline-flex gap-1 rounded-lg bg-muted p-1">
           {STATUS_TABS.map((tab) => {
             const active = statusFilter === tab.key
             return (
@@ -104,18 +67,12 @@ export function SuppliersListClient({
                 key={tab.key}
                 type="button"
                 onClick={() => setStatusFilter(tab.key)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '0.375rem',
-                  border: 'none',
-                  background: active ? 'hsl(0 0% 100%)' : 'transparent',
-                  color: active ? 'hsl(222 47% 11%)' : 'hsl(215 16% 47%)',
-                  fontSize: 13,
-                  fontWeight: active ? 600 : 500,
-                  cursor: 'pointer',
-                  boxShadow: active ? '0 1px 2px 0 hsl(222 47% 11% / 0.08)' : 'none',
-                  transition: 'background .12s, color .12s',
-                }}
+                className={cn(
+                  'cursor-pointer rounded-md px-3.5 py-1.5 text-[13px] transition-colors',
+                  active
+                    ? 'bg-card font-semibold text-foreground shadow-sm'
+                    : 'font-medium text-muted-foreground hover:text-foreground',
+                )}
               >
                 {tab.label}
               </button>
@@ -123,73 +80,40 @@ export function SuppliersListClient({
           })}
         </div>
 
-        <div style={{ position: 'relative', minWidth: 240 }}>
+        <div className="relative min-w-[240px]">
           <Search
             size={15}
             strokeWidth={1.6}
-            style={{
-              position: 'absolute',
-              left: 10,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'hsl(215 16% 47%)',
-              pointerEvents: 'none',
-            }}
+            className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground"
           />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por nome..."
-            style={{
-              height: 38,
-              width: '100%',
-              padding: '0 12px 0 32px',
-              fontSize: 13.5,
-              borderRadius: '0.375rem',
-              border: '1px solid hsl(214 32% 91%)',
-              background: 'hsl(0 0% 100%)',
-              color: 'hsl(222 47% 11%)',
-              outline: 'none',
-            }}
+            className="h-[38px] w-full rounded-md border border-input bg-card pr-3 pl-8 text-[13.5px] text-foreground outline-none focus:border-ring focus:ring-3 focus:ring-ring/[0.13]"
           />
         </div>
       </div>
 
       {/* Tabela */}
-      <div
-        style={{
-          background: 'hsl(0 0% 100%)',
-          border: '1px solid hsl(214 32% 91%)',
-          borderRadius: '0.5rem',
-          boxShadow: '0 1px 3px 0 hsl(222 47% 11% / 0.05)',
-          overflow: 'visible',
-        }}
-      >
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
+      <div className="overflow-visible rounded-lg border border-border bg-card shadow-card">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[13.5px]">
             <thead>
               <tr>
-                <th style={thStyle}>Nome</th>
-                <th style={thStyle}>Tipo</th>
-                <th style={thStyle}>CNPJ/CPF</th>
-                <th style={thStyle}>Status</th>
-                <th style={thStyle}>E-mail</th>
-                <th style={{ ...thStyle, textAlign: 'right', width: 48 }} />
+                <th className={TH}>Nome</th>
+                <th className={TH}>Tipo</th>
+                <th className={TH}>CNPJ/CPF</th>
+                <th className={TH}>Status</th>
+                <th className={TH}>E-mail</th>
+                <th className={cn(TH, 'w-12 text-right')} />
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={6}
-                    style={{
-                      textAlign: 'center',
-                      padding: '48px 16px',
-                      color: 'hsl(215 16% 47%)',
-                      fontSize: 14,
-                    }}
-                  >
+                  <td colSpan={6} className="px-4 py-12 text-center text-sm text-muted-foreground">
                     Nenhum fornecedor encontrado.
                   </td>
                 </tr>
@@ -202,115 +126,59 @@ export function SuppliersListClient({
                 return (
                   <tr
                     key={supplier.id}
-                    style={{
-                      borderBottom: '1px solid hsl(214 32% 91%)',
-                      animation: `rowIn .3s ease ${Math.min(index * 0.025, 0.3)}s both`,
-                    }}
+                    className="border-b border-border [animation:rowIn_.3s_ease_both]"
+                    style={{ animationDelay: `${Math.min(index * 0.025, 0.3)}s` }}
                   >
-                    <td style={{ padding: '12px 16px' }}>
+                    <td className="px-4 py-3">
                       <Link
                         href={detailHref}
-                        style={{
-                          fontWeight: 600,
-                          color: 'hsl(222 47% 11%)',
-                          textDecoration: 'none',
-                        }}
+                        className="font-semibold text-foreground no-underline"
                       >
                         {supplier.name}
                       </Link>
                     </td>
-                    <td style={{ padding: '12px 16px', color: 'hsl(215 16% 47%)' }}>
+                    <td className="px-4 py-3 text-muted-foreground">
                       {TYPE_LABELS[supplier.type] ?? supplier.type}
                     </td>
-                    <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 12.5 }}>
+                    <td className="px-4 py-3 font-mono text-[12.5px]">
                       {supplier.cnpj ?? supplier.cpf ?? '—'}
                     </td>
-                    <td style={{ padding: '12px 16px' }}>
+                    <td className="px-4 py-3">
                       <SupplierStatusBadge status={supplier.status} />
                     </td>
-                    <td style={{ padding: '12px 16px', color: 'hsl(215 16% 47%)' }}>
-                      {supplier.email ?? '—'}
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                      <div style={{ position: 'relative', display: 'inline-block' }}>
+                    <td className="px-4 py-3 text-muted-foreground">{supplier.email ?? '—'}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="relative inline-block">
                         <button
                           type="button"
                           onClick={() => setMenuOpen(menuOpen === supplier.id ? null : supplier.id)}
                           aria-label={`Ações para ${supplier.name}`}
-                          style={{
-                            width: 30,
-                            height: 30,
-                            borderRadius: '0.375rem',
-                            border: 'none',
-                            background: 'transparent',
-                            color: 'hsl(215 16% 47%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            transition: 'background .12s',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'hsl(210 40% 96.1%)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent'
-                          }}
+                          className="flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted"
                         >
                           <MoreHorizontal size={16} strokeWidth={1.6} />
                         </button>
 
                         {menuOpen === supplier.id && (
-                          <div
-                            style={{
-                              position: 'absolute',
-                              top: 'calc(100% + 4px)',
-                              right: 0,
-                              zIndex: 50,
-                              width: 200,
-                              background: 'hsl(0 0% 100%)',
-                              border: '1px solid hsl(214 32% 91%)',
-                              borderRadius: '0.5rem',
-                              boxShadow: '0 4px 16px -2px hsl(222 47% 11% / 0.12)',
-                              padding: 5,
-                              animation: 'popIn .14s ease',
-                            }}
-                          >
+                          <div className="absolute top-[calc(100%+4px)] right-0 z-50 w-[200px] rounded-lg border border-border bg-card p-[5px] shadow-pop [animation:popIn_0.14s_ease]">
                             <Link
                               href={detailHref}
-                              style={menuItemStyle}
+                              className={cn(MENU_ITEM, 'text-foreground hover:bg-muted')}
                               onClick={() => setMenuOpen(null)}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'hsl(210 40% 96.1%)'
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'transparent'
-                              }}
                             >
-                              <Eye
-                                size={15}
-                                strokeWidth={1.6}
-                                style={{ color: 'hsl(215 16% 47%)' }}
-                              />
+                              <Eye size={15} strokeWidth={1.6} className="text-muted-foreground" />
                               Ver detalhes
                             </Link>
 
                             {canMutate && (
                               <Link
                                 href={editHref}
-                                style={menuItemStyle}
+                                className={cn(MENU_ITEM, 'text-foreground hover:bg-muted')}
                                 onClick={() => setMenuOpen(null)}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = 'hsl(210 40% 96.1%)'
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = 'transparent'
-                                }}
                               >
                                 <Pencil
                                   size={15}
                                   strokeWidth={1.6}
-                                  style={{ color: 'hsl(215 16% 47%)' }}
+                                  className="text-muted-foreground"
                                 />
                                 Editar
                               </Link>
@@ -320,37 +188,28 @@ export function SuppliersListClient({
                               <>
                                 <button
                                   type="button"
-                                  style={menuItemStyle}
+                                  className={cn(MENU_ITEM, 'text-foreground hover:bg-success-soft')}
                                   onClick={() => {
                                     setMenuOpen(null)
                                     setApproveTarget(supplier)
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = 'hsl(142 71% 96%)'
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'transparent'
                                   }}
                                 >
                                   <CheckCircle
                                     size={15}
                                     strokeWidth={1.6}
-                                    style={{ color: 'hsl(142 71% 35%)' }}
+                                    className="text-success"
                                   />
                                   Aprovar
                                 </button>
                                 <button
                                   type="button"
-                                  style={{ ...menuItemStyle, color: 'hsl(0 72% 51%)' }}
+                                  className={cn(
+                                    MENU_ITEM,
+                                    'text-destructive hover:bg-destructive-soft',
+                                  )}
                                   onClick={() => {
                                     setMenuOpen(null)
                                     setRejectTarget(supplier)
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = 'hsl(0 86% 97%)'
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'transparent'
                                   }}
                                 >
                                   <XCircle size={15} strokeWidth={1.6} />

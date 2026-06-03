@@ -1,5 +1,6 @@
 'use client'
 
+import { cn } from '@/lib/utils'
 import type { MyCompany } from '@elos/shared'
 import { Building2, Check, ChevronsUpDown, Settings } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -26,106 +27,32 @@ export function CompanySwitcher({ currentCnpj, currentName, companies }: Company
   }, [open])
 
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
+    <div ref={ref} className="relative">
       {/* Trigger */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label="Trocar empresa"
         aria-expanded={open}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          height: 40,
-          padding: '0 10px 0 12px',
-          background: 'transparent',
-          border: '1px solid hsl(214 32% 91%)',
-          borderRadius: '0.375rem',
-          cursor: 'pointer',
-          transition: 'background .15s',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'hsl(210 40% 96.1%)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'transparent'
-        }}
+        className="flex h-10 cursor-pointer items-center gap-2.5 rounded-md border border-border bg-transparent pr-2.5 pl-3 transition-colors hover:bg-muted"
       >
-        <div
-          style={{
-            width: 26,
-            height: 26,
-            borderRadius: 7,
-            background: 'hsl(243 75% 59% / 0.13)',
-            color: 'hsl(243 75% 59%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
+        <div className="flex h-[26px] w-[26px] items-center justify-center rounded-[7px] bg-primary/[0.13] text-primary">
           <Building2 size={15} strokeWidth={1.6} />
         </div>
-        <div style={{ textAlign: 'left', lineHeight: 1.2 }}>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              maxWidth: 180,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              color: 'hsl(222 47% 11%)',
-            }}
-          >
+        <div className="text-left leading-[1.2]">
+          <div className="max-w-[180px] truncate text-[13px] font-semibold text-foreground">
             {currentName}
           </div>
-          <div
-            style={{
-              fontSize: 10.5,
-              color: 'hsl(215 16% 47%)',
-              fontFamily: 'var(--font-mono, monospace)',
-            }}
-          >
-            {currentCnpj}
-          </div>
+          <div className="font-mono text-[10.5px] text-muted-foreground">{currentCnpj}</div>
         </div>
-        <ChevronsUpDown
-          size={15}
-          strokeWidth={1.6}
-          style={{ color: 'hsl(215 20% 65%)', marginLeft: 2 }}
-        />
+        <ChevronsUpDown size={15} strokeWidth={1.6} className="ml-0.5 text-subtle-foreground" />
       </button>
 
       {/* Dropdown */}
       {open && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 6px)',
-            left: 0,
-            zIndex: 50,
-            width: 300,
-            background: 'hsl(0 0% 100%)',
-            border: '1px solid hsl(214 32% 91%)',
-            borderRadius: '0.5rem',
-            boxShadow:
-              '0 4px 16px -2px hsl(222 47% 11% / 0.12), 0 2px 6px -2px hsl(222 47% 11% / 0.08)',
-            padding: 5,
-            animation: 'popIn .14s ease',
-          }}
-        >
+        <div className="absolute top-[calc(100%+6px)] left-0 z-50 w-[300px] rounded-lg border border-border bg-card p-[5px] shadow-pop [animation:popIn_0.14s_ease]">
           {/* Header */}
-          <div
-            style={{
-              padding: '7px 9px 5px',
-              fontSize: 11,
-              fontWeight: 600,
-              color: 'hsl(215 16% 47%)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-            }}
-          >
+          <div className="px-[9px] pt-[7px] pb-[5px] text-[11px] font-semibold tracking-[0.04em] text-muted-foreground uppercase">
             Empresas
           </div>
 
@@ -139,50 +66,23 @@ export function CompanySwitcher({ currentCnpj, currentName, companies }: Company
                   setOpen(false)
                   if (!isActive) router.push(`/${company.cnpj}/dashboard`)
                 }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 9,
-                  width: '100%',
-                  padding: '8px 9px',
-                  borderRadius: '0.375rem',
-                  border: 'none',
-                  background: 'transparent',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  transition: 'background .12s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'hsl(210 40% 96.1%)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent'
-                }}
+                className="flex w-full cursor-pointer items-center gap-[9px] rounded-md px-[9px] py-2 text-left transition-colors hover:bg-muted"
               >
                 <Check
                   size={15}
                   strokeWidth={2}
-                  style={{ color: 'hsl(243 75% 59%)', opacity: isActive ? 1 : 0, flexShrink: 0 }}
+                  className={cn('shrink-0 text-primary', isActive ? 'opacity-100' : 'opacity-0')}
                 />
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="min-w-0 flex-1">
                   <div
-                    style={{
-                      fontSize: 13.5,
-                      fontWeight: isActive ? 600 : 500,
-                      color: 'hsl(222 47% 11%)',
-                      lineHeight: 1.3,
-                    }}
+                    className={cn(
+                      'text-[13.5px] leading-[1.3] text-foreground',
+                      isActive ? 'font-semibold' : 'font-medium',
+                    )}
                   >
                     {company.companyName}
                   </div>
-                  <div
-                    style={{
-                      fontSize: 10.5,
-                      color: 'hsl(215 16% 47%)',
-                      fontFamily: 'monospace',
-                      lineHeight: 1.3,
-                    }}
-                  >
+                  <div className="font-mono text-[10.5px] leading-[1.3] text-muted-foreground">
                     {company.cnpj} · {company.role}
                   </div>
                 </div>
@@ -191,7 +91,7 @@ export function CompanySwitcher({ currentCnpj, currentName, companies }: Company
           })}
 
           {/* Divider */}
-          <div style={{ height: 1, background: 'hsl(214 32% 91%)', margin: '5px -5px' }} />
+          <div className="-mx-[5px] my-[5px] h-px bg-border" />
 
           {/* Gerenciar empresas (SUPER_ADMIN) */}
           <button
@@ -200,33 +100,9 @@ export function CompanySwitcher({ currentCnpj, currentName, companies }: Company
               setOpen(false)
               router.push('/admin/companies')
             }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 9,
-              width: '100%',
-              padding: '8px 9px',
-              borderRadius: '0.375rem',
-              border: 'none',
-              background: 'transparent',
-              textAlign: 'left',
-              fontSize: 13.5,
-              color: 'hsl(222 47% 11%)',
-              cursor: 'pointer',
-              transition: 'background .12s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'hsl(210 40% 96.1%)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent'
-            }}
+            className="flex w-full cursor-pointer items-center gap-[9px] rounded-md px-[9px] py-2 text-left text-[13.5px] text-foreground transition-colors hover:bg-muted"
           >
-            <Settings
-              size={15}
-              strokeWidth={1.6}
-              style={{ color: 'hsl(215 16% 47%)', flexShrink: 0 }}
-            />
+            <Settings size={15} strokeWidth={1.6} className="shrink-0 text-muted-foreground" />
             Gerenciar empresas
           </button>
         </div>
