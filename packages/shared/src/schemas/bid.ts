@@ -1,11 +1,13 @@
 import { z } from 'zod'
+import { BidStatus } from '../enums'
 
 // ─── Bid ──────────────────────────────────────────────────────────────────────
 
-export const bidStatusValues = ['DRAFT', 'SUBMITTED', 'ACCEPTED', 'REJECTED'] as const
-// O tipo `BidStatus` já é exportado por `../enums`; não o re-declaramos aqui
-// para evitar ambiguidade no barrel `index.ts`. Use `bidStatusValues` para
-// validação via `z.enum`.
+// Fonte única de verdade: os valores derivam do enum canônico `BidStatus`
+// (`../enums`), o mesmo usado pelo `bidStatusEnum` do banco — sem hard-code que
+// possa divergir. O tipo `BidStatus` não é re-declarado aqui para evitar
+// ambiguidade no barrel `index.ts`. Use `bidStatusValues` para validação via `z.enum`.
+export const bidStatusValues = Object.values(BidStatus) as [BidStatus, ...BidStatus[]]
 
 // COMPRADOR cria o lance em nome do fornecedor (portal de fornecedor fora do escopo v1)
 export const createBidSchema = z.object({
@@ -107,7 +109,7 @@ export const bidComparisonResponseSchema = z.object({
       bidId: z.string().uuid(),
       supplierId: z.string().uuid(),
       supplierName: z.string(),
-      status: z.enum(['DRAFT', 'SUBMITTED', 'ACCEPTED', 'REJECTED'] as const),
+      status: z.enum(bidStatusValues),
       totalPrice: z.string().nullable(),
     }),
   ),
