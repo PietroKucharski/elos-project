@@ -9,6 +9,7 @@ import { CompaniesModule } from './modules/companies/companies.module'
 import { HealthModule } from './modules/health/health.module'
 import { MembersModule } from './modules/members/members.module'
 import { ProductsModule } from './modules/products/products.module'
+import { QuotationsModule } from './modules/quotations/quotations.module'
 import { SuppliersModule } from './modules/suppliers/suppliers.module'
 
 @Module({
@@ -27,6 +28,7 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module'
     MembersModule,
     SuppliersModule,
     ProductsModule,
+    QuotationsModule,
     // Fases 1–7: módulos de domínio adicionados aqui
   ],
   providers: [

@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 3 — Cotações e Lances** · `Em andamento` (3.1 concluída) → próxima unidade: **3.2 — Quotations Module (API)**
+**Fase 3 — Cotações e Lances** · `Em andamento` (3.2 concluída) → próxima unidade: **3.3 — Bids Module (API)**
 
 ---
 
@@ -407,11 +407,50 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     `export type BidStatus` removidos dos schema files (colidiam com os tipos homônimos já exportados por
     `enums.ts` no barrel)
 
+- [x] **3.2 — Quotations Module (API)** — spec `18-quaotations-api-spec.md`
+  - Commit convencional esperado: `feat(api): add quotations module with crud, status transitions and sub-resources`
+  - `apps/api/src/modules/quotations/`: `quotations.module.ts` (exporta `QuotationsService` para o
+    BidsService de 3.3), `quotations.controller.ts` (`@Controller('companies/:cnpj/quotations')`:
+    GET/POST lista+criação, GET/PATCH `:id`, POST `:id/publish|close|cancel`, sub-recursos `:id/items`
+    e `:id/suppliers` com GET/POST/PATCH/DELETE; Swagger + `ZodValidationPipe` por rota),
+    `quotations.service.ts` (findAll com filtros `status`/`search`/paginação + subqueries de `itemCount`/
+    `bidCount`, findOne, create com **número sequencial por empresa** `COT-{ano}-{4 dígitos}`, update/publish/
+    close/cancel com regras de transição de status, itens e convites editáveis apenas em DRAFT, convite só
+    de fornecedor **APPROVED** e dedup; CASL antes de cada mutação e audit log em create/update/publish/
+    close/cancel), `quotations.service.spec.ts` (13 testes) e `quotations.controller.spec.ts` (5 testes)
+    — **95 testes da API passando no total**
+  - `ability.factory.ts` — subject `Quotation` tagueado (`& ForcedSubject<'Quotation'>`) para
+    `subject('Quotation', row)` no update/publish/close/cancel; `read Quotation` adicionado a
+    ALMOXARIFE/ANALISTA_FINANCEIRO/TRANSPORTADOR (ADMIN_EMPRESA e COMPRADOR já tinham `manage Quotation`)
+  - `app.module.ts` — `QuotationsModule` importado
+  - **Reconciliação de schema (decisão do owner):** a spec 3.2 e os schemas shared da 3.1 assumiam um
+    schema de banco diferente do gerado na 0.3. O DB schema foi **ajustado à spec** (fonte de verdade =
+    `@elos/shared`): `quotations` ganhou `number` (UNIQUE por empresa via `quotations_company_number_unique`)
+    e `payment_terms`, e `created_by_id`→`created_by`; `quotation_items` teve `product_id` tornado nullable,
+    `description` tornado NOT NULL, `notes` adicionado e `unit` ampliado p/ `varchar(20)`; a tabela
+    `quotation_invites` (enum `invite_status` PENDING/ACCEPTED/DECLINED, `sent_at`) foi renomeada para
+    `quotation_suppliers` (enum `quotation_supplier_status` INVITED/RESPONDED/DECLINED, `invited_at`).
+    `relations.ts` atualizado. Migration `0002_quotations_module_schema.sql` + snapshot/journal v7 gerados
+  - **Verificado:** `vitest run` (95/95), `pnpm type-check` (3 workspaces) e `biome check` dos arquivos
+    novos verdes (só warnings `noNonNullAssertion` de `companyId!`, severidade `warn`, padrão do projeto);
+    `drizzle-kit check` ✅ ("Everything's fine") e `drizzle-kit generate` reporta **"No schema changes"**
+    (snapshot 0002 confere exatamente com o schema TS). Checklist de segurança coberto pelos testes/regras:
+    403 sem permissão (ALMOXARIFE não cria), 400 em publish sem itens/sem fornecedores, 400 em item/convite
+    fora de DRAFT, 400 fornecedor não APPROVED, 409 convite duplicado, queries escopadas a `companyId`,
+    audit log em toda mutação. Banco vivo (`db:migrate`) não executado — sem Supabase neste ambiente
+  - **Ajustes vs. spec:** ver Decisões Arquiteturais (3.2) — bids importados de `db/schema/quotations`
+    (não há `db/schema/bids.ts`), `cancel` rejeita lances `NOT IN ('SELECTED','REJECTED')` (enum canônico
+    usa SELECTED, não ACCEPTED), `quantity` numeric convertido p/ string no insert/update de item, `set`
+    de update montado explicitamente (deadline destruturado p/ não colidir string×Date), `@Inject` explícito
+    na DI (padrão do projeto), migration 0002 escrita à mão + snapshot via script (drizzle-kit `generate`
+    exige TTY p/ prompts de rename, indisponível no ambiente), `enqueue` do service spec virou fila
+    sequencial (a versão da spec sobrescrevia e quebrava o fluxo multi-select do inviteSupplier)
+
 ---
 
 ## Em Progresso
 
-- Nada ativo. **3.1 concluída**. Próximo: **3.2 — Quotations Module (API)**.
+- Nada ativo. **3.2 concluída**. Próximo: **3.3 — Bids Module (API)**.
 
 ---
 
@@ -653,6 +692,13 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | Coluna "Fornecedores" mostra "—" na lista (2.5) | A tabela da spec inclui a coluna "Fornecedores", mas o endpoint de **lista** (`findAll`) retorna produtos sem o array `suppliers` (presente só no `GET :id` via `innerJoin`). A célula renderiza `product.suppliers?.length` quando presente, senão "—" — sem fetch extra por linha (contagem por produto fica para uma agregação futura no endpoint de lista, fora do escopo desta unidade) |
 | `console.error` no `error.tsx` + nos catch dos componentes (2.5) | Invariante 5 ("nenhum `catch {}` vazio — sempre logar ou relançar") + precedente de 2.4. Os snippets da spec usam `} catch {` só com `toast.error`; todos os catch dos handlers client (`product-form.onSubmit`, `products-list-client.handleDeactivate`, `product-suppliers-panel.handleUnlink`/`handleTogglePreferred`, `link-supplier-sheet.onSubmit`) ganharam `catch (error) { console.error('[Componente.handler]', error); toast.error(...) }`. O `error.tsx` segue o boundary de suppliers (`useEffect` + `console.error('[ProductsError]', error)`) |
 | `export type QuotationStatus`/`BidStatus` removidos dos schema files (3.1) | A spec re-declara `export type QuotationStatus`/`BidStatus = (typeof …Values)[number]` em `quotation.ts`/`bid.ts`, mas `enums.ts` (0.3) já exporta `QuotationStatus` e `BidStatus` (const + type), e ambos passam pelo barrel `index.ts` → `error TS2308` (re-export ambíguo) — mesmo padrão já resolvido para `UnitOfMeasure` em 2.1. Mantidos `quotationStatusValues`/`bidStatusValues` (necessários p/ `z.enum`) e removidas as re-declarações de tipo, com comentário apontando para `enums.ts`. Reconciliação de valores (pós-review 3.1): `bidStatusValues` passou a derivar do enum canônico via `Object.values(BidStatus) as [BidStatus, ...BidStatus[]]` (import de `../enums`, sem re-export → sem ambiguidade no barrel), eliminando o hard-code que divergia (`ACCEPTED`→`SELECTED`). Agora schema Zod, `enums.ts` e o `bidStatusEnum` do banco compartilham os mesmos 4 valores (DRAFT/SUBMITTED/SELECTED/REJECTED); o literal inline em `bidComparisonResponseSchema` também passou a usar `z.enum(bidStatusValues)` |
+| DB schema reconciliado à spec/shared, não o inverso (3.2, decisão do owner) | A spec 3.2 e os schemas shared da 3.1 (fonte de verdade dos contratos) assumiam colunas/tabelas que a 0.3 não gerou. Em vez de reescrever o service/controller (e regredir a 3.1 já commitada), o **DB schema foi ajustado**: `quotations` ganhou `number`+`payment_terms` e `created_by_id`→`created_by`; `quotation_items` teve `product_id` nullable, `description` NOT NULL, `notes` e `unit`→`varchar(20)`; `quotation_invites`(`invite_status` P/A/D, `sent_at`) virou `quotation_suppliers`(`quotation_supplier_status` INVITED/RESPONDED/DECLINED, `invited_at`). `relations.ts` atualizado. Alinha o banco aos contratos de `@elos/shared` (invariante 9) |
+| Migration 0002 + snapshot escritos à mão (3.2) | `drizzle-kit generate` exige TTY para os prompts de rename (enum `invite_status`→`quotation_supplier_status`, tabela `quotation_invites`→`quotation_suppliers`, coluna `created_by_id`→`created_by`) e o ambiente é não-interativo (winpty não aloca console). Escritos `0002_quotations_module_schema.sql` (renames preservando dados + add colunas + UNIQUE) e o `0002_snapshot.json` via script mutando o snapshot 0001 real, mais a entrada no `_journal.json`. Validado: `drizzle-kit check` ✅ e `drizzle-kit generate` → "No schema changes" (snapshot confere byte-a-byte com o schema TS). Aplicar (`db:migrate`) requer banco — diferido como nas unidades anteriores |
+| Subject `Quotation` tagueado + `read` p/ papéis read-only (3.2) | Mesmo padrão de `Supplier`(2.2)/`Product`(2.3): `(Quotation & ForcedSubject<'Quotation'>)` adicionado ao union `Subjects` p/ `subject('Quotation', existing)` tipar no update/publish/close/cancel (sem ele, TS2345). ADMIN_EMPRESA/COMPRADOR já tinham `manage Quotation`; adicionado `can('read','Quotation')` a ALMOXARIFE/ANALISTA_FINANCEIRO/TRANSPORTADOR (a spec dava read a esses papéis, ausente até então). `create`/`update` continuam negados a eles → POST/publish retornam 403 |
+| `bids` importado de `db/schema/quotations`, não `db/schema/bids` (3.2) | O snippet do service importa `bids` de `'../../db/schema/bids'`, arquivo que **não existe** — `bids`/`bidItems` vivem em `quotations.ts` (definidos na 0.3, referenciados por `purchase-orders.ts`/`relations.ts`). Criar um `bids.ts` separado obrigaria a mexer nesses imports (fora do escopo 3.2). Service importa `bids` de `'../../db/schema/quotations'`, sem tocar a estrutura de arquivos |
+| `cancel` rejeita lances `NOT IN ('SELECTED','REJECTED')` (3.2) | O snippet usa `NOT IN ('ACCEPTED','REJECTED')`, mas o enum canônico `BidStatus`/`bid_status` (enums.ts + DB) não tem `ACCEPTED` — o estado "vencedor" é `SELECTED`. Usar `'ACCEPTED'` no `sql` cru falharia o cast de enum em runtime. Trocado para `SELECTED` (estados finais = SELECTED/REJECTED), consistente com a 3.1 |
+| `quantity` numeric→string + `set` explícito no item (3.2) | `quotation_items.quantity` é `numeric` (tipo de insert do Drizzle = `string`), mas `CreateQuotationItemDto.quantity` é `number`; `.values({ ...dto })` falharia o type-check. `addItem` monta os values explicitamente com `String(dto.quantity)` e `productId/notes ?? null`; `updateItem` monta o `set` campo-a-campo (padrão do `SuppliersService.updateContact`). No `create`/`update` da cotação o `deadline` (string) é destruturado p/ fora do spread antes de `new Date(...)`, evitando o conflito string×Date no `set`/`values` |
+| `@Inject` explícito + `enqueue` como fila no spec (3.2) | `@Inject(DRIZZLE)`/`@Inject(AbilityFactory)`/`@Inject(QuotationsService)` adicionados (tsx/esbuild não emite metadata de DI — padrão de 1.2/2.2/2.3). O `enqueue` do `quotations.service.spec` da spec **sobrescrevia** `qb.then` a cada chamada (só o último valor valia), quebrando o teste de `inviteSupplier` que encadeia 3 selects (cotação→fornecedor→convite duplicado); reescrito como **fila sequencial** (`resultsQueue.shift()`), fazendo cada `await` consumir o próximo resultado na ordem. 95/95 testes passam |
 
 ---
 
