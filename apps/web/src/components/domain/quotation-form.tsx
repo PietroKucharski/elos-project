@@ -50,6 +50,7 @@ export function QuotationForm({ cnpj, mode, quotation }: QuotationFormProps) {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<CreateQuotationDto>({
     resolver: zodResolver(schema) as never,
@@ -58,11 +59,21 @@ export function QuotationForm({ cnpj, mode, quotation }: QuotationFormProps) {
         ? {
             title: quotation.title,
             description: quotation.description ?? undefined,
-            deadline: isoToDatetimeLocal(quotation.deadline),
+            // Valor do form é sempre ISO (o schema exige z.string().datetime());
+            // a conversão p/ exibição no input é feita via estado controlado abaixo.
+            deadline: quotation.deadline,
             paymentTerms: quotation.paymentTerms ?? undefined,
           }
         : undefined,
   })
+
+  // O input datetime-local exibe `YYYY-MM-DDTHH:mm` (local) enquanto o form guarda
+  // ISO. Mantemos o valor de exibição controlado e gravamos o ISO via setValue —
+  // assim um campo não tocado em modo edição submete o ISO correto (o RHF não roda
+  // defaultValues por setValueAs).
+  const [deadlineLocal, setDeadlineLocal] = useState(
+    isEdit && quotation ? isoToDatetimeLocal(quotation.deadline) : '',
+  )
 
   const onSubmit = async (data: CreateQuotationDto) => {
     setLoading(true)
@@ -125,9 +136,15 @@ export function QuotationForm({ cnpj, mode, quotation }: QuotationFormProps) {
         <input
           id="deadline"
           type="datetime-local"
-          {...register('deadline', {
-            setValueAs: (v: string) => (v ? new Date(v).toISOString() : ''),
-          })}
+          value={deadlineLocal}
+          onChange={(e) => {
+            const v = e.target.value
+            setDeadlineLocal(v)
+            setValue('deadline', v ? new Date(v).toISOString() : '', {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
+          }}
           className={INPUT}
         />
         {errors.deadline && <span className={ERROR}>{errors.deadline.message}</span>}
