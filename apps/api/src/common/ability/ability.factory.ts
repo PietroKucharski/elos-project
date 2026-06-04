@@ -7,6 +7,7 @@ import {
 import { Injectable } from '@nestjs/common'
 import type { Company, CompanyMember } from '../../db/schema/companies'
 import type { Product } from '../../db/schema/products'
+import type { PurchaseOrder } from '../../db/schema/purchase-orders'
 import type { Bid, Quotation } from '../../db/schema/quotations'
 import type { Supplier } from '../../db/schema/suppliers'
 import type { SessionUser } from '../types/session-user'
@@ -21,6 +22,7 @@ export type Actions =
   | 'reject'
   | 'submit'
   | 'select' // selecionar lance vencedor em cotação
+  | 'receive' // transição SENT→RECEIVED de pedido de compra (ALMOXARIFE)
 
 export type Subjects =
   // 'Company' aceita tanto a string (checagem por tipo: can('read', 'Company'))
@@ -55,7 +57,10 @@ export type Subjects =
   | 'Bid'
   | (Bid & ForcedSubject<'Bid'>)
   | 'BidItem'
+  // 'PurchaseOrder' tagueado (como 'Bid') para suportar condições por objeto via
+  // subject('PurchaseOrder', row) no PurchaseOrdersService — sem cair em MongoQuery<never>
   | 'PurchaseOrder'
+  | (PurchaseOrder & ForcedSubject<'PurchaseOrder'>)
   | 'PurchaseOrderItem'
   | 'Receipt'
   | 'Warehouse'
@@ -143,6 +148,7 @@ export class AbilityFactory {
         can('read', 'Quotation')
         can('read', 'Bid', { companyId })
         can('read', 'PurchaseOrder')
+        can('receive', 'PurchaseOrder') // transição SENT→RECEIVED
         can('manage', 'Receipt')
         can('manage', 'Warehouse')
         can('manage', 'Inventory')
