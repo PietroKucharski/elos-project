@@ -6,10 +6,9 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 4 — Pedidos de Compra** · `Em andamento` (4.1 e 4.2 concluídas) → próxima unidade: **4.3 — Purchase Orders UI (Frontend)**
+**Fase 4 — Pedidos de Compra** · `Concluída` (4.1, 4.2 e 4.3 concluídas) → próxima fase: **Fase 5 — Recebimento e Estoque**
 
-> **Pendência da Fase 3:** **3.5 — Lances e Comparativo UI (Frontend)** ainda não foi registrada como concluída neste tracker (4.1 foi implementada fora de ordem).
-**Fase 3 — Cotações e Lances** · `Concluída` (3.5 concluída) → próxima fase: **Fase 4 — Pedidos de Compra** (unidade **4.1 — Shared Schemas: Pedidos de Compra**)
+> **Fase 3 — Cotações e Lances:** concluída (todas as 5 unidades, incluindo a 3.5 — Lances e Comparativo UI).
 
 ---
 
@@ -620,14 +619,44 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     da API no total**. Ver Decisões Arquiteturais (4.2)
   - **Out (próximas unidades):** UI de pedidos de compra (4.3), recebimento de mercadoria/`ReceiptsModule` (Fase 5)
 
+- [x] **4.3 — Purchase Orders UI (Frontend)** — spec `23-purchase-orders-ui-spec.md`
+  - Commit convencional esperado: `feat(web): add purchase orders ui with list, detail and status workflow`
+  - `lib/api.ts` estendido: 2 funções server-side (`getPurchaseOrdersServer` com query `status`/`search`/
+    `supplierId`/paginação, `getPurchaseOrderServer` com itens) + 4 client-side (`createPurchaseOrder`,
+    `approvePurchaseOrder`, `sendPurchaseOrder`, `cancelPurchaseOrder`); `receivePurchaseOrder` **não**
+    incluído (transição SENT→RECEIVED é da Fase 5). Imports de tipos `PurchaseOrderResponse`/
+    `PurchaseOrderItemResponse`/`CreatePurchaseOrderDto`
+  - `components/domain/`: `purchase-order-status-badge.tsx` (DRAFT→muted, APPROVED→info, SENT→warning,
+    RECEIVED→success, CANCELLED→destructive), `purchase-order-stepper.tsx` (stepper horizontal
+    DRAFT→APPROVED→SENT→RECEIVED com `STATUS_ORDER` numérico; CANCELLED=-1 não marca nenhum step + badge
+    "Cancelado"), `purchase-order-actions.tsx` (Aprovar/Enviar/Cancelar via `AlertDialog`, conforme status,
+    só se `canMutate`), `purchase-orders-list-client.tsx` (tabs de status + busca por número/fornecedor
+    client-side + tabela) e `generate-po-dialog.tsx` (confirma geração do PO e redireciona ao detalhe)
+  - Rotas `(app)/[cnpj]/purchase-orders/`: `page.tsx` (SSR — carrega todos os status em paralelo, filtro
+    client-side), `loading.tsx`, `error.tsx`, `[id]/page.tsx` (breadcrumb + header com badge + stepper +
+    grid Informações/Financeiro + tabela de itens), `[id]/loading.tsx`, `[id]/error.tsx`. Sidebar (1.4) já
+    tinha o item "Pedidos de Compra" (`ShoppingCart`, href `/${cnpj}/purchase-orders`) — nenhuma mudança
+  - Modificação em `(app)/[cnpj]/quotations/[id]/page.tsx`: card **"🏆 Lance Vencedor"** (cotação `CLOSED`
+    com lance `SELECTED`) com `GeneratePODialog` → `POST /purchase-orders` e redirect ao PO gerado.
+    `getBidsServer` adicionado ao `Promise.all` da página
+  - **Verificado:** `pnpm --filter @elos/web type-check` verde; `biome check` dos arquivos novos limpo (só
+    o warning `noNonNullAssertion` pré-existente em `API_URL`); `pnpm --filter web build` **compila + gera
+    as 2 rotas PO** (`purchase-orders/page.js` e `purchase-orders/[id]/page.js` confirmados em `.next`,
+    ✓ Compiled successfully, ✓ 9/9 static pages). Passo `output: 'standalone'` falha por `EPERM` de symlink
+    no Windows (mesma limitação de 0.5/.../3.5). Fluxo runtime (aprovar/enviar/cancelar, gerar PO da
+    cotação) não exercitado — requer API + banco vivos
+  - **Ajustes vs. spec:** ver Decisões Arquiteturais (4.3) — a spec usava **inline styles com
+    `hsl(var(--token))`** e `var(--radius-*)`, que produzem cor inválida neste projeto (tokens são
+    `--color-*` e já vêm embrulhados em `hsl(...)`). Reimplementado com **Tailwind utility classes + tokens
+    semânticos**, mesma decisão de 3.4/2.4/2.5; mutações via helper `(await client())` (não `import()`
+    inline); `getBidsServer` no `Promise.all` sem condicional (a spec tinha snippet quebrado referenciando
+    `quotation?.status` dentro do próprio `Promise.all`)
+
 ---
 
 ## Em Progresso
 
-- Nada ativo. **4.2 concluída**. Próximo: **4.3 — Purchase Orders UI (Frontend)**.
-  Pendente da Fase 3: **3.5 — Lances e Comparativo UI (Frontend)**.
-- Nada ativo. **Fase 3 concluída** (3.5 fecha a fase). Próximo: **Fase 4 — Pedidos de Compra**
-  (unidade **4.1 — Shared Schemas: Pedidos de Compra**).
+- Nada ativo. **Fase 4 concluída** (4.1 + 4.2 + 4.3); Fase 3 também fechada. Próximo: **Fase 5 — Recebimento e Estoque**.
 
 ---
 
@@ -739,10 +768,8 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | 0    | Fundação                        | Concluída     |
 | 1    | Auth e Empresas                 | Concluída     |
 | 2    | Fornecedores e Produtos         | Concluída     |
-| 3    | Cotações e Lances               | Em andamento  |
-| 4    | Pedidos de Compra               | Em andamento  |
 | 3    | Cotações e Lances               | Concluída     |
-| 4    | Pedidos de Compra               | Não iniciada  |
+| 4    | Pedidos de Compra               | Concluída     |
 | 5    | Recebimento e Estoque           | Não iniciada  |
 | 6    | Financeiro (NF + Pagamentos)    | Não iniciada  |
 | 7    | Audit Log e Administração       | Não iniciada  |
@@ -895,6 +922,11 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | Parse seguro de paginação no `findAll` (4.2, hardening pós-review) | `Number(query.page ?? 1)` produzia `NaN` para `?page=abc`/`?limit=` e o `NaN` chegava a `.limit()/.offset()`. Trocado por `Number.parseInt(…, 10)` + `Number.isFinite` com fallback explícito (`page=1`, `limit=20`) preservando o clamp `1..100` e `page ≥ 1` |
 | `existingPO` escopado a `companyId` (4.2, hardening pós-review) | O lookup de PO já existente para o `bidId` filtrava só por `bidId`. Embora o `bid` já tenha sido validado por `companyId` (um lance pertence a uma empresa), a query passou a `and(eq(bidId), eq(companyId))` — invariante 8 (toda query escopada ao tenant), defesa em profundidade |
 | Testes de forbidden-path verificam ausência de escrita (4.2, hardening pós-review) | `approve` já tinha teste de 403; adicionados os equivalentes para send/cancel/receive (reusando `poId`/`mockUser`, `almoxUser` no receive): enfileiram o PO existente, forçam `mockAbility.cannot → true`, esperam `ForbiddenException` **e** asseguram `expect(mockDb.transaction).not.toHaveBeenCalled()` — comprovando que a checagem CASL precede qualquer mutação. 146/146 testes da API passam |
+| Tailwind utility classes em vez dos inline `hsl(var(--token))` da spec (4.3) | A spec 4.3 escreveu todos os componentes com inline styles usando `hsl(var(--muted))`, `hsl(var(--info) / 0.15)`, `var(--radius-md)` etc. Isso produz **cor inválida** neste projeto: os tokens são `--color-*` (não `--*`) e **já vêm embrulhados em `hsl(...)`** no `@theme inline` do `globals.css` (ex.: `--color-info: hsl(199 89% 42%)`), então `hsl(var(--info))` resolve para `hsl(undefined)`/`hsl(hsl(...))`. Reimplementado com Tailwind utility classes + tokens semânticos (`bg-muted`, `text-info bg-info-soft`, `text-warning bg-warning-soft`, etc.) — mesma decisão já tomada em 2.4/2.5/3.4. `var(--radius-*)`/`var(--font-mono)` existem como vars planas e funcionariam inline, mas usei as classes Tailwind por consistência |
+| Geração do PO a partir da cotação (card "Lance Vencedor") (4.3) | Conforme a decisão de UX da spec: o botão "Gerar Pedido de Compra" vive no detalhe da cotação (`CLOSED` + lance `SELECTED`), não no módulo de POs (que não tem "Novo PO"). `GeneratePODialog` chama `POST /purchase-orders` e redireciona ao PO. `getBidsServer` foi adicionado ao `Promise.all` da página de cotação **sem condicional** — o snippet da spec referenciava `quotation?.status` dentro do próprio `Promise.all` (quebrado, pois `quotation` ainda não existe ali); buscar os lances sempre é barato e o card só renderiza em `CLOSED` com `SELECTED` |
+| `receive` ausente no cliente web (4.3) | A transição SENT→RECEIVED não tem botão no web da Fase 4 — será acionada pelo `ReceiptsModule` (Fase 5) após criar o recebimento. Expor agora criaria fluxo incompleto. As 4 mutações expostas: create/approve/send/cancel |
+| Mutações PO via helper `(await client())` (4.3) | A spec escreve cada mutação com `const { api } = await import('@/lib/api-client')` inline; o `lib/api.ts` já tem o helper `client()` que faz exatamente isso e é usado por todas as outras mutações (quotations/bids). Usado o helper por consistência |
+| Stepper com `STATUS_ORDER` numérico, sem 'use client' nos componentes puros (4.3) | `PurchaseOrderStepper`/`PurchaseOrderStatusBadge` são puros (sem hooks) — omitido o `'use client'` que a spec colocava, espelhando `quotation-status-badge` (server-safe, usável tanto em Server quanto Client Components). `STATUS_ORDER` numérico (DRAFT=0…RECEIVED=3, CANCELLED=-1) compara estados sem switch aninhado e garante que nenhum step apareça concluído quando cancelado |
 
 ---
 
