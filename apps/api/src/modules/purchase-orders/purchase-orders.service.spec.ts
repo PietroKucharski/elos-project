@@ -252,6 +252,13 @@ describe('PurchaseOrdersService', () => {
       enqueue(mockPO) // DRAFT
       await expect(service.send(poId, mockUser)).rejects.toThrow(BadRequestException)
     })
+
+    it('retorna 403 se sem permissão — sem escrita no banco', async () => {
+      enqueue({ ...mockPO, status: 'APPROVED' })
+      mockAbility.cannot.mockReturnValue(true)
+      await expect(service.send(poId, mockUser)).rejects.toThrow(ForbiddenException)
+      expect(mockDb.transaction).not.toHaveBeenCalled()
+    })
   })
 
   // ─── cancel ─────────────────────────────────────────────────────────────
@@ -277,6 +284,13 @@ describe('PurchaseOrdersService', () => {
       enqueue({ ...mockPO, status: 'SENT' })
       await expect(service.cancel(poId, mockUser)).rejects.toThrow(BadRequestException)
     })
+
+    it('retorna 403 se sem permissão — sem escrita no banco', async () => {
+      enqueue(mockPO)
+      mockAbility.cannot.mockReturnValue(true)
+      await expect(service.cancel(poId, mockUser)).rejects.toThrow(ForbiddenException)
+      expect(mockDb.transaction).not.toHaveBeenCalled()
+    })
   })
 
   // ─── receive ────────────────────────────────────────────────────────────
@@ -294,6 +308,14 @@ describe('PurchaseOrdersService', () => {
     it('retorna 400 se PO não está em SENT', async () => {
       enqueue(mockPO) // DRAFT
       await expect(service.receive(poId, mockUser)).rejects.toThrow(BadRequestException)
+    })
+
+    it('retorna 403 se sem permissão — sem escrita no banco', async () => {
+      const almoxUser = { ...mockUser, role: 'ALMOXARIFE' }
+      enqueue({ ...mockPO, status: 'SENT' })
+      mockAbility.cannot.mockReturnValue(true)
+      await expect(service.receive(poId, almoxUser)).rejects.toThrow(ForbiddenException)
+      expect(mockDb.transaction).not.toHaveBeenCalled()
     })
   })
 })
