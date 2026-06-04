@@ -1,6 +1,11 @@
 import type {
   ApproveSupplierDto,
+  BidComparisonResponse,
+  BidItemResponse,
+  BidResponse,
   CompanyResponse,
+  CreateBidDto,
+  CreateBidItemDto,
   CreateCompanyDto,
   CreateProductDto,
   CreateQuotationDto,
@@ -19,6 +24,7 @@ import type {
   QuotationResponse,
   QuotationSupplierResponse,
   RejectSupplierDto,
+  SelectWinnerDto,
   SupplierBankAccountResponse,
   SupplierContactResponse,
   SupplierResponse,
@@ -503,4 +509,107 @@ export async function removeSupplierFromQuotation(
   await (await client()).delete(
     `v1/companies/${cnpj}/quotations/${quotationId}/suppliers/${supplierId}`,
   )
+}
+
+// ── Bids / Lances (server-side) ─────────────────────────────────────────────
+// O detalhe de um lance (findOne) traz os itens junto; tipamos esse shape aqui
+// pois `bidResponseSchema` em @elos/shared cobre apenas o lance "raso".
+
+export type BidWithItems = BidResponse & { items: BidItemResponse[] }
+
+export async function getBidsServer(cnpj: string, quotationId: string): Promise<BidResponse[]> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/quotations/${quotationId}/bids`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (res.ok) return res.json() as Promise<BidResponse[]>
+  // 404 (cotação inexistente) é o único "vazio" esperado; demais status são
+  // falhas reais e devem propagar para o error boundary da rota.
+  if (res.status === 404) return []
+  throw new Error(`getBidsServer falhou (${res.status}): ${await res.text()}`)
+}
+
+export async function getBidItemsServer(
+  cnpj: string,
+  quotationId: string,
+  bidId: string,
+): Promise<BidItemResponse[]> {
+  const res = await fetch(
+    `${API_URL}/v1/companies/${cnpj}/quotations/${quotationId}/bids/${bidId}/items`,
+    { headers: await sessionHeaders(), cache: 'no-store' },
+  )
+  if (res.ok) return res.json() as Promise<BidItemResponse[]>
+  if (res.status === 404) return []
+  throw new Error(`getBidItemsServer falhou (${res.status}): ${await res.text()}`)
+}
+
+export async function getBidComparisonServer(
+  cnpj: string,
+  quotationId: string,
+): Promise<BidComparisonResponse | null> {
+  const res = await fetch(
+    `${API_URL}/v1/companies/${cnpj}/quotations/${quotationId}/bids/compare`,
+    { headers: await sessionHeaders(), cache: 'no-store' },
+  )
+  if (res.ok) return res.json() as Promise<BidComparisonResponse>
+  if (res.status === 404) return null
+  throw new Error(`getBidComparisonServer falhou (${res.status}): ${await res.text()}`)
+}
+
+// ── Bids / Lances (client-side) ─────────────────────────────────────────────
+
+export async function createBid(
+  cnpj: string,
+  quotationId: string,
+  data: CreateBidDto,
+): Promise<BidResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/quotations/${quotationId}/bids`, { json: data })
+    .json<BidResponse>()
+}
+
+export async function removeBid(cnpj: string, quotationId: string, bidId: string): Promise<void> {
+  await (await client()).delete(`v1/companies/${cnpj}/quotations/${quotationId}/bids/${bidId}`)
+}
+
+export async function submitBid(
+  cnpj: string,
+  quotationId: string,
+  bidId: string,
+): Promise<BidResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/quotations/${quotationId}/bids/${bidId}/submit`)
+    .json<BidResponse>()
+}
+
+export async function addBidItem(
+  cnpj: string,
+  quotationId: string,
+  bidId: string,
+  data: CreateBidItemDto,
+): Promise<BidItemResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/quotations/${quotationId}/bids/${bidId}/items`, { json: data })
+    .json<BidItemResponse>()
+}
+
+export async function removeBidItem(
+  cnpj: string,
+  quotationId: string,
+  bidId: string,
+  itemId: string,
+): Promise<void> {
+  await (await client()).delete(
+    `v1/companies/${cnpj}/quotations/${quotationId}/bids/${bidId}/items/${itemId}`,
+  )
+}
+
+export async function selectWinner(
+  cnpj: string,
+  quotationId: string,
+  data: SelectWinnerDto,
+): Promise<{ success: boolean; winnerBidId: string }> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/quotations/${quotationId}/select-winner`, { json: data })
+    .json<{ success: boolean; winnerBidId: string }>()
 }
