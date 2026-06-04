@@ -1,9 +1,11 @@
 // apps/web/src/app/(app)/[cnpj]/quotations/[id]/page.tsx
+import { GeneratePODialog } from '@/components/domain/generate-po-dialog'
 import { QuotationActions } from '@/components/domain/quotation-actions'
 import { QuotationItemsPanel } from '@/components/domain/quotation-items-panel'
 import { QuotationStatusBadge } from '@/components/domain/quotation-status-badge'
 import { QuotationSuppliersPanel } from '@/components/domain/quotation-suppliers-panel'
 import {
+  getBidsServer,
   getMyCompaniesServer,
   getQuotationItemsServer,
   getQuotationServer,
@@ -22,12 +24,13 @@ const MUTATE_ROLES = ['COMPRADOR', 'ADMIN_EMPRESA', 'SUPER_ADMIN']
 export default async function QuotationDetailPage({ params }: Props) {
   const { cnpj, id } = await params
 
-  const [quotation, items, invites, approvedSuppliers, myCompanies] = await Promise.all([
+  const [quotation, items, invites, approvedSuppliers, myCompanies, bids] = await Promise.all([
     getQuotationServer(cnpj, id),
     getQuotationItemsServer(cnpj, id),
     getQuotationSuppliersServer(cnpj, id),
     getSuppliersServer(cnpj, { status: 'APPROVED' }),
     getMyCompaniesServer(),
+    getBidsServer(cnpj, id),
   ])
 
   if (!quotation) notFound()
@@ -105,6 +108,45 @@ export default async function QuotationDetailPage({ params }: Props) {
           canEdit={canEdit}
         />
       </section>
+
+      {/* Lance vencedor → gerar Pedido de Compra (cotação CLOSED com lance SELECTED) */}
+      {quotation.status === 'CLOSED' &&
+        (() => {
+          const winnerBid = bids.find((b) => b.status === 'SELECTED')
+          if (!winnerBid) return null
+
+          return (
+            <section className="mb-8">
+              <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border-2 border-primary/30 bg-card p-5">
+                <div>
+                  <h2 className="mb-1 text-base font-semibold text-primary">🏆 Lance Vencedor</h2>
+                  <p className="text-[13.5px] text-muted-foreground">
+                    <strong className="text-foreground">{winnerBid.supplierName}</strong>
+                    {winnerBid.totalPrice && (
+                      <>
+                        {' · '}
+                        <strong className="text-foreground">
+                          {Number(winnerBid.totalPrice).toLocaleString('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                          })}
+                        </strong>
+                      </>
+                    )}
+                  </p>
+                </div>
+                {canMutate && (
+                  <GeneratePODialog
+                    cnpj={cnpj}
+                    bidId={winnerBid.id}
+                    supplierName={winnerBid.supplierName}
+                    totalPrice={winnerBid.totalPrice ?? '0'}
+                  />
+                )}
+              </div>
+            </section>
+          )
+        })()}
     </div>
   )
 }
