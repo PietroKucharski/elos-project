@@ -640,8 +640,11 @@ export async function getPurchaseOrdersServer(
     headers: await sessionHeaders(),
     cache: 'no-store',
   })
-  if (!res.ok) return []
-  return res.json() as Promise<PurchaseOrderResponse[]>
+  if (res.ok) return res.json() as Promise<PurchaseOrderResponse[]>
+  // 404 (empresa/rota inexistente) é o único "vazio" esperado; 403/500/auth
+  // devem propagar para o error boundary da rota.
+  if (res.status === 404) return []
+  throw new Error(`getPurchaseOrdersServer falhou (${res.status}): ${await res.text()}`)
 }
 
 export async function getPurchaseOrderServer(
@@ -652,8 +655,11 @@ export async function getPurchaseOrderServer(
     headers: await sessionHeaders(),
     cache: 'no-store',
   })
-  if (!res.ok) return null
-  return res.json() as Promise<PurchaseOrderResponse & { items: PurchaseOrderItemResponse[] }>
+  if (res.ok)
+    return res.json() as Promise<PurchaseOrderResponse & { items: PurchaseOrderItemResponse[] }>
+  // 404 (PO inexistente) → null para o caller chamar notFound(); demais falhas propagam.
+  if (res.status === 404) return null
+  throw new Error(`getPurchaseOrderServer falhou (${res.status}): ${await res.text()}`)
 }
 
 // ── Purchase Orders / Pedidos de Compra (client-side) ───────────────────────
