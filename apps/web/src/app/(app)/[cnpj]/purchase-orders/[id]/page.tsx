@@ -1,0 +1,177 @@
+// apps/web/src/app/(app)/[cnpj]/purchase-orders/[id]/page.tsx
+import { PurchaseOrderActions } from '@/components/domain/purchase-order-actions'
+import { PurchaseOrderStatusBadge } from '@/components/domain/purchase-order-status-badge'
+import { PurchaseOrderStepper } from '@/components/domain/purchase-order-stepper'
+import { getMyCompaniesServer, getPurchaseOrderServer } from '@/lib/api'
+import { ChevronLeft } from 'lucide-react'
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+
+const MUTATE_ROLES = ['COMPRADOR', 'ADMIN_EMPRESA', 'SUPER_ADMIN']
+
+const TH =
+  'border-b border-border px-3 pb-2.5 text-left text-[11.5px] font-semibold tracking-[0.04em] text-muted-foreground uppercase'
+
+interface Props {
+  params: Promise<{ cnpj: string; id: string }>
+}
+
+function brl(value: string | number) {
+  return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+function date(value: string | null) {
+  return value ? new Date(value).toLocaleDateString('pt-BR', { dateStyle: 'medium' }) : '—'
+}
+
+export default async function PurchaseOrderDetailPage({ params }: Props) {
+  const { cnpj, id } = await params
+
+  const [po, myCompanies] = await Promise.all([
+    getPurchaseOrderServer(cnpj, id),
+    getMyCompaniesServer(),
+  ])
+
+  if (!po) notFound()
+
+  const role = myCompanies.find((c) => c.cnpj === cnpj)?.role ?? ''
+  const canMutate = MUTATE_ROLES.includes(role)
+  const items = po.items ?? []
+
+  return (
+    <div className="max-w-[960px]">
+      {/* Breadcrumb */}
+      <Link
+        href={`/${cnpj}/purchase-orders`}
+        className="mb-4 inline-flex items-center gap-1 text-[13px] text-muted-foreground no-underline transition-colors hover:text-foreground"
+      >
+        <ChevronLeft size={15} strokeWidth={1.8} />
+        Pedidos de Compra
+      </Link>
+
+      {/* Header */}
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="mb-1 flex items-center gap-3">
+            <h1 className="font-mono text-2xl font-semibold text-foreground">{po.number}</h1>
+            <PurchaseOrderStatusBadge status={po.status} />
+          </div>
+          <p className="text-[13.5px] text-muted-foreground">
+            Fornecedor: <strong className="text-foreground">{po.supplierName}</strong>
+            {po.quotationNumber && (
+              <>
+                {' · '}
+                <Link
+                  href={`/${cnpj}/quotations/${po.quotationId}`}
+                  className="text-primary no-underline hover:underline"
+                >
+                  Cotação {po.quotationNumber}
+                </Link>
+              </>
+            )}
+          </p>
+        </div>
+        <PurchaseOrderActions po={po} cnpj={cnpj} canMutate={canMutate} />
+      </div>
+
+      {/* Stepper */}
+      <div className="mb-5 rounded-lg border border-border bg-card px-6 py-4">
+        <PurchaseOrderStepper status={po.status} />
+      </div>
+
+      {/* Info grid */}
+      <div className="mb-5 grid grid-cols-1 gap-5 md:grid-cols-2">
+        {/* Datas */}
+        <div className="rounded-lg border border-border bg-card p-6">
+          <h2 className="mb-4 text-[13px] font-semibold tracking-[0.04em] text-muted-foreground uppercase">
+            Informações
+          </h2>
+          <dl className="grid gap-3">
+            {[
+              { label: 'Criado em', value: date(po.createdAt) },
+              { label: 'Aprovado em', value: date(po.approvedAt) },
+              { label: 'Enviado em', value: date(po.sentAt) },
+            ].map(({ label, value }) => (
+              <div key={label} className="flex justify-between">
+                <dt className="text-[13.5px] text-muted-foreground">{label}</dt>
+                <dd className="m-0 text-[13.5px] font-medium text-foreground">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        {/* Financeiro */}
+        <div className="rounded-lg border border-border bg-card p-6">
+          <h2 className="mb-4 text-[13px] font-semibold tracking-[0.04em] text-muted-foreground uppercase">
+            Financeiro
+          </h2>
+          <div className="flex items-center justify-between border-t border-border pt-3">
+            <span className="font-semibold text-foreground">Total do Pedido</span>
+            <span className="font-mono-nums text-xl font-bold text-primary">
+              {brl(po.totalAmount)}
+            </span>
+          </div>
+          {po.notes && (
+            <div className="mt-3 rounded-md bg-muted/50 px-3 py-2.5">
+              <p className="text-[12.5px] text-muted-foreground italic">{po.notes}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Itens */}
+      <div className="rounded-lg border border-border bg-card p-6">
+        <h2 className="mb-4 text-base font-semibold text-foreground">
+          Itens do Pedido ({items.length})
+        </h2>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[13.5px]">
+            <thead>
+              <tr>
+                <th className={TH}>Produto</th>
+                <th className={TH}>Código</th>
+                <th className={TH}>Unidade</th>
+                <th className={`${TH} text-right`}>Quantidade</th>
+                <th className={`${TH} text-right`}>Preço Unit.</th>
+                <th className={`${TH} text-right`}>Total</th>
+                <th className={`${TH} text-right`}>Recebido</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-3 py-8 text-center text-sm text-muted-foreground">
+                    Nenhum item neste pedido.
+                  </td>
+                </tr>
+              )}
+              {items.map((item) => (
+                <tr key={item.id} className="border-b border-border last:border-0">
+                  <td className="px-3 py-2.5 font-medium text-foreground">{item.productName}</td>
+                  <td className="px-3 py-2.5 font-mono text-[12px] text-muted-foreground">
+                    {item.productCode ?? '—'}
+                  </td>
+                  <td className="px-3 py-2.5 text-muted-foreground">{item.unit}</td>
+                  <td className="px-3 py-2.5 text-right font-mono-nums text-foreground">
+                    {Number(item.quantity).toLocaleString('pt-BR', { minimumFractionDigits: 3 })}
+                  </td>
+                  <td className="px-3 py-2.5 text-right font-mono-nums text-foreground">
+                    {brl(item.unitPrice)}
+                  </td>
+                  <td className="px-3 py-2.5 text-right font-mono-nums font-semibold text-foreground">
+                    {brl(item.totalPrice)}
+                  </td>
+                  <td className="px-3 py-2.5 text-right font-mono-nums text-muted-foreground">
+                    {Number(item.receivedQuantity).toLocaleString('pt-BR', {
+                      minimumFractionDigits: 3,
+                    })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
