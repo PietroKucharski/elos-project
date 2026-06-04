@@ -1,21 +1,41 @@
 // apps/web/src/app/(app)/[cnpj]/purchase-orders/page.tsx
 import { PurchaseOrdersListClient } from '@/components/domain/purchase-orders-list-client'
 import { getPurchaseOrdersServer } from '@/lib/api'
+import type { PurchaseOrderResponse } from '@elos/shared'
 
 interface Props {
   params: Promise<{ cnpj: string }>
 }
 
+const PAGE_SIZE = 100
+
+// Pagina por status até esgotar — a API limita o `limit` a 100, então um único
+// request não traz todos os POs quando há >100 em um status.
+async function fetchAllByStatus(cnpj: string, status: string): Promise<PurchaseOrderResponse[]> {
+  const all: PurchaseOrderResponse[] = []
+  for (let page = 1; ; page++) {
+    const batch = await getPurchaseOrdersServer(cnpj, {
+      status,
+      page: String(page),
+      limit: String(PAGE_SIZE),
+    })
+    all.push(...batch)
+    if (batch.length < PAGE_SIZE) break
+  }
+  return all
+}
+
 export default async function PurchaseOrdersPage({ params }: Props) {
   const { cnpj } = await params
 
-  // Carrega todos os status em paralelo e filtra client-side (mesmo padrão de products 2.5).
+  // Carrega todos os status em paralelo (cada um paginado) e filtra client-side
+  // (mesmo padrão de products 2.5).
   const [draft, approved, sent, received, cancelled] = await Promise.all([
-    getPurchaseOrdersServer(cnpj, { status: 'DRAFT', limit: '100' }),
-    getPurchaseOrdersServer(cnpj, { status: 'APPROVED', limit: '100' }),
-    getPurchaseOrdersServer(cnpj, { status: 'SENT', limit: '100' }),
-    getPurchaseOrdersServer(cnpj, { status: 'RECEIVED', limit: '100' }),
-    getPurchaseOrdersServer(cnpj, { status: 'CANCELLED', limit: '100' }),
+    fetchAllByStatus(cnpj, 'DRAFT'),
+    fetchAllByStatus(cnpj, 'APPROVED'),
+    fetchAllByStatus(cnpj, 'SENT'),
+    fetchAllByStatus(cnpj, 'RECEIVED'),
+    fetchAllByStatus(cnpj, 'CANCELLED'),
   ])
 
   const allPOs = [...draft, ...approved, ...sent, ...received, ...cancelled]

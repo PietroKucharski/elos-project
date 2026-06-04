@@ -156,7 +156,7 @@ export async function cancelPurchaseOrder(
 
 ## Arquivos a Criar / Modificar
 
-```
+```text
 apps/web/src/
   lib/
     api.ts                                      ← modificar (adicionar funções PO)
@@ -1267,16 +1267,16 @@ visível apenas quando a cotação está `CLOSED` e há um lance `SELECTED`:
 import { getBidsServer } from '@/lib/api'
 import { GeneratePODialog } from '@/components/domain/generate-po-dialog'
 
-// No corpo do Server Component, adicionar ao Promise.all:
-const [quotation, items, suppliers, bids] = await Promise.all([
-  getQuotationServer(cnpj, id),
+// No corpo do Server Component: buscar a cotação primeiro (para o notFound
+// antecipado e para condicionar a busca de lances), depois o restante em paralelo.
+const quotation = await getQuotationServer(cnpj, id)
+if (!quotation) notFound()
+
+const [items, suppliers, bids] = await Promise.all([
   getQuotationItemsServer(cnpj, id),
   getQuotationSuppliersServer(cnpj, id),
-  getQuotationServer(cnpj, id)  // já existia; adicionar também:
-  // Somente buscar lances se cotação CLOSED
-  quotation?.status === 'CLOSED'
-    ? getBidsServer(cnpj, id)
-    : Promise.resolve([]),
+  // Somente buscar lances se a cotação estiver CLOSED
+  quotation.status === 'CLOSED' ? getBidsServer(cnpj, id) : Promise.resolve([]),
 ])
 
 // Após os painéis de itens e fornecedores, adicionar:
