@@ -609,6 +609,15 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     `{ companyId }` (a spec sugeria escopo, mas a `read` vizinha já é irrestrita — isolamento garantido
     pelas queries do Service); `manage PurchaseOrder` de ADMIN/COMPRADOR mantido irrestrito (já existente,
     `manage` cobre a action `receive`)
+  - **Hardening pós-review (4.2):** (a) numeração `PO-{ano}-NNNN` movida para **dentro da transação** do
+    `create` com loop de retry no `23505` (`isUniqueViolation`), padrão do `QuotationsService` — fecha a
+    corrida de geração concorrente (constraint `UNIQUE` em `number` já existia; sem `SELECT FOR UPDATE`/
+    sequencer); (b) guarda **atômica de status** no `WHERE` do `UPDATE` de update/approve/send/cancel/receive
+    (`eq(status, …)` / `inArray` no cancel) + zero linhas → `ConflictException` (TOCTOU); (c) `findAll` com
+    parse seguro de paginação (`Number.parseInt` + `Number.isFinite`, sem `NaN` em `.limit()/.offset()`);
+    (d) lookup de PO existente (`existingPO`) escopado a `companyId` (invariante 8); (e) 3 testes de
+    forbidden-path (send/cancel/receive) que verificam `mockDb.transaction` **não** chamado — **146 testes
+    da API no total**. Ver Decisões Arquiteturais (4.2)
   - **Out (próximas unidades):** UI de pedidos de compra (4.3), recebimento de mercadoria/`ReceiptsModule` (Fase 5)
 
 ---
@@ -881,6 +890,11 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | Numeração `PO-{ano}-{4 dígitos}` via query do último número (4.2) | Mesmo padrão do `COT-` das cotações (3.2): sequencial por empresa derivado do último `number` com `LIKE 'PO-{ano}-%'` ordenado desc, sem `SEQUENCE` PostgreSQL (lógica no Service, padrão do projeto). `totalAmount = SUM(quantity × unitPrice)` calculado in-memory dos itens copiados do lance, sem trigger. Race condition improvável em v1 (`number` é UNIQUE no banco — colisão falharia o insert; retry pode ser adicionado se necessário) |
 | `bidItems`/`bids` importados de `db/schema/quotations` (4.2) | Mesmo motivo de 3.2/3.3: `bids`/`bidItems` vivem em `quotations.ts` (0.3), não há `db/schema/bids.ts`. O `create` copia `productId`/`quantity` de `quotation_items` (join por `bid_items.quotation_item_id`) e `unitPrice` de `bid_items`; valida `bid.status === 'SELECTED'`, 409 se `bidId` já tem PO (`bid_id` UNIQUE), 400 se algum item de cotação sem `product_id` |
 | Concatenação de string colapsada em template único (4.2) | O snippet do `BadRequestException` de "itens sem produto" usava `` `…texto…` + `…texto…` ``, disparando `useTemplate` (concatenação) **e** `noUnusedTemplateLiteral` (template sem interpolação na 1ª metade) do Biome — dois erros contraditórios que o `--write` não resolve. Colapsado num único template literal com a interpolação `${itemsSemProduto.length}`. `noNonNullAssertion` de `user.companyId!` mantidos como warning (padrão do projeto, presente em todos os Services) |
+| Numeração `PO-` na transação + retry no `23505`, sem `SELECT FOR UPDATE` (4.2, hardening pós-review) | A leitura do último `number` corria **fora** da transação do `create` → sob concorrência dois requests derivavam o mesmo `PO-{ano}-NNNN` e o 2º insert estourava `23505` cru (500). Movida a leitura+insert para a mesma transação dentro de um loop `MAX_ATTEMPTS=5` que faz `continue` no `23505` (helper `isUniqueViolation`, idêntico ao `QuotationsService`) e lança `ConflictException` se esgotar. A constraint `UNIQUE` em `purchase_orders.number` **já existia** (0.3) — não foi preciso adicionar. Descartado `SELECT FOR UPDATE`/tabela sequencer sugeridos no review: over-engineering e divergência do padrão de retry já estabelecido (3.2) |
+| Guarda atômica de status no `WHERE` do `UPDATE` (4.2, hardening pós-review) | A validação de status corria só no `select` inicial (fora da transação) → janela TOCTOU entre o `select` e o `update`. Adicionado o status esperado ao `WHERE` do `UPDATE` transacional de update/approve/send/cancel/receive (`eq(purchaseOrders.status, …)`; `inArray(status, ['DRAFT','APPROVED'])` no cancel, que tem dois estados de origem). Zero linhas afetadas (mudança concorrente) agora lança `ConflictException` ("modificado por outra operação") em vez de seguir; a pré-checagem fora da transação foi mantida para a mensagem amigável (`BadRequestException`) no caso comum |
+| Parse seguro de paginação no `findAll` (4.2, hardening pós-review) | `Number(query.page ?? 1)` produzia `NaN` para `?page=abc`/`?limit=` e o `NaN` chegava a `.limit()/.offset()`. Trocado por `Number.parseInt(…, 10)` + `Number.isFinite` com fallback explícito (`page=1`, `limit=20`) preservando o clamp `1..100` e `page ≥ 1` |
+| `existingPO` escopado a `companyId` (4.2, hardening pós-review) | O lookup de PO já existente para o `bidId` filtrava só por `bidId`. Embora o `bid` já tenha sido validado por `companyId` (um lance pertence a uma empresa), a query passou a `and(eq(bidId), eq(companyId))` — invariante 8 (toda query escopada ao tenant), defesa em profundidade |
+| Testes de forbidden-path verificam ausência de escrita (4.2, hardening pós-review) | `approve` já tinha teste de 403; adicionados os equivalentes para send/cancel/receive (reusando `poId`/`mockUser`, `almoxUser` no receive): enfileiram o PO existente, forçam `mockAbility.cannot → true`, esperam `ForbiddenException` **e** asseguram `expect(mockDb.transaction).not.toHaveBeenCalled()` — comprovando que a checagem CASL precede qualquer mutação. 146/146 testes da API passam |
 
 ---
 
