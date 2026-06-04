@@ -32,7 +32,7 @@ import type {
   QuotationSupplierResponse,
 } from '@elos/shared'
 import { Send, Trash2 } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useId, useState } from 'react'
 import { toast } from 'sonner'
 import { BidStatusBadge } from './bid-status-badge'
 
@@ -76,6 +76,13 @@ function AddBidItemForm({
   const [deliveryDays, setDeliveryDays] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // ids únicos por instância: múltiplos lances DRAFT renderizam este form ao
+  // mesmo tempo, então ids estáticos colidiriam entre label e controle.
+  const uid = useId()
+  const itemFieldId = `${uid}-item`
+  const priceFieldId = `${uid}-price`
+  const daysFieldId = `${uid}-days`
+
   if (availableItems.length === 0) {
     return (
       <p className="text-[13px] text-muted-foreground">
@@ -108,11 +115,11 @@ function AddBidItemForm({
       className="mt-4 grid grid-cols-[2fr_1fr_1fr_auto] items-end gap-2.5 rounded-lg border border-border bg-muted/40 p-4"
     >
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="bid-item" className={LABEL}>
+        <label htmlFor={itemFieldId} className={LABEL}>
           Item *
         </label>
         <select
-          id="bid-item"
+          id={itemFieldId}
           value={quotationItemId}
           onChange={(e) => setQuotationItemId(e.target.value)}
           className={SELECT}
@@ -126,11 +133,11 @@ function AddBidItemForm({
         </select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="bid-unit-price" className={LABEL}>
+        <label htmlFor={priceFieldId} className={LABEL}>
           Preço unit. (R$) *
         </label>
         <input
-          id="bid-unit-price"
+          id={priceFieldId}
           type="number"
           min="0"
           step="0.01"
@@ -141,11 +148,11 @@ function AddBidItemForm({
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="bid-delivery-days" className={LABEL}>
+        <label htmlFor={daysFieldId} className={LABEL}>
           Prazo (dias) *
         </label>
         <input
-          id="bid-delivery-days"
+          id={daysFieldId}
           type="number"
           min="1"
           step="1"

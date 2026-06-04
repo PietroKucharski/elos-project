@@ -522,8 +522,11 @@ export async function getBidsServer(cnpj: string, quotationId: string): Promise<
     headers: await sessionHeaders(),
     cache: 'no-store',
   })
-  if (!res.ok) return []
-  return res.json() as Promise<BidResponse[]>
+  if (res.ok) return res.json() as Promise<BidResponse[]>
+  // 404 (cotação inexistente) é o único "vazio" esperado; demais status são
+  // falhas reais e devem propagar para o error boundary da rota.
+  if (res.status === 404) return []
+  throw new Error(`getBidsServer falhou (${res.status}): ${await res.text()}`)
 }
 
 export async function getBidItemsServer(
@@ -535,8 +538,9 @@ export async function getBidItemsServer(
     `${API_URL}/v1/companies/${cnpj}/quotations/${quotationId}/bids/${bidId}/items`,
     { headers: await sessionHeaders(), cache: 'no-store' },
   )
-  if (!res.ok) return []
-  return res.json() as Promise<BidItemResponse[]>
+  if (res.ok) return res.json() as Promise<BidItemResponse[]>
+  if (res.status === 404) return []
+  throw new Error(`getBidItemsServer falhou (${res.status}): ${await res.text()}`)
 }
 
 export async function getBidComparisonServer(
@@ -547,8 +551,9 @@ export async function getBidComparisonServer(
     `${API_URL}/v1/companies/${cnpj}/quotations/${quotationId}/bids/compare`,
     { headers: await sessionHeaders(), cache: 'no-store' },
   )
-  if (!res.ok) return null
-  return res.json() as Promise<BidComparisonResponse>
+  if (res.ok) return res.json() as Promise<BidComparisonResponse>
+  if (res.status === 404) return null
+  throw new Error(`getBidComparisonServer falhou (${res.status}): ${await res.text()}`)
 }
 
 // ── Bids / Lances (client-side) ─────────────────────────────────────────────
