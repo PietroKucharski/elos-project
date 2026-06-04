@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 3 — Cotações e Lances** · `Em andamento` (3.4 concluída) → próxima unidade: **3.5 — Lances e Comparativo UI (Frontend)**
+**Fase 3 — Cotações e Lances** · `Concluída` (3.5 concluída) → próxima fase: **Fase 4 — Pedidos de Compra** (unidade **4.1 — Shared Schemas: Pedidos de Compra**)
 
 ---
 
@@ -521,11 +521,45 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     contrato exige `z.string().datetime()`); (g) cancelar usa `AlertDialog` (não `confirm()`); (h) badge por
     tokens semânticos (não hex hardcoded — não existe `--radius-full` no token set)
 
+- [x] **3.5 — Lances e Comparativo UI (Frontend)** — sem spec dedicada (derivada da API 3.3 + schemas 3.1)
+  - Commit convencional esperado: `feat: add bids and comparison ui with winner selection`
+  - **Sem arquivo de spec** (a numeração de specs salta de `20-quotations-ui` para `21-purchase-orders`);
+    implementação derivada dos endpoints reais do `BidsModule` (3.3), dos schemas `bid.ts` (3.1) e das
+    convenções de UI de 3.4. **Status canônico do vencedor é `SELECTED`** (confirmado em `bidStatusEnum`
+    e `bids.service.ts`); o texto da spec 3.3 dizia `ACCEPTED`, desatualizado
+  - `lib/api.ts` estendido: 3 funções server-side (`getBidsServer`, `getBidItemsServer`,
+    `getBidComparisonServer`) + 6 client-side (`createBid`/`removeBid`/`submitBid`, `addBidItem`/
+    `removeBidItem`, `selectWinner`) no padrão `sessionHeaders()` (server) e `client()` ky (client);
+    tipo auxiliar `BidWithItems = BidResponse & { items: BidItemResponse[] }` (o `findOne` da API traz
+    os itens, shape não coberto por `bidResponseSchema`)
+  - `components/domain/`: `bid-status-badge.tsx` (DRAFT→muted, SUBMITTED→info, SELECTED→success/“Vencedor”,
+    REJECTED→destructive), `bids-manager.tsx` (Client Component do estado **OPEN**: cria lance para
+    fornecedor convidado sem lance, cota itens inline com preço unit. + prazo, remove item/lance, envia
+    lance com `AlertDialog`; total por lance somado client-side) e `bid-comparison.tsx` (Client Component
+    do estado **CLOSED**: matrix item × fornecedor com menor preço por linha destacado, total por lance no
+    rodapé, banner do vencedor e seleção via `AlertDialog`; respeita `noUncheckedIndexedAccess` no acesso
+    ao `record` de células)
+  - Rota `(app)/[cnpj]/quotations/[id]/bids/`: `page.tsx` (SSR; `notFound` se cotação inexistente,
+    `redirect` p/ o detalhe se status ≠ OPEN/CLOSED; ramifica entre `BidsManager` e `BidComparison`
+    conforme status; link “Voltar para a cotação”), `loading.tsx` (skeleton) e `error.tsx` (boundary com
+    `console.error`). O link “Ver lances/comparativo →” já existia no detalhe da cotação (3.4) apontando
+    para esta rota — nenhuma mudança necessária lá
+  - **Fora de escopo (intencional):** edição de notas do lance (`updateBid`) e edição inline de item já
+    cotado (`updateBidItem`) — a API suporta, mas o fluxo usa remover+readicionar; portal de submissão
+    pelo próprio fornecedor permanece fora da v1
+  - **Verificado:** `pnpm type-check` (4 tasks, 3 workspaces) verde; `biome lint` dos arquivos novos limpo
+    (só o warning `noNonNullAssertion` pré-existente em `API_URL` de `lib/api.ts`); `pnpm --filter web build`
+    **✓ Compiled successfully + 9/9 static pages**, rota `[id]/bids` gerada em `.next/server/app` (`page.js`
+    presente). Passo `output: 'standalone'` falha por `EPERM` de symlink no Windows (mesma limitação de
+    0.5/1.4/1.5/2.4/2.5/3.4). Fluxo runtime (criar lance, cotar itens, enviar, comparar, selecionar
+    vencedor) não exercitado — requer API + banco vivos
+
 ---
 
 ## Em Progresso
 
-- Nada ativo. **3.4 concluída**. Próximo: **3.5 — Lances e Comparativo UI (Frontend)**.
+- Nada ativo. **Fase 3 concluída** (3.5 fecha a fase). Próximo: **Fase 4 — Pedidos de Compra**
+  (unidade **4.1 — Shared Schemas: Pedidos de Compra**).
 
 ---
 
@@ -637,7 +671,7 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | 0    | Fundação                        | Concluída     |
 | 1    | Auth e Empresas                 | Concluída     |
 | 2    | Fornecedores e Produtos         | Concluída     |
-| 3    | Cotações e Lances               | Em andamento  |
+| 3    | Cotações e Lances               | Concluída     |
 | 4    | Pedidos de Compra               | Não iniciada  |
 | 5    | Recebimento e Estoque           | Não iniciada  |
 | 6    | Financeiro (NF + Pagamentos)    | Não iniciada  |
