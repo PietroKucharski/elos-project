@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 4 — Pedidos de Compra** · `Em andamento` (4.1 concluída) → próxima unidade: **4.2 — Purchase Orders Module (API)**
+**Fase 4 — Pedidos de Compra** · `Em andamento` (4.1 e 4.2 concluídas) → próxima unidade: **4.3 — Purchase Orders UI (Frontend)**
 
 > **Pendência da Fase 3:** **3.5 — Lances e Comparativo UI (Frontend)** ainda não foi registrada como concluída neste tracker (4.1 foi implementada fora de ordem).
 **Fase 3 — Cotações e Lances** · `Concluída` (3.5 concluída) → próxima fase: **Fase 4 — Pedidos de Compra** (unidade **4.1 — Shared Schemas: Pedidos de Compra**)
@@ -577,11 +577,45 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     0.5/1.4/1.5/2.4/2.5/3.4). Fluxo runtime (criar lance, cotar itens, enviar, comparar, selecionar
     vencedor) não exercitado — requer API + banco vivos
 
+- [x] **4.2 — Purchase Orders Module (API)** — spec `22-purchase-orders-api-spec.md`
+  - Commit convencional esperado: `feat(api): add purchase-orders module with generate-from-bid and status transitions`
+  - `apps/api/src/modules/purchase-orders/`: `purchase-orders.module.ts` (importa `AbilityModule`,
+    exporta `PurchaseOrdersService` para o `ReceiptsModule` da Fase 5), `purchase-orders.controller.ts`
+    (`@Controller('companies/:cnpj/purchase-orders')`: GET lista com filtros `status`/`search`/`supplierId`/
+    paginação, POST gera PO a partir de lance, GET `:id` detalhe com itens, PATCH `:id` (notes), e
+    transições POST `:id/approve`/`send`/`cancel`/`receive`; Swagger + `ZodValidationPipe` no create/update),
+    `purchase-orders.service.ts` (findAll com subquery de `itemCount` + joins de fornecedor/cotação,
+    findOne com itens via join de produto, create gerando número sequencial `PO-{ano}-NNNN` por empresa a
+    partir de lance `SELECTED` — valida lance da empresa, 404 se inexistente, 400 se não-SELECTED, 409 se
+    `bidId` já tem PO, 400 se algum item de cotação sem `productId`, `totalAmount = SUM(qty×unitPrice)`,
+    insere PO+itens+audit em transação; update só em DRAFT, approve DRAFT→APPROVED com `approvedById`/
+    `approvedAt`, send APPROVED→SENT com `sentAt`, cancel DRAFT/APPROVED→CANCELLED, receive SENT→RECEIVED;
+    CASL antes de cada mutação e audit log em create/update/approve/send/cancel/receive),
+    `purchase-orders.service.spec.ts` (21 testes) e `purchase-orders.controller.spec.ts` (7 testes) —
+    **143 testes da API passando no total**
+  - `ability.factory.ts` — action customizada `'receive'` adicionada ao union `Actions` (precedente da
+    `'select'` de 3.3); subject `PurchaseOrder` tagueado (`& ForcedSubject<'PurchaseOrder'>`) para suportar
+    `subject('PurchaseOrder', row)` no Service; ALMOXARIFE ganhou `can('receive', 'PurchaseOrder')`
+    (transição SENT→RECEIVED) — ADMIN_EMPRESA e COMPRADOR já tinham `manage PurchaseOrder` (cobre receive),
+    COMPRADOR já tinha `approve`, e ALMOXARIFE/ANALISTA_FINANCEIRO/TRANSPORTADOR já tinham `read`
+  - `app.module.ts` — `PurchaseOrdersModule` importado (após `BidsModule`)
+  - **Verificado:** `vitest run` (143/143), `pnpm type-check` (3 workspaces) e `biome check` dos arquivos
+    novos verdes (só warnings `noNonNullAssertion` de `user.companyId!`, severidade `warn`, padrão do projeto).
+    Checklist de segurança coberto pelos testes: 403 sem permissão (read/create/update/receive), 404 PO/lance
+    inexistente, 400 lance não-SELECTED / item sem produto / transições inválidas, 409 PO duplicado (`bidId`
+    UNIQUE), queries escopadas a `companyId`, audit log em todas as mutações
+  - **Ajustes vs. spec:** ver Decisões Arquiteturais (4.2) — concatenação de string colapsada em template
+    único (biome `useTemplate`/`noUnusedTemplateLiteral`); regra `receive` da ALMOXARIFE sem escopo
+    `{ companyId }` (a spec sugeria escopo, mas a `read` vizinha já é irrestrita — isolamento garantido
+    pelas queries do Service); `manage PurchaseOrder` de ADMIN/COMPRADOR mantido irrestrito (já existente,
+    `manage` cobre a action `receive`)
+  - **Out (próximas unidades):** UI de pedidos de compra (4.3), recebimento de mercadoria/`ReceiptsModule` (Fase 5)
+
 ---
 
 ## Em Progresso
 
-- Nada ativo. **4.1 concluída**. Próximo: **4.2 — Purchase Orders Module (API)**.
+- Nada ativo. **4.2 concluída**. Próximo: **4.3 — Purchase Orders UI (Frontend)**.
   Pendente da Fase 3: **3.5 — Lances e Comparativo UI (Frontend)**.
 - Nada ativo. **Fase 3 concluída** (3.5 fecha a fase). Próximo: **Fase 4 — Pedidos de Compra**
   (unidade **4.1 — Shared Schemas: Pedidos de Compra**).
@@ -840,6 +874,13 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | Vencedor = `SELECTED`, não `ACCEPTED` (3.3) | O snippet da spec usa `'ACCEPTED'` em toda a seleção de vencedor (set, dedup de vencedor existente, `isWinner` do compare), mas o enum canônico `BidStatus`/`bid_status` (enums.ts + DB) não tem `ACCEPTED` — o estado é `SELECTED` (mesma reconciliação já feita em 3.1/3.2). `selectWinner` grava `SELECTED`, o guard de vencedor existente filtra `eq(bids.status, 'SELECTED')` e `compare` marca `isWinner: bid.status === 'SELECTED'` |
 | Regras `Bid` do COMPRADOR substituídas + subject tagueado (3.3) | A 0.4/3.1 tinha `can('read','Bid')` + `can('select','Bid')` (sem escopo) p/ COMPRADOR; a spec 3.3 pede `read`/`create`/`update`/`delete` escopados a `{ companyId }`. Como `selectWinner` passou a usar `ability.cannot('update','Bid')` (não `'select'`), as duas regras antigas foram **substituídas** pelas 4 CRUD escopadas; ADMIN_EMPRESA (que não tinha regra `Bid`) ganhou as mesmas 4; ALMOXARIFE/ANALISTA_FINANCEIRO/TRANSPORTADOR ganham `read` escopado. `(Bid & ForcedSubject<'Bid'>)` adicionado ao union `Subjects` p/ `subject('Bid', existing)` tipar no update/remove/submit (mesmo padrão de Quotation 3.2). A action `'select'` ficou órfã no union `Actions` mas é inócua (mantida p/ minimizar churn) |
 | Audit log em delete/itens + `@Inject` + `enqueue` como fila (3.3) | `@Inject(DRIZZLE)`/`@Inject(AbilityFactory)`/`@Inject(BidsService)` adicionados (tsx/esbuild não emite metadata de DI — padrão desde 1.2). O snippet da spec **não** registrava audit log no `remove` nem nos itens de lance (só create/submit/select_winner) e fazia `delete` fora de transação; alinhado ao `QuotationsService` (invariante: toda mutação gera `audit_logs`), `remove`/`addBidItem`/`updateBidItem`/`removeBidItem` agora envolvem write+audit numa transação. O `enqueue` do `bids.service.spec` da spec **sobrescrevia** `qb.then` a cada chamada (quebrando os fluxos multi-select de create/submit/selectWinner/addBidItem); reescrito como **fila sequencial** (`resultsQueue.shift()`, padrão de 3.2). 115/115 testes passam |
+| `receive` incluso no módulo da Fase 4 + `PurchaseOrdersModule` exporta o Service (4.2) | O status `RECEIVED` já existe no schema (0.3) e o `ReceiptsModule` (Fase 5) chamará `purchaseOrdersService.receive()` internamente após confirmar o recebimento completo. Implementar a transição SENT→RECEIVED agora (e exportar o Service) evita dependência circular futura entre receipts↔purchase-orders. Endpoint também exposto diretamente (`POST :id/receive`, ALMOXARIFE) |
+| Action `'receive'` no CASL em vez de `'update'` (4.2) | A transição SENT→RECEIVED é responsabilidade do ALMOXARIFE, separada das demais (COMPRADOR). Modelada como action customizada `'receive'` (precedente da `'select'` de 3.3) adicionada ao union `Actions`; o Service checa `cannot('receive', subject('PurchaseOrder', existing))`. Impede que o ALMOXARIFE aprove/envie o PO (ele só tem `read`+`receive`) e que o COMPRADOR receba sem ser via `manage` |
+| Regra `receive` da ALMOXARIFE sem escopo `{ companyId }` (4.2) | A spec sugeria `can('receive','PurchaseOrder',{ companyId })`, mas a regra `read` vizinha da ALMOXARIFE já é irrestrita (`can('read','PurchaseOrder')`). Mantida `can('receive','PurchaseOrder')` sem escopo p/ consistência com a `read` vizinha — o isolamento de tenant é garantido pelas queries do Service (`eq(purchaseOrders.companyId, user.companyId!)` em todo `select`/`update`). ADMIN_EMPRESA/COMPRADOR já tinham `manage PurchaseOrder` (cobre `receive`); COMPRADOR já tinha `approve` |
+| Subject `PurchaseOrder` tagueado, sem reescrever as `case` (4.2) | Mesmo padrão de Supplier(2.2)/Product(2.3)/Quotation(3.2)/Bid(3.3): `(PurchaseOrder & ForcedSubject<'PurchaseOrder'>)` adicionado ao union `Subjects` p/ `subject('PurchaseOrder', existing)` tipar no update/approve/send/cancel/receive (sem ele, TS2345). As regras de papel `PurchaseOrder` (`manage` p/ ADMIN/COMPRADOR, `read` p/ os demais) **já existiam** — só faltava a action `receive` da ALMOXARIFE e o tipo tagueado |
+| Numeração `PO-{ano}-{4 dígitos}` via query do último número (4.2) | Mesmo padrão do `COT-` das cotações (3.2): sequencial por empresa derivado do último `number` com `LIKE 'PO-{ano}-%'` ordenado desc, sem `SEQUENCE` PostgreSQL (lógica no Service, padrão do projeto). `totalAmount = SUM(quantity × unitPrice)` calculado in-memory dos itens copiados do lance, sem trigger. Race condition improvável em v1 (`number` é UNIQUE no banco — colisão falharia o insert; retry pode ser adicionado se necessário) |
+| `bidItems`/`bids` importados de `db/schema/quotations` (4.2) | Mesmo motivo de 3.2/3.3: `bids`/`bidItems` vivem em `quotations.ts` (0.3), não há `db/schema/bids.ts`. O `create` copia `productId`/`quantity` de `quotation_items` (join por `bid_items.quotation_item_id`) e `unitPrice` de `bid_items`; valida `bid.status === 'SELECTED'`, 409 se `bidId` já tem PO (`bid_id` UNIQUE), 400 se algum item de cotação sem `product_id` |
+| Concatenação de string colapsada em template único (4.2) | O snippet do `BadRequestException` de "itens sem produto" usava `` `…texto…` + `…texto…` ``, disparando `useTemplate` (concatenação) **e** `noUnusedTemplateLiteral` (template sem interpolação na 1ª metade) do Biome — dois erros contraditórios que o `--write` não resolve. Colapsado num único template literal com a interpolação `${itemsSemProduto.length}`. `noNonNullAssertion` de `user.companyId!` mantidos como warning (padrão do projeto, presente em todos os Services) |
 
 ---
 
