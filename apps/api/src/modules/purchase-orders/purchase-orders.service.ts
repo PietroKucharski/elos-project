@@ -8,7 +8,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
-import { type SQL, and, desc, eq, ilike, or, sql } from 'drizzle-orm'
+import { type SQL, and, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm'
 import { AbilityFactory } from '../../common/ability/ability.factory'
 import type { SessionUser } from '../../common/types/session-user'
 import type { DrizzleDB } from '../../db'
@@ -18,6 +18,18 @@ import { products } from '../../db/schema/products'
 import { purchaseOrderItems, purchaseOrders } from '../../db/schema/purchase-orders'
 import { bidItems, bids, quotationItems, quotations } from '../../db/schema/quotations'
 import { suppliers } from '../../db/schema/suppliers'
+
+// `23505` = unique_violation do PostgreSQL. Usado para fechar a corrida na geração
+// do número sequencial do pedido de compra (PO-{ano}-NNNN): a constraint única em
+// `number` garante a unicidade e o `create` reexecuta a transação na colisão.
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as { code?: unknown }).code === '23505'
+  )
+}
 
 @Injectable()
 export class PurchaseOrdersService {
@@ -43,8 +55,11 @@ export class PurchaseOrdersService {
       throw new ForbiddenException('Sem permissão para listar pedidos de compra.')
     }
 
-    const page = Math.max(1, Number(query.page ?? 1))
-    const limit = Math.min(100, Math.max(1, Number(query.limit ?? 20)))
+    // Parse seguro: `?page=abc`/`?limit=` produzem NaN com Number(); cai no default.
+    const parsedPage = Number.parseInt(query.page ?? '', 10)
+    const parsedLimit = Number.parseInt(query.limit ?? '', 10)
+    const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1
+    const limit = Number.isFinite(parsedLimit) ? Math.min(100, Math.max(1, parsedLimit)) : 20
     const offset = (page - 1) * limit
 
     const conditions: SQL[] = [eq(purchaseOrders.companyId, user.companyId!)]
@@ -198,7 +213,9 @@ export class PurchaseOrdersService {
     const [existingPO] = await this.db
       .select({ id: purchaseOrders.id })
       .from(purchaseOrders)
-      .where(eq(purchaseOrders.bidId, dto.bidId))
+      .where(
+        and(eq(purchaseOrders.bidId, dto.bidId), eq(purchaseOrders.companyId, user.companyId!)),
+      )
       .limit(1)
 
     if (existingPO) {
@@ -239,76 +256,90 @@ export class PurchaseOrdersService {
       return acc + qty * price
     }, 0)
 
-    // 6. Gerar número sequencial PO-{ano}-{4 dígitos}
+    // 6. Gerar número sequencial PO-{ano}-{4 dígitos} e criar PO + itens + audit log.
+    // A leitura do último número e o insert correm na MESMA transação; sob concorrência
+    // a constraint única em `number` rejeita a colisão (23505) e reexecutamos — a leitura
+    // seguinte já enxerga a linha concorrente commitada, derivando o próximo número.
     const year = new Date().getFullYear()
     const prefix = `PO-${year}-`
 
-    const [lastPO] = await this.db
-      .select({ number: purchaseOrders.number })
-      .from(purchaseOrders)
-      .where(
-        and(
-          eq(purchaseOrders.companyId, user.companyId!),
-          sql`${purchaseOrders.number} LIKE ${`${prefix}%`}`,
-        ),
-      )
-      .orderBy(desc(purchaseOrders.number))
-      .limit(1)
+    const MAX_ATTEMPTS = 5
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      try {
+        return await this.db.transaction(async (tx) => {
+          const [lastPO] = await tx
+            .select({ number: purchaseOrders.number })
+            .from(purchaseOrders)
+            .where(
+              and(
+                eq(purchaseOrders.companyId, user.companyId!),
+                sql`${purchaseOrders.number} LIKE ${`${prefix}%`}`,
+              ),
+            )
+            .orderBy(desc(purchaseOrders.number))
+            .limit(1)
 
-    let sequence = 1
-    if (lastPO) {
-      const lastSeq = Number.parseInt(lastPO.number.slice(prefix.length), 10)
-      sequence = (Number.isNaN(lastSeq) ? 0 : lastSeq) + 1
-    }
-    const number = `${prefix}${String(sequence).padStart(4, '0')}`
-
-    // 7. Criar PO + itens + audit log em transação
-    return this.db.transaction(async (tx) => {
-      const [po] = await tx
-        .insert(purchaseOrders)
-        .values({
-          companyId: user.companyId!,
-          supplierId: bid.supplierId,
-          quotationId: bid.quotationId,
-          bidId: dto.bidId,
-          number,
-          status: 'DRAFT',
-          totalAmount: String(totalAmount.toFixed(2)),
-          notes: dto.notes ?? null,
-          createdById: user.id,
-        })
-        .returning()
-
-      if (!po) throw new Error('Falha ao criar pedido de compra.')
-
-      // Inserir itens
-      await tx.insert(purchaseOrderItems).values(
-        items.map((item) => {
-          const qty = Number(item.quantity)
-          const price = Number(item.unitPrice)
-          const total = qty * price
-          return {
-            purchaseOrderId: po.id,
-            productId: item.productId!,
-            quantity: String(item.quantity),
-            unitPrice: String(item.unitPrice),
-            totalPrice: String(total.toFixed(2)),
-            receivedQuantity: '0',
+          let sequence = 1
+          if (lastPO) {
+            const lastSeq = Number.parseInt(lastPO.number.slice(prefix.length), 10)
+            sequence = (Number.isNaN(lastSeq) ? 0 : lastSeq) + 1
           }
-        }),
-      )
+          const number = `${prefix}${String(sequence).padStart(4, '0')}`
 
-      await tx.insert(auditLogs).values({
-        entity: 'PurchaseOrder',
-        entityId: po.id,
-        action: 'CREATE',
-        after: { number: po.number, bidId: dto.bidId, status: 'DRAFT' },
-        userId: user.id,
-        companyId: user.companyId,
-      })
+          const [po] = await tx
+            .insert(purchaseOrders)
+            .values({
+              companyId: user.companyId!,
+              supplierId: bid.supplierId,
+              quotationId: bid.quotationId,
+              bidId: dto.bidId,
+              number,
+              status: 'DRAFT',
+              totalAmount: String(totalAmount.toFixed(2)),
+              notes: dto.notes ?? null,
+              createdById: user.id,
+            })
+            .returning()
 
-      return po
-    })
+          if (!po) throw new Error('Falha ao criar pedido de compra.')
+
+          // Inserir itens
+          await tx.insert(purchaseOrderItems).values(
+            items.map((item) => {
+              const qty = Number(item.quantity)
+              const price = Number(item.unitPrice)
+              const total = qty * price
+              return {
+                purchaseOrderId: po.id,
+                productId: item.productId!,
+                quantity: String(item.quantity),
+                unitPrice: String(item.unitPrice),
+                totalPrice: String(total.toFixed(2)),
+                receivedQuantity: '0',
+              }
+            }),
+          )
+
+          await tx.insert(auditLogs).values({
+            entity: 'PurchaseOrder',
+            entityId: po.id,
+            action: 'CREATE',
+            after: { number: po.number, bidId: dto.bidId, status: 'DRAFT' },
+            userId: user.id,
+            companyId: user.companyId,
+          })
+
+          return po
+        })
+      } catch (err) {
+        if (isUniqueViolation(err) && attempt < MAX_ATTEMPTS - 1) continue
+        throw err
+      }
+    }
+
+    throw new ConflictException(
+      'Não foi possível gerar um número único para o pedido de compra. Tente novamente.',
+    )
   }
 
   // ─── update ───────────────────────────────────────────────────────────────
@@ -334,10 +365,20 @@ export class PurchaseOrdersService {
       const [updated] = await tx
         .update(purchaseOrders)
         .set({ notes: dto.notes ?? null, updatedAt: new Date() })
-        .where(and(eq(purchaseOrders.id, id), eq(purchaseOrders.companyId, user.companyId!)))
+        .where(
+          and(
+            eq(purchaseOrders.id, id),
+            eq(purchaseOrders.companyId, user.companyId!),
+            eq(purchaseOrders.status, 'DRAFT'),
+          ),
+        )
         .returning()
 
-      if (!updated) throw new NotFoundException('Pedido de compra não encontrado.')
+      if (!updated) {
+        throw new ConflictException(
+          'O pedido de compra foi modificado por outra operação. Tente novamente.',
+        )
+      }
 
       await tx.insert(auditLogs).values({
         entity: 'PurchaseOrder',
@@ -384,10 +425,20 @@ export class PurchaseOrdersService {
           approvedAt: now,
           updatedAt: now,
         })
-        .where(and(eq(purchaseOrders.id, id), eq(purchaseOrders.companyId, user.companyId!)))
+        .where(
+          and(
+            eq(purchaseOrders.id, id),
+            eq(purchaseOrders.companyId, user.companyId!),
+            eq(purchaseOrders.status, 'DRAFT'),
+          ),
+        )
         .returning()
 
-      if (!updated) throw new NotFoundException('Pedido de compra não encontrado.')
+      if (!updated) {
+        throw new ConflictException(
+          'O pedido de compra foi modificado por outra operação. Tente novamente.',
+        )
+      }
 
       await tx.insert(auditLogs).values({
         entity: 'PurchaseOrder',
@@ -429,10 +480,20 @@ export class PurchaseOrdersService {
       const [updated] = await tx
         .update(purchaseOrders)
         .set({ status: 'SENT', sentAt: now, updatedAt: now })
-        .where(and(eq(purchaseOrders.id, id), eq(purchaseOrders.companyId, user.companyId!)))
+        .where(
+          and(
+            eq(purchaseOrders.id, id),
+            eq(purchaseOrders.companyId, user.companyId!),
+            eq(purchaseOrders.status, 'APPROVED'),
+          ),
+        )
         .returning()
 
-      if (!updated) throw new NotFoundException('Pedido de compra não encontrado.')
+      if (!updated) {
+        throw new ConflictException(
+          'O pedido de compra foi modificado por outra operação. Tente novamente.',
+        )
+      }
 
       await tx.insert(auditLogs).values({
         entity: 'PurchaseOrder',
@@ -473,10 +534,20 @@ export class PurchaseOrdersService {
       const [updated] = await tx
         .update(purchaseOrders)
         .set({ status: 'CANCELLED', updatedAt: new Date() })
-        .where(and(eq(purchaseOrders.id, id), eq(purchaseOrders.companyId, user.companyId!)))
+        .where(
+          and(
+            eq(purchaseOrders.id, id),
+            eq(purchaseOrders.companyId, user.companyId!),
+            inArray(purchaseOrders.status, ['DRAFT', 'APPROVED']),
+          ),
+        )
         .returning()
 
-      if (!updated) throw new NotFoundException('Pedido de compra não encontrado.')
+      if (!updated) {
+        throw new ConflictException(
+          'O pedido de compra foi modificado por outra operação. Tente novamente.',
+        )
+      }
 
       await tx.insert(auditLogs).values({
         entity: 'PurchaseOrder',
@@ -519,10 +590,20 @@ export class PurchaseOrdersService {
       const [updated] = await tx
         .update(purchaseOrders)
         .set({ status: 'RECEIVED', updatedAt: new Date() })
-        .where(and(eq(purchaseOrders.id, id), eq(purchaseOrders.companyId, user.companyId!)))
+        .where(
+          and(
+            eq(purchaseOrders.id, id),
+            eq(purchaseOrders.companyId, user.companyId!),
+            eq(purchaseOrders.status, 'SENT'),
+          ),
+        )
         .returning()
 
-      if (!updated) throw new NotFoundException('Pedido de compra não encontrado.')
+      if (!updated) {
+        throw new ConflictException(
+          'O pedido de compra foi modificado por outra operação. Tente novamente.',
+        )
+      }
 
       await tx.insert(auditLogs).values({
         entity: 'PurchaseOrder',
