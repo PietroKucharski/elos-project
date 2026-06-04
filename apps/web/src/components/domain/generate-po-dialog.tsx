@@ -18,7 +18,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { createPurchaseOrder } from '@/lib/api'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 interface Props {
@@ -31,8 +31,14 @@ interface Props {
 export function GeneratePODialog({ cnpj, bidId, supplierName, totalPrice }: Props) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  // Guard de re-entrada: fecha a janela entre o clique e o re-render que
+  // desabilita o botão (o `bid_id` UNIQUE no banco já impede PO duplicado, mas
+  // evita o 409 desnecessário no double-click).
+  const submittingRef = useRef(false)
 
   async function handleGenerate() {
+    if (submittingRef.current) return
+    submittingRef.current = true
     setIsLoading(true)
     try {
       const po = await createPurchaseOrder(cnpj, { bidId })
@@ -41,6 +47,8 @@ export function GeneratePODialog({ cnpj, bidId, supplierName, totalPrice }: Prop
     } catch (error) {
       console.error('[GeneratePODialog.handleGenerate]', error)
       toast.error('Erro ao gerar pedido de compra. Tente novamente.')
+    } finally {
+      submittingRef.current = false
       setIsLoading(false)
     }
   }

@@ -24,16 +24,18 @@ const MUTATE_ROLES = ['COMPRADOR', 'ADMIN_EMPRESA', 'SUPER_ADMIN']
 export default async function QuotationDetailPage({ params }: Props) {
   const { cnpj, id } = await params
 
-  const [quotation, items, invites, approvedSuppliers, myCompanies, bids] = await Promise.all([
-    getQuotationServer(cnpj, id),
+  // Busca a cotação primeiro: permite o notFound() antecipado e condicionar a
+  // busca de lances (só necessária no card de "Lance Vencedor", em CLOSED).
+  const quotation = await getQuotationServer(cnpj, id)
+  if (!quotation) notFound()
+
+  const [items, invites, approvedSuppliers, myCompanies, bids] = await Promise.all([
     getQuotationItemsServer(cnpj, id),
     getQuotationSuppliersServer(cnpj, id),
     getSuppliersServer(cnpj, { status: 'APPROVED' }),
     getMyCompaniesServer(),
-    getBidsServer(cnpj, id),
+    quotation.status === 'CLOSED' ? getBidsServer(cnpj, id) : Promise.resolve([]),
   ])
-
-  if (!quotation) notFound()
 
   const role = myCompanies.find((c) => c.cnpj === cnpj)?.role ?? ''
   const canMutate = MUTATE_ROLES.includes(role)
