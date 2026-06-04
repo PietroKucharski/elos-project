@@ -6,6 +6,9 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
+**Fase 4 — Pedidos de Compra** · `Em andamento` (4.1 concluída) → próxima unidade: **4.2 — Purchase Orders Module (API)**
+
+> **Pendência da Fase 3:** **3.5 — Lances e Comparativo UI (Frontend)** ainda não foi registrada como concluída neste tracker (4.1 foi implementada fora de ordem).
 **Fase 3 — Cotações e Lances** · `Concluída` (3.5 concluída) → próxima fase: **Fase 4 — Pedidos de Compra** (unidade **4.1 — Shared Schemas: Pedidos de Compra**)
 
 ---
@@ -521,6 +524,26 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     contrato exige `z.string().datetime()`); (g) cancelar usa `AlertDialog` (não `confirm()`); (h) badge por
     tokens semânticos (não hex hardcoded — não existe `--radius-full` no token set)
 
+- [x] **4.1 — Shared Schemas: Pedidos de Compra** — spec `21-shared-schemas-purchase-orders-spec.md`
+  - Commit convencional esperado: `feat(shared): add purchase order zod schemas`
+  - `packages/shared/src/schemas/purchase-order.ts` — `purchaseOrderStatusValues` via
+    `Object.values(PurchaseOrderStatus)` (DRAFT/APPROVED/SENT/RECEIVED/CANCELLED — sincroniza com o enum
+    canônico de `enums.ts`, sem array literal hardcoded); `createPurchaseOrderSchema` (apenas `bidId` uuid
+    + `notes` opcional — PO é gerado a partir de um lance `SELECTED`, sem criação manual de itens),
+    `updatePurchaseOrderSchema` (apenas `notes`, status DRAFT), `purchaseOrderItemResponseSchema`
+    (`quantity`/`unitPrice`/`totalPrice`/`receivedQuantity` string = numeric do postgres.js,
+    `receivedQuantity` começa em `'0'` p/ progresso de recebimento da Fase 5) e `purchaseOrderResponseSchema`
+    (`items[]` opcional só no GET :id, `itemCount` opcional só na listagem, `totalAmount` string); tipos
+    `CreatePurchaseOrderDto`/`UpdatePurchaseOrderDto`/`PurchaseOrderItemResponse`/`PurchaseOrderResponse`
+    via `z.infer`
+  - Barrel `packages/shared/src/index.ts` re-exporta `./schemas/purchase-order` (ordem alfabética, entre
+    `product` e `quotation`)
+  - **Verificado:** `pnpm --filter @elos/shared type-check` (3 workspaces, `tsc --noEmit`) verde; o padrão
+    `z.enum(purchaseOrderStatusValues)` é idêntico ao `z.enum(bidStatusValues)` já provado em `bid.ts`.
+    `PurchaseOrderStatus` **não** é re-declarado (já exportado por `enums.ts`, mesmo padrão de 3.1/2.1).
+    `pnpm lint` na raiz do pacote reporta apenas ruído CRLF pré-existente em arquivos não tocados
+    (working tree com CRLF do `core.autocrlf=true`; git armazena LF — o arquivo novo é LF, consistente)
+  - **Out (próximas unidades):** módulo NestJS de purchase-orders (4.2), UI (4.3), schema de recebimento (Fase 5)
 - [x] **3.5 — Lances e Comparativo UI (Frontend)** — sem spec dedicada (derivada da API 3.3 + schemas 3.1)
   - Commit convencional esperado: `feat: add bids and comparison ui with winner selection`
   - **Sem arquivo de spec** (a numeração de specs salta de `20-quotations-ui` para `21-purchase-orders`);
@@ -558,6 +581,8 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 
 ## Em Progresso
 
+- Nada ativo. **4.1 concluída**. Próximo: **4.2 — Purchase Orders Module (API)**.
+  Pendente da Fase 3: **3.5 — Lances e Comparativo UI (Frontend)**.
 - Nada ativo. **Fase 3 concluída** (3.5 fecha a fase). Próximo: **Fase 4 — Pedidos de Compra**
   (unidade **4.1 — Shared Schemas: Pedidos de Compra**).
 
@@ -671,6 +696,8 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | 0    | Fundação                        | Concluída     |
 | 1    | Auth e Empresas                 | Concluída     |
 | 2    | Fornecedores e Produtos         | Concluída     |
+| 3    | Cotações e Lances               | Em andamento  |
+| 4    | Pedidos de Compra               | Em andamento  |
 | 3    | Cotações e Lances               | Concluída     |
 | 4    | Pedidos de Compra               | Não iniciada  |
 | 5    | Recebimento e Estoque           | Não iniciada  |
