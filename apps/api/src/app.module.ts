@@ -13,6 +13,7 @@ import { ProductsModule } from './modules/products/products.module'
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module'
 import { QuotationsModule } from './modules/quotations/quotations.module'
 import { SuppliersModule } from './modules/suppliers/suppliers.module'
+import { WarehousesModule } from './modules/warehouses/warehouses.module'
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module'
     QuotationsModule,
     BidsModule,
     PurchaseOrdersModule,
+    WarehousesModule,
     // Fases 1–7: módulos de domínio adicionados aqui
   ],
   providers: [

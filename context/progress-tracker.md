@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 5 — Recebimento e Estoque** · `Em andamento` (5.1 concluída) → próximas unidades: 5.2+ (módulos NestJS e UI)
+**Fase 5 — Recebimento e Estoque** · `Em andamento` (5.1 e 5.2 concluídas) → próxima unidade: 5.3 (ReceiptsModule) e UI
 
 > **Fase 4 — Pedidos de Compra:** concluída (4.1, 4.2 e 4.3).
 **Fase 4 — Pedidos de Compra** · `Concluída` (4.1, 4.2 e 4.3 concluídas) → próxima fase: **Fase 5 — Recebimento e Estoque**
@@ -652,6 +652,36 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     (`z.string().uuid()`/`.datetime()`, `z.enum(values)`, `Object.values(Enum) as [...]`), então o código foi
     seguido à risca. Os enums `NonConformityStatus`/`NonConformityType`/`Severity`/`StockMovementType` já
     existiam de 0.3; apenas os arrays de valores são exportados dos schemas (evita `TS2308` no barrel)
+- [x] **5.2 — Warehouses Module (API)** — spec `25-warehouse-api-spec.md`
+  - Commit convencional esperado: `feat(api): add warehouses module with crud and inventory view`
+  - `apps/api/src/modules/warehouses/`: `warehouses.module.ts` (importa `AbilityModule`, exporta
+    `WarehousesService` para o `ReceiptsService` da 5.3), `warehouses.controller.ts`
+    (`@Controller('companies/:cnpj/warehouses')`: GET/POST lista+criação, `GET /inventory` global,
+    GET/PATCH `:id`, `POST :id/deactivate`, `GET :id/inventory`; Swagger + `ZodValidationPipe` no
+    create/update), `warehouses.service.ts` (findAll com `includeInactive`, findOne, create/update com
+    dedup de `code`, deactivate soft com guarda de estoque > 0, getInventory global/por armazém com
+    filtros `productId`/`search`/paginação; CASL antes de cada mutação e audit log em
+    create/update/deactivate), `warehouses.service.spec.ts` (11 testes) e
+    `warehouses.controller.spec.ts` (6 testes) — **163 testes da API passando no total**
+  - `ability.factory.ts` — subject `Warehouse` tagueado (`& ForcedSubject<'Warehouse'>`) adicionado ao
+    union `Subjects` para suportar `subject('Warehouse', row)` no `update`/`deactivate`; regra
+    `read Warehouse` escopada a `{ companyId }` adicionada a COMPRADOR/ANALISTA_FINANCEIRO/TRANSPORTADOR
+    (ADMIN_EMPRESA e ALMOXARIFE já tinham `manage Warehouse` da configuração inicial)
+  - `apps/api/src/db/schema/warehouses.ts` — `uniqueIndex('warehouses_company_id_code_unique')` em
+    `(companyId, code)` (NULLs distintos no Postgres → armazéns sem código não colidem), espelhando o
+    índice de `products`; migration `0003_careless_blade.sql` gerada (`CREATE UNIQUE INDEX`)
+  - `app.module.ts` — `WarehousesModule` importado
+  - **Verificado:** `vitest run` (163/163), `pnpm type-check` (3 workspaces) e `biome check` dos arquivos
+    novos verdes (só warnings `noNonNullAssertion` de `companyId!`/`or(...)!`, severidade `warn`, padrão
+    do projeto). Checklist de segurança coberto pelos testes: 403 sem permissão (list/create/deactivate),
+    404 não encontrado, 409 código duplicado, 400 ao desativar armazém com estoque, queries escopadas a
+    `companyId` (incl. `getInventory`), audit log em create/update/deactivate. Banco vivo (migrate) não
+    executado neste ambiente — sem Supabase
+  - **Ajustes vs. spec:** ordem das rotas garantida pela posição de `getGlobalInventory` antes de
+    `findOne` (a spec alerta para isso); `getInventory` usa o mesmo parse seguro de página/limite do
+    `PurchaseOrdersService` (`Number.parseInt` + `Number.isNaN`) em vez do encadeamento inline da spec;
+    índice único de `code` adicionado ao schema (a spec o marcava como "migration se necessário") para
+    fechar a corrida na unicidade no nível do banco, além do check em aplicação
 - [x] **4.3 — Purchase Orders UI (Frontend)** — spec `23-purchase-orders-ui-spec.md`
   - Commit convencional esperado: `feat(web): add purchase orders ui with list, detail and status workflow`
   - `lib/api.ts` estendido: 2 funções server-side (`getPurchaseOrdersServer` com query `status`/`search`/
@@ -689,10 +719,10 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 
 ## Em Progresso
 
-- **Fase 5 — Recebimento e Estoque** iniciada: 5.1 (Shared Schemas) concluída. Próximo: **5.2** —
-  módulo NestJS de armazéns/recebimento (WarehousesModule/ReceiptsModule), seguido de movimentações
-  de estoque, não-conformidades e a UI correspondente (5.5+).
-- Nada ativo. **Fase 4 concluída** (4.1 + 4.2 + 4.3); Fase 3 também fechada. Próximo: **Fase 5 — Recebimento e Estoque**.
+- **Fase 5 — Recebimento e Estoque** em andamento: 5.1 (Shared Schemas) e 5.2 (Warehouses Module API)
+  concluídas. Próximo: **5.3** — `ReceiptsModule` (recebimento de mercadoria + movimentações de estoque
+  que fazem upsert na tabela `inventory` e validam o armazém via `WarehousesService`), seguido de
+  não-conformidades e a UI correspondente (5.5+).
 
 ---
 
