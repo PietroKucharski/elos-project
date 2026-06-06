@@ -8,6 +8,7 @@ import type {
   CreateBidItemDto,
   CreateCompanyDto,
   CreateProductDto,
+  CreatePurchaseOrderDto,
   CreateQuotationDto,
   CreateQuotationItemDto,
   CreateSupplierBankAccountDto,
@@ -20,6 +21,8 @@ import type {
   MyCompany,
   ProductResponse,
   ProductSupplierResponse,
+  PurchaseOrderItemResponse,
+  PurchaseOrderResponse,
   QuotationItemResponse,
   QuotationResponse,
   QuotationSupplierResponse,
@@ -612,4 +615,85 @@ export async function selectWinner(
   return (await client())
     .post(`v1/companies/${cnpj}/quotations/${quotationId}/select-winner`, { json: data })
     .json<{ success: boolean; winnerBidId: string }>()
+}
+
+// ── Purchase Orders / Pedidos de Compra (server-side) ───────────────────────
+
+export async function getPurchaseOrdersServer(
+  cnpj: string,
+  params?: {
+    status?: string
+    search?: string
+    supplierId?: string
+    page?: string
+    limit?: string
+  },
+): Promise<PurchaseOrderResponse[]> {
+  const url = new URL(`${API_URL}/v1/companies/${cnpj}/purchase-orders`)
+  if (params?.status) url.searchParams.set('status', params.status)
+  if (params?.search) url.searchParams.set('search', params.search)
+  if (params?.supplierId) url.searchParams.set('supplierId', params.supplierId)
+  if (params?.page) url.searchParams.set('page', params.page)
+  if (params?.limit) url.searchParams.set('limit', params.limit)
+
+  const res = await fetch(url.toString(), {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (res.ok) return res.json() as Promise<PurchaseOrderResponse[]>
+  // 404 (empresa/rota inexistente) é o único "vazio" esperado; 403/500/auth
+  // devem propagar para o error boundary da rota.
+  if (res.status === 404) return []
+  throw new Error(`getPurchaseOrdersServer falhou (${res.status}): ${await res.text()}`)
+}
+
+export async function getPurchaseOrderServer(
+  cnpj: string,
+  id: string,
+): Promise<(PurchaseOrderResponse & { items: PurchaseOrderItemResponse[] }) | null> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/purchase-orders/${id}`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (res.ok)
+    return res.json() as Promise<PurchaseOrderResponse & { items: PurchaseOrderItemResponse[] }>
+  // 404 (PO inexistente) → null para o caller chamar notFound(); demais falhas propagam.
+  if (res.status === 404) return null
+  throw new Error(`getPurchaseOrderServer falhou (${res.status}): ${await res.text()}`)
+}
+
+// ── Purchase Orders / Pedidos de Compra (client-side) ───────────────────────
+// `receive` (SENT→RECEIVED) é acionado pela Fase 5 (Receipts), não pelo web aqui.
+
+export async function createPurchaseOrder(
+  cnpj: string,
+  data: CreatePurchaseOrderDto,
+): Promise<PurchaseOrderResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/purchase-orders`, { json: data })
+    .json<PurchaseOrderResponse>()
+}
+
+export async function approvePurchaseOrder(
+  cnpj: string,
+  id: string,
+): Promise<PurchaseOrderResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/purchase-orders/${id}/approve`)
+    .json<PurchaseOrderResponse>()
+}
+
+export async function sendPurchaseOrder(cnpj: string, id: string): Promise<PurchaseOrderResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/purchase-orders/${id}/send`)
+    .json<PurchaseOrderResponse>()
+}
+
+export async function cancelPurchaseOrder(
+  cnpj: string,
+  id: string,
+): Promise<PurchaseOrderResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/purchase-orders/${id}/cancel`)
+    .json<PurchaseOrderResponse>()
 }
