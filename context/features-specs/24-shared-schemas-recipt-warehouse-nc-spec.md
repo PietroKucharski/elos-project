@@ -41,7 +41,7 @@ são a fonte de verdade para validação no backend e tipagem no frontend.
 
 ## Arquivos a Criar / Modificar
 
-```
+```text
 packages/shared/src/
   schemas/
     warehouse.ts        ← criar

@@ -8,17 +8,27 @@ export const stockMovementTypeValues = Object.values(StockMovementType) as [
 
 // Movimentações manuais criadas pelo ALMOXARIFE (entrada, saída, transferência)
 // As movimentações geradas automaticamente pelo recebimento não passam por este schema.
-export const createStockMovementSchema = z.object({
-  warehouseId: z.string().uuid(),
-  productId: z.string().uuid(),
-  type: z.enum(stockMovementTypeValues),
-  quantity: z.number().positive(),
-  // Para transferências: armazém de destino
-  toWarehouseId: z.string().uuid().optional(),
-  referenceType: z.string().max(50).optional(),
-  referenceId: z.string().uuid().optional(),
-  notes: z.string().max(500).optional(),
-})
+export const createStockMovementSchema = z
+  .object({
+    warehouseId: z.string().uuid(),
+    productId: z.string().uuid(),
+    type: z.enum(stockMovementTypeValues),
+    quantity: z.number().positive(),
+    // Para transferências: armazém de destino
+    toWarehouseId: z.string().uuid().optional(),
+    referenceType: z.string().max(50).optional(),
+    referenceId: z.string().uuid().optional(),
+    notes: z.string().max(500).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.type === StockMovementType.TRANSFER && !data.toWarehouseId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'toWarehouseId é obrigatório para movimentações do tipo TRANSFER.',
+        path: ['toWarehouseId'],
+      })
+    }
+  })
 
 export const stockMovementResponseSchema = z.object({
   id: z.string().uuid(),
