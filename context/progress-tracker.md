@@ -6,6 +6,9 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
+**Fase 5 — Recebimento e Estoque** · `Em andamento` (5.1 concluída) → próximas unidades: 5.2+ (módulos NestJS e UI)
+
+> **Fase 4 — Pedidos de Compra:** concluída (4.1, 4.2 e 4.3).
 **Fase 4 — Pedidos de Compra** · `Concluída` (4.1, 4.2 e 4.3 concluídas) → próxima fase: **Fase 5 — Recebimento e Estoque**
 
 > **Fase 3 — Cotações e Lances:** concluída (todas as 5 unidades, incluindo a 3.5 — Lances e Comparativo UI).
@@ -619,6 +622,36 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     da API no total**. Ver Decisões Arquiteturais (4.2)
   - **Out (próximas unidades):** UI de pedidos de compra (4.3), recebimento de mercadoria/`ReceiptsModule` (Fase 5)
 
+- [x] **5.1 — Shared Schemas: Recebimento, Armazéns e Não-Conformidades** — spec `24-shared-schemas-recipt-warehouse-nc-spec.md`
+  - Commit convencional esperado: `feat(shared): add warehouse, receipt and non-conformity zod schemas`
+  - `packages/shared/src/schemas/warehouse.ts` — `createWarehouseSchema` (name 2–255, code/location opcionais),
+    `updateWarehouseSchema` (`.partial()`), `warehouseResponseSchema` (nullable + `isActive` + timestamps) e
+    `inventoryResponseSchema` (saldo por produto/armazém, `quantity`/`minStock` string do numeric); tipos
+    `CreateWarehouseDto`/`UpdateWarehouseDto`/`WarehouseResponse`/`InventoryResponse`
+  - `packages/shared/src/schemas/receipt.ts` — `createReceiptItemSchema` (`receivedQuantity` number positivo),
+    `createReceiptSchema` (cabeçalho + `items[].min(1)`, `receivedAt` ISO informado pelo almoxarife),
+    `receiptItemResponseSchema` (com `orderedQuantity`/`totalReceived` acumulado) e `receiptResponseSchema`
+    (status `PARTIAL`/`COMPLETE` decidido pelo backend, `items` só no GET :id); tipos correspondentes
+  - `packages/shared/src/schemas/stock-movement.ts` — `stockMovementTypeValues` (via `Object.values`),
+    `createStockMovementSchema` (movimentações **manuais** ENTRY/EXIT/TRANSFER; `toWarehouseId` opcional p/
+    transferência) e `stockMovementResponseSchema`; tipos `CreateStockMovementDto`/`StockMovementResponse`.
+    Movimentações automáticas do recebimento não têm schema de criação exposto (criadas no `ReceiptsService`)
+  - `packages/shared/src/schemas/non-conformity.ts` — arrays `ncStatusValues`/`ncTypeValues`/`severityValues`,
+    `createNonConformitySchema` (`supplierId` obrigatório; `purchaseOrderId`/`productId` opcionais — NC pode ser
+    aberta por inspeção sem PO), `updateNonConformitySchema`, transições `analyzeNcSchema`/`resolveNcSchema`/
+    `rejectNcSchema`, comentários (`addNcCommentSchema`/`ncCommentResponseSchema`) e
+    `nonConformityResponseSchema` (`comments` só no GET :id). `ncCommentResponseSchema` **declarado antes** de
+    `nonConformityResponseSchema` para evitar referência para frente; tipos via `z.infer`
+  - Barrel `packages/shared/src/index.ts` — re-exporta os 4 novos schemas em ordem alfabética
+    (`non-conformity` antes de `product`; `receipt`/`stock-movement`/`warehouse` após `quotation`)
+  - **Verificado:** `pnpm --filter @elos/shared build` (tsc) e `pnpm type-check` (3 workspaces) verdes;
+    `biome check` dos 5 arquivos limpo (sem fixes); 8 verificações `safeParse` via `tsx` confirmadas
+    (warehouse name vazio falha / válido passa, receipt sem items falha / com items passa, NC description
+    < 10 falha / válida passa, stock movement válido passa, NC response com comments aninhados)
+  - **Ajustes vs. spec:** nenhum desvio funcional — o projeto já usa os mesmos padrões Zod 4 da spec
+    (`z.string().uuid()`/`.datetime()`, `z.enum(values)`, `Object.values(Enum) as [...]`), então o código foi
+    seguido à risca. Os enums `NonConformityStatus`/`NonConformityType`/`Severity`/`StockMovementType` já
+    existiam de 0.3; apenas os arrays de valores são exportados dos schemas (evita `TS2308` no barrel)
 - [x] **4.3 — Purchase Orders UI (Frontend)** — spec `23-purchase-orders-ui-spec.md`
   - Commit convencional esperado: `feat(web): add purchase orders ui with list, detail and status workflow`
   - `lib/api.ts` estendido: 2 funções server-side (`getPurchaseOrdersServer` com query `status`/`search`/
@@ -656,6 +689,9 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 
 ## Em Progresso
 
+- **Fase 5 — Recebimento e Estoque** iniciada: 5.1 (Shared Schemas) concluída. Próximo: **5.2** —
+  módulo NestJS de armazéns/recebimento (WarehousesModule/ReceiptsModule), seguido de movimentações
+  de estoque, não-conformidades e a UI correspondente (5.5+).
 - Nada ativo. **Fase 4 concluída** (4.1 + 4.2 + 4.3); Fase 3 também fechada. Próximo: **Fase 5 — Recebimento e Estoque**.
 
 ---
