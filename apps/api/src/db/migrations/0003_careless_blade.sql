@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "warehouses_company_id_code_unique" ON "warehouses" USING btree ("company_id","code");

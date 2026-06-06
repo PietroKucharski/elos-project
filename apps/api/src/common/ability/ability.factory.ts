@@ -10,6 +10,7 @@ import type { Product } from '../../db/schema/products'
 import type { PurchaseOrder } from '../../db/schema/purchase-orders'
 import type { Bid, Quotation } from '../../db/schema/quotations'
 import type { Supplier } from '../../db/schema/suppliers'
+import type { Warehouse } from '../../db/schema/warehouses'
 import type { SessionUser } from '../types/session-user'
 
 export type Actions =
@@ -63,7 +64,10 @@ export type Subjects =
   | (PurchaseOrder & ForcedSubject<'PurchaseOrder'>)
   | 'PurchaseOrderItem'
   | 'Receipt'
+  // 'Warehouse' tagueado (como 'PurchaseOrder') para suportar condições por objeto
+  // via subject('Warehouse', row) no WarehousesService — sem cair em MongoQuery<never>
   | 'Warehouse'
+  | (Warehouse & ForcedSubject<'Warehouse'>)
   | 'Inventory'
   | 'StockMovement'
   | 'NonConformity'
@@ -135,6 +139,7 @@ export class AbilityFactory {
         can('delete', 'Bid', { companyId })
         can('manage', 'PurchaseOrder')
         can('approve', 'PurchaseOrder')
+        can('read', 'Warehouse', { companyId })
         can('read', 'Receipt')
         can('read', 'NonConformity')
         can('read', 'Invoice')
@@ -163,6 +168,7 @@ export class AbilityFactory {
         can('read', 'Quotation')
         can('read', 'Bid', { companyId })
         can('read', 'PurchaseOrder')
+        can('read', 'Warehouse', { companyId })
         can('read', 'Receipt')
         can('manage', 'Invoice')
         can('manage', 'Payment')
@@ -175,6 +181,7 @@ export class AbilityFactory {
         can('read', 'Quotation')
         can('read', 'Bid', { companyId })
         can('read', 'PurchaseOrder')
+        can('read', 'Warehouse', { companyId })
         can('manage', 'Shipment')
         break
 

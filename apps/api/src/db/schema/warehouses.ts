@@ -5,6 +5,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
@@ -14,18 +15,24 @@ import { products } from './products'
 
 export const stockMovementTypeEnum = pgEnum('stock_movement_type', ['ENTRY', 'EXIT', 'TRANSFER'])
 
-export const warehouses = pgTable('warehouses', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  companyId: uuid('company_id')
-    .notNull()
-    .references(() => companies.id, { onDelete: 'cascade' }),
-  name: varchar('name', { length: 255 }).notNull(),
-  code: varchar('code', { length: 50 }),
-  location: text('location'),
-  isActive: boolean('is_active').notNull().default(true),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-})
+export const warehouses = pgTable(
+  'warehouses',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    companyId: uuid('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 255 }).notNull(),
+    code: varchar('code', { length: 50 }),
+    location: text('location'),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  // Código do armazém único por empresa (tenant). `code` é nullable: o Postgres
+  // trata NULLs como distintos, então armazéns sem código não colidem entre si.
+  (table) => [uniqueIndex('warehouses_company_id_code_unique').on(table.companyId, table.code)],
+)
 
 // Saldo atual de estoque por produto/armazém — mantido via stock_movements
 export const inventory = pgTable('inventory', {
