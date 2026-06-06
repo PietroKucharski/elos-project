@@ -806,7 +806,7 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | 2    | Fornecedores e Produtos         | Concluída     |
 | 3    | Cotações e Lances               | Concluída     |
 | 4    | Pedidos de Compra               | Concluída     |
-| 5    | Recebimento e Estoque           | Não iniciada  |
+| 5    | Recebimento e Estoque           | Em andamento  |
 | 6    | Financeiro (NF + Pagamentos)    | Não iniciada  |
 | 7    | Audit Log e Administração       | Não iniciada  |
 
