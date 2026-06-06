@@ -63,10 +63,10 @@ movimentações.
 | PATCH | `/v1/companies/:cnpj/warehouses/:id` | `ALMOXARIFE` | Atualiza armazém |
 | POST | `/v1/companies/:cnpj/warehouses/:id/deactivate` | `ALMOXARIFE` | Desativa armazém (soft delete) |
 | GET | `/v1/companies/:cnpj/warehouses/:id/inventory` | Autenticado | Saldo de estoque do armazém |
-| GET | `/v1/companies/:cnpj/inventory` | Autenticado | Saldo de estoque global (todos os armazéns) |
+| GET | `/v1/companies/:cnpj/warehouses/inventory` | Autenticado | Saldo de estoque global (todos os armazéns) |
 
 > **Query params em GET /warehouses:** `includeInactive` (boolean string `'true'`).  
-> **Query params em GET /inventory e /warehouses/:id/inventory:** `productId` (uuid),
+> **Query params em GET /warehouses/inventory e /warehouses/:id/inventory:** `productId` (uuid),
 > `search` (substring do nome ou código do produto), `page` (default 1), `limit` (default 50, max 200).
 
 ---

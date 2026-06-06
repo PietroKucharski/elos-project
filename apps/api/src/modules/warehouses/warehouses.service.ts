@@ -102,7 +102,7 @@ export class WarehousesService {
         entity: 'Warehouse',
         entityId: created.id,
         action: 'CREATE',
-        after: { name: dto.name, code: dto.code },
+        after: { name: dto.name, code: dto.code, location: dto.location },
         userId: user.id,
         companyId: user.companyId,
       })
@@ -161,7 +161,7 @@ export class WarehousesService {
         entity: 'Warehouse',
         entityId: id,
         action: 'UPDATE',
-        before: { name: existing.name, code: existing.code },
+        before: { name: existing.name, code: existing.code, location: existing.location },
         after: updateData,
         userId: user.id,
         companyId: user.companyId,
@@ -194,7 +194,13 @@ export class WarehousesService {
     const [stockEntry] = await this.db
       .select({ id: inventory.id })
       .from(inventory)
-      .where(and(eq(inventory.warehouseId, id), sql`${inventory.quantity}::numeric > 0`))
+      .where(
+        and(
+          eq(inventory.companyId, user.companyId!),
+          eq(inventory.warehouseId, id),
+          sql`${inventory.quantity}::numeric > 0`,
+        ),
+      )
       .limit(1)
 
     if (stockEntry) {
