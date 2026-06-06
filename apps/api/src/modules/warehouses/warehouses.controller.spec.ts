@@ -19,6 +19,8 @@ describe('WarehousesController', () => {
   }
 
   beforeEach(async () => {
+    vi.clearAllMocks()
+
     const module = await Test.createTestingModule({
       controllers: [WarehousesController],
       providers: [{ provide: WarehousesService, useValue: mockService }],
@@ -30,16 +32,56 @@ describe('WarehousesController', () => {
     controller = module.get(WarehousesController)
   })
 
-  it('GET / — lista armazéns', async () =>
-    expect(await controller.findAll(mockUser)).toEqual([mockWarehouse]))
-  it('POST / — cria armazém', async () =>
-    expect(await controller.create({ name: 'X' }, mockUser)).toMatchObject({ name: 'Central' }))
-  it('GET /:id — detalhe', async () =>
-    expect(await controller.findOne('w1', mockUser)).toMatchObject({ id: 'w1' }))
-  it('PATCH /:id — atualiza', async () =>
-    expect(await controller.update('w1', { name: 'Y' }, mockUser)).toMatchObject({ id: 'w1' }))
-  it('POST /:id/deactivate — desativa', async () =>
-    expect(await controller.deactivate('w1', mockUser)).toEqual({ success: true }))
-  it('GET /:id/inventory — inventário', async () =>
-    expect(await controller.getInventory('w1', mockUser)).toEqual([]))
+  it('GET / — lista armazéns e delega ao service', async () => {
+    expect(await controller.findAll(mockUser)).toEqual([mockWarehouse])
+    expect(mockService.findAll).toHaveBeenCalledTimes(1)
+    expect(mockService.findAll).toHaveBeenCalledWith(mockUser, { includeInactive: undefined })
+  })
+
+  it('POST / — cria armazém e delega body + user', async () => {
+    expect(await controller.create({ name: 'X' }, mockUser)).toMatchObject({ name: 'Central' })
+    expect(mockService.create).toHaveBeenCalledTimes(1)
+    expect(mockService.create).toHaveBeenCalledWith({ name: 'X' }, mockUser)
+  })
+
+  it('GET /inventory — saldo global e delega ao getInventory do service', async () => {
+    expect(await controller.getGlobalInventory(mockUser)).toEqual([])
+    expect(mockService.getInventory).toHaveBeenCalledTimes(1)
+    expect(mockService.getInventory).toHaveBeenCalledWith(mockUser, {
+      productId: undefined,
+      search: undefined,
+      page: undefined,
+      limit: undefined,
+    })
+  })
+
+  it('GET /:id — detalhe e delega id + user', async () => {
+    expect(await controller.findOne('w1', mockUser)).toMatchObject({ id: 'w1' })
+    expect(mockService.findOne).toHaveBeenCalledTimes(1)
+    expect(mockService.findOne).toHaveBeenCalledWith('w1', mockUser)
+  })
+
+  it('PATCH /:id — atualiza e delega id + body + user', async () => {
+    expect(await controller.update('w1', { name: 'Y' }, mockUser)).toMatchObject({ id: 'w1' })
+    expect(mockService.update).toHaveBeenCalledTimes(1)
+    expect(mockService.update).toHaveBeenCalledWith('w1', { name: 'Y' }, mockUser)
+  })
+
+  it('POST /:id/deactivate — desativa e delega id + user', async () => {
+    expect(await controller.deactivate('w1', mockUser)).toEqual({ success: true })
+    expect(mockService.deactivate).toHaveBeenCalledTimes(1)
+    expect(mockService.deactivate).toHaveBeenCalledWith('w1', mockUser)
+  })
+
+  it('GET /:id/inventory — saldo do armazém e delega warehouseId no getInventory', async () => {
+    expect(await controller.getInventory('w1', mockUser)).toEqual([])
+    expect(mockService.getInventory).toHaveBeenCalledTimes(1)
+    expect(mockService.getInventory).toHaveBeenCalledWith(mockUser, {
+      warehouseId: 'w1',
+      productId: undefined,
+      search: undefined,
+      page: undefined,
+      limit: undefined,
+    })
+  })
 })
