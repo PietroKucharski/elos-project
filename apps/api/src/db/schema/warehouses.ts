@@ -5,6 +5,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
   varchar,
@@ -35,21 +36,27 @@ export const warehouses = pgTable(
 )
 
 // Saldo atual de estoque por produto/armazém — mantido via stock_movements
-export const inventory = pgTable('inventory', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  companyId: uuid('company_id')
-    .notNull()
-    .references(() => companies.id, { onDelete: 'cascade' }),
-  warehouseId: uuid('warehouse_id')
-    .notNull()
-    .references(() => warehouses.id, { onDelete: 'cascade' }),
-  productId: uuid('product_id')
-    .notNull()
-    .references(() => products.id, { onDelete: 'cascade' }),
-  quantity: numeric('quantity', { precision: 15, scale: 3 }).notNull().default('0'),
-  minStock: numeric('min_stock', { precision: 15, scale: 3 }),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-})
+export const inventory = pgTable(
+  'inventory',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    companyId: uuid('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    warehouseId: uuid('warehouse_id')
+      .notNull()
+      .references(() => warehouses.id, { onDelete: 'cascade' }),
+    productId: uuid('product_id')
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    quantity: numeric('quantity', { precision: 15, scale: 3 }).notNull().default('0'),
+    minStock: numeric('min_stock', { precision: 15, scale: 3 }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  // Saldo único por par (armazém, produto) — exigido pelo upsert
+  // `INSERT … ON CONFLICT (warehouse_id, product_id)` do recebimento (5.3).
+  (table) => [unique('inventory_warehouse_product_unique').on(table.warehouseId, table.productId)],
+)
 
 export const stockMovements = pgTable('stock_movements', {
   id: uuid('id').defaultRandom().primaryKey(),

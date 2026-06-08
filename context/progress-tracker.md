@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 5 — Recebimento e Estoque** · `Em andamento` (5.1 e 5.2 concluídas) → próxima unidade: 5.3 (ReceiptsModule) e UI
+**Fase 5 — Recebimento e Estoque** · `Em andamento` (5.1, 5.2 e 5.3 concluídas) → próxima unidade: 5.4 (Não-Conformidades) e UI
 
 > **Fase 4 — Pedidos de Compra:** concluída (4.1, 4.2 e 4.3).
 **Fase 4 — Pedidos de Compra** · `Concluída` (4.1, 4.2 e 4.3 concluídas) → próxima fase: **Fase 5 — Recebimento e Estoque**
@@ -682,6 +682,62 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     `PurchaseOrdersService` (`Number.parseInt` + `Number.isNaN`) em vez do encadeamento inline da spec;
     índice único de `code` adicionado ao schema (a spec o marcava como "migration se necessário") para
     fechar a corrida na unicidade no nível do banco, além do check em aplicação
+- [x] **5.3 — Receipts Module (API)** — spec `26-receipts-api-spec.md`
+  - Commit convencional esperado: `feat(api): add receipts module with stock movements and po completion`
+  - `apps/api/src/modules/receipts/`: `receipts.module.ts` (importa `AbilityModule` e
+    `PurchaseOrdersModule`, exporta `ReceiptsService`), `receipts.controller.ts`
+    (`@Controller('companies/:cnpj')`: `GET/POST /receipts`, `GET /receipts/:id`,
+    `GET /purchase-orders/:poId/receipts`, `GET/POST /stock-movements`; Swagger + `ZodValidationPipe`
+    no create de receipt/movimentação), `receipts.service.ts` (findAll com filtros
+    `purchaseOrderId`/`warehouseId`/`status`/paginação, findOne com itens, create transacional:
+    valida PO `SENT` + armazém ativo + saldo pendente por item, insere `receipt`/`receipt_items`,
+    acumula `received_quantity` no PO item, gera `stock_movement` `ENTRY`, faz upsert em `inventory`
+    via `ON CONFLICT (warehouse_id, product_id)`, decide `PARTIAL`/`COMPLETE` e — se completo —
+    chama `purchaseOrdersService.receive()` **fora** da transação), `stock-movements.service.ts`
+    (findAll com filtros `warehouseId`/`productId`/`type`/paginação; create de movimentação manual
+    `ENTRY`/`EXIT`/`TRANSFER` com validação de armazém/produto, checagem de saldo em saídas e
+    transferências, e upsert de `inventory` — `TRANSFER` gera `EXIT` na origem + `ENTRY` no destino),
+    `receipts.service.spec.ts` (10 testes), `stock-movements.service.spec.ts` (5 testes) e
+    `receipts.controller.spec.ts` (5 testes) — **184 testes da API passando no total**
+  - `ability.factory.ts` — subjects `Receipt` e `StockMovement` tagueados
+    (`& ForcedSubject<'Receipt'|'StockMovement'>`) no union `Subjects` para suportar condições por
+    objeto `{ companyId }`; regras: ADMIN_EMPRESA/ALMOXARIFE `manage` ambos, COMPRADOR/ANALISTA_FINANCEIRO
+    `read` ambos, TRANSPORTADOR `read Receipt` (regras `Receipt`/`StockMovement` pré-existentes
+    condicionadas a `{ companyId }`; ADMIN_EMPRESA ganha `Receipt`, COMPRADOR/ANALISTA_FINANCEIRO ganham
+    `StockMovement`, TRANSPORTADOR ganha `Receipt`)
+  - `apps/api/src/db/schema/warehouses.ts` — `unique('inventory_warehouse_product_unique')` em
+    `(warehouseId, productId)` na tabela `inventory` (exigida pelo upsert `ON CONFLICT`); migration
+    **`0004_receipts_inventory_constraint.sql`** (`ALTER TABLE … ADD CONSTRAINT … UNIQUE`) escrita à mão
+    + snapshot `0004_snapshot.json` gerado mutando o `0003` (id/prevId encadeados, `uniqueConstraints`
+    adicionada) e entrada `idx 4` no `_journal.json`
+  - `app.module.ts` — `ReceiptsModule` importado
+  - **Verificado:** `vitest run` (184/184), `turbo run type-check --force` (4 workspaces, fresh) e
+    `drizzle-kit check` (`Everything's fine 🐶🔥`) verdes; `biome check` dos arquivos novos sem erros (só
+    16 warnings `noNonNullAssertion` de `companyId!`, padrão do projeto). Checklist de segurança coberto
+    pelos testes: 403 sem permissão (receipt/movimentação), 404 PO/armazém, 400 PO fora de `SENT`, 400
+    quantidade excede saldo pendente, 400 item fora do PO, 400 `EXIT`/`TRANSFER` sem saldo, 400 `TRANSFER`
+    sem destino, PO→`RECEIVED` só quando todos os itens completos, upsert de inventory atômico (na
+    transação), audit log em create de receipt e movimentação. Banco vivo (migrate) não executado — sem
+    Supabase neste ambiente
+  - **Ajustes vs. spec:**
+    - Migration numerada **`0004`** (a spec dizia `0003`, mas `0003_careless_blade` já fora usada pela
+      5.2 para o índice único de `warehouses`); SQL ajustado para `ADD CONSTRAINT … UNIQUE` no formato do
+      Drizzle Kit. Constraint também adicionada ao **schema TypeScript** de `inventory` (invariante 14:
+      schema é fonte de verdade) para evitar drift em futuros `drizzle-kit generate`
+    - O mock thenable do Drizzle em `receipts.service.spec.ts` foi tornado **ciente de escrita-vs-leitura**:
+      o `create` faz writes "fire-and-forget" (insert de `receipt_items`, update do PO item, insert do
+      `stock_movement`) **entre** o insert do receipt e a releitura/atualização final do status; só leituras
+      (selects e cadeias com `.returning()`) consomem a fila de `enqueue`. Sem isso, o mock simples da spec
+      desalinhava a fila e o teste "COMPLETE → chama receive" falhava. As asserções/cenários permanecem os
+      da spec (`stock-movements.service.spec.ts` manteve o mock simples — seu `create` captura o movimento
+      no `.returning()` antes de qualquer write extra, então não desalinha)
+    - `poItem.productId` usado sem `!` (a coluna é `notNull` → `string`, dispensa a asserção da spec);
+      parse de página/limite no padrão `Number.parseInt` + `Number.isNaN` do projeto
+  - **Nota de ambiente:** um `pnpm install` de diagnóstico (tentando depurar o `tsc`) deixou symlinks
+    pendurados no `.pnpm` (store renomeado p/ hashes, links apontando p/ nomes antigos), quebrando a
+    resolução de módulos do `tsc`/`drizzle-kit`/`vitest`. Resolvido com reinstalação limpa
+    (`rm -rf node_modules apps/*/node_modules packages/*/node_modules && pnpm install`) — após isso,
+    type-check/tests/drizzle-kit voltaram a rodar do zero e passaram
 - [x] **4.3 — Purchase Orders UI (Frontend)** — spec `23-purchase-orders-ui-spec.md`
   - Commit convencional esperado: `feat(web): add purchase orders ui with list, detail and status workflow`
   - `lib/api.ts` estendido: 2 funções server-side (`getPurchaseOrdersServer` com query `status`/`search`/
@@ -719,10 +775,10 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 
 ## Em Progresso
 
-- **Fase 5 — Recebimento e Estoque** em andamento: 5.1 (Shared Schemas) e 5.2 (Warehouses Module API)
-  concluídas. Próximo: **5.3** — `ReceiptsModule` (recebimento de mercadoria + movimentações de estoque
-  que fazem upsert na tabela `inventory` e validam o armazém via `WarehousesService`), seguido de
-  não-conformidades e a UI correspondente (5.5+).
+- **Fase 5 — Recebimento e Estoque** em andamento: 5.1 (Shared Schemas), 5.2 (Warehouses Module API) e
+  5.3 (Receipts Module API — recebimento de mercadoria + movimentações de estoque com upsert em
+  `inventory` e conclusão automática do PO) concluídas. Próximo: **5.4** — Não-Conformidades (API), e
+  depois a UI correspondente (5.5+).
 
 ---
 
@@ -871,6 +927,9 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 
 | Decisão                            | Motivo                                                                              |
 | ---------------------------------- | ----------------------------------------------------------------------------------- |
+| `purchaseOrdersService.receive()` chamado fora da transação do recebimento (5.3) | `receive()` abre a própria `db.transaction`; chamá-lo após o commit do recebimento evita transação aninhada e é seguro — `receive()` é idempotente (400 se PO já `RECEIVED`), então falha isolada não deixa dados inconsistentes |
+| `StockMovementsService` no mesmo módulo de receipts (5.3) | Movimentações automáticas (recebimento) e manuais compartilham a lógica de upsert de `inventory`; manter no mesmo módulo evita dependência circular e duplicação |
+| Upsert de `inventory` via `sql\`\`` cru com `ON CONFLICT (warehouse_id, product_id)` (5.3) | O builder do Drizzle não tem helper de `ON CONFLICT … DO UPDATE` para o caso; SQL cru com `gen_random_uuid()` e conflict target explícito é mais legível. Exigiu constraint `UNIQUE` em `inventory` (migration 0004 + schema) |
 | Turborepo + pnpm workspaces        | Build cache inteligente + task orchestration paralela no monorepo                   |
 | NestJS em vez de Fastify           | DI container, módulos, guards e interceptors nativos — melhor estrutura para projeto de longo prazo |
 | Better-Auth (sem 2FA)              | Auth completa e type-safe sem código manual de JWT/bcrypt; extensível no futuro     |
