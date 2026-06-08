@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 5 — Recebimento e Estoque** · `Em andamento` (5.1, 5.2, 5.3 e 5.4 concluídas) → próxima unidade: UI de Recebimento/Estoque/Não-Conformidades (5.5+)
+**Fase 5 — Recebimento e Estoque** · `Em andamento` (5.1, 5.2, 5.3, 5.4 e 5.5 concluídas) → próxima unidade: UI de Recebimento (5.6) e Não-Conformidades (5.7)
 
 > **Fase 4 — Pedidos de Compra:** concluída (4.1, 4.2 e 4.3).
 **Fase 4 — Pedidos de Compra** · `Concluída` (4.1, 4.2 e 4.3 concluídas) → próxima fase: **Fase 5 — Recebimento e Estoque**
@@ -804,15 +804,47 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     (a spec usava `Number.isFinite` inline); coluna `notes` + migration `0005` adicionadas (a spec assumia
     a coluna já existente desde 0.3); ordenação de imports/formatação aplicada pelo `biome check --write`
 
+- [x] **5.5 — Warehouses UI (Frontend)** — spec `28-warehouse-ui-spec.md`
+  - Commit convencional esperado: `feat(web): add warehouses ui with list, form and inventory view`
+  - `lib/api.ts` estendido: 4 funções server-side (`getWarehousesServer` com query `includeInactive`,
+    `getWarehouseServer`, `getInventoryServer` listagem global com filtros `warehouseId`/`productId`/
+    `search`/paginação, `getWarehouseInventoryServer` inventário por armazém) + 3 client-side
+    (`createWarehouse`/`updateWarehouse`/`deactivateWarehouse` → `POST :id/deactivate` retornando
+    `{ success }`), no padrão `sessionHeaders()` (server) e `client()` ky (client); imports de tipos de
+    `@elos/shared` (`CreateWarehouseDto`/`UpdateWarehouseDto`/`WarehouseResponse`/`InventoryResponse`)
+  - `components/domain/`: `warehouse-form.tsx` (form reutilizável create/edit via `react-hook-form` +
+    `zodResolver`, schema `create`/`update` conforme o modo, redirect + toast no sucesso),
+    `warehouses-list-client.tsx` (Client Component: busca por nome/código client-side, tabela com kebab
+    menu — Ver/Editar/Desativar só em armazéns ativos e só se `canMutate`, linha esmaecida `opacity-50` +
+    badge Ativo/Inativo, `AlertDialog` antes de desativar com aviso de estoque) e `inventory-table.tsx`
+    (saldo por produto com busca client-side, coluna `Armazém` opcional via prop `showWarehouse`, alerta
+    inline `AlertTriangle` vermelho quando `quantity < minStock`)
+  - Rotas `(app)/[cnpj]/warehouses/`: `page.tsx` (SSR lista com `includeInactive: 'true'` + role via
+    membership), `loading.tsx` (skeleton), `error.tsx` (boundary com `console.error`), `new/page.tsx`
+    (form create), `[id]/page.tsx` (detalhe + inventário do armazém via `InventoryTable showWarehouse=false`),
+    `[id]/loading.tsx`, `[id]/error.tsx`, `[id]/edit/page.tsx` (form edit, `notFound` se inexistente/inativo).
+    Sidebar (1.4) já tinha o item "Armazéns" — nenhuma mudança necessária
+  - **Verificado:** `pnpm --filter web type-check` verde; `biome check` dos arquivos novos limpo após
+    `--write` (só 1 warning `noNonNullAssertion` em `warehouse-form` — `warehouse!.id` no modo edit,
+    idêntico ao `cnpj!`/`supplierId!`/`productId!` dos outros forms, padrão do projeto); `pnpm --filter web
+    build` **compila + checa tipos + gera as 4 rotas de warehouses** (`page`/`new`/`[id]`/`[id]/edit`
+    confirmadas em `.next/server/app`, ✓ 9/9 static pages). Passo `output: 'standalone'` falha por `EPERM`
+    de symlink no Windows (mesma limitação de 0.5/1.4/1.5/2.4/2.5). Fluxo runtime (criar/editar/desativar,
+    inventário, alerta de estoque mínimo) não exercitado — requer API + banco vivos
+  - **Ajustes vs. spec:** import `notFound` não usado removido do `page.tsx` da listagem (o projeto trata
+    `noUnusedImports` como erro; a spec o listava sem uso) — mantido nas rotas `[id]`/`[id]/edit` que o
+    chamam; ordenação de imports/formatação aplicada pelo `biome check --write`
+
 ---
 
 ## Em Progresso
 
 - **Fase 5 — Recebimento e Estoque** em andamento: 5.1 (Shared Schemas), 5.2 (Warehouses Module API),
   5.3 (Receipts Module API — recebimento de mercadoria + movimentações de estoque com upsert em
-  `inventory` e conclusão automática do PO) e 5.4 (Non-Conformities Module API — abertura, fluxo de
-  status `OPEN→ANALYZING→RESOLVED|REJECTED` e comentários) concluídas. Próximo: a UI correspondente da
-  Fase 5 (Recebimento, Estoque e Não-Conformidades — 5.5+).
+  `inventory` e conclusão automática do PO), 5.4 (Non-Conformities Module API — abertura, fluxo de
+  status `OPEN→ANALYZING→RESOLVED|REJECTED` e comentários) e 5.5 (Warehouses UI — listagem, form
+  create/edit, desativação e visualização de inventário com alerta de estoque mínimo) concluídas.
+  Próximo: UI de Recebimento (5.6) e de Não-Conformidades (5.7).
 
 ---
 
