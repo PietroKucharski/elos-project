@@ -144,26 +144,29 @@ export class StockMovementsService {
 
     if (!product) throw new NotFoundException('Produto não encontrado ou inativo.')
 
-    // Para saídas e transferências: verificar saldo disponível
-    if (dto.type === 'EXIT' || dto.type === 'TRANSFER') {
-      const [inv] = await this.db
-        .select({ quantity: inventory.quantity })
-        .from(inventory)
-        .where(
-          and(eq(inventory.warehouseId, dto.warehouseId), eq(inventory.productId, dto.productId)),
-        )
-        .limit(1)
-
-      const currentQty = Number(inv?.quantity ?? 0)
-      if (currentQty < dto.quantity) {
-        throw new BadRequestException(
-          `Saldo insuficiente no armazém. Disponível: ${currentQty.toFixed(3)}; ` +
-            `Solicitado: ${dto.quantity.toFixed(3)}.`,
-        )
-      }
-    }
-
     return this.db.transaction(async (tx) => {
+      // Para saídas e transferências: travar a linha de saldo e verificar a
+      // suficiência DENTRO da transação (SELECT ... FOR UPDATE), antes da dedução,
+      // para evitar a corrida TOCTOU entre a checagem e o upsert sob concorrência.
+      if (dto.type === 'EXIT' || dto.type === 'TRANSFER') {
+        const [inv] = await tx
+          .select({ quantity: inventory.quantity })
+          .from(inventory)
+          .where(
+            and(eq(inventory.warehouseId, dto.warehouseId), eq(inventory.productId, dto.productId)),
+          )
+          .for('update')
+          .limit(1)
+
+        const currentQty = Number(inv?.quantity ?? 0)
+        if (currentQty < dto.quantity) {
+          throw new BadRequestException(
+            `Saldo insuficiente no armazém. Disponível: ${currentQty.toFixed(3)}; ` +
+              `Solicitado: ${dto.quantity.toFixed(3)}.`,
+          )
+        }
+      }
+
       const qty = String(dto.quantity)
 
       // Movimento de saída/entrada no armazém de origem

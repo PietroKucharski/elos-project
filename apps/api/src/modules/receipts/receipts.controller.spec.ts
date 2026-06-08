@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthGuard } from '../../common/guards/auth.guard'
@@ -48,10 +49,20 @@ describe('ReceiptsController', () => {
   })
   it('GET /receipts/:id — detalhe', async () =>
     expect(await controller.findOne('r1', mockUser)).toMatchObject({ items: [] }))
+  it('GET /purchase-orders/:poId/receipts — recebimentos do PO', async () =>
+    expect(await controller.findByPo('po-1', mockUser)).toEqual([mockReceipt]))
   it('GET /stock-movements — lista', async () =>
     expect(await controller.findMovements(mockUser)).toEqual([]))
   it('POST /stock-movements — cria', async () => {
     const dto = { warehouseId: 'w1', productId: 'p1', type: 'ENTRY' as const, quantity: 10 }
     expect(await controller.createMovement(dto, mockUser)).toMatchObject({ type: 'ENTRY' })
   })
+  it('GET /receipts — 400 com status inválido', () =>
+    expect(() => controller.findAll(mockUser, undefined, undefined, 'INVALID')).toThrow(
+      BadRequestException,
+    ))
+  it('GET /stock-movements — 400 com type inválido', () =>
+    expect(() => controller.findMovements(mockUser, undefined, undefined, 'INVALID')).toThrow(
+      BadRequestException,
+    ))
 })
