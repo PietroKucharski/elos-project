@@ -9,8 +9,9 @@ import type { Company, CompanyMember } from '../../db/schema/companies'
 import type { Product } from '../../db/schema/products'
 import type { PurchaseOrder } from '../../db/schema/purchase-orders'
 import type { Bid, Quotation } from '../../db/schema/quotations'
+import type { Receipt } from '../../db/schema/receipts'
 import type { Supplier } from '../../db/schema/suppliers'
-import type { Warehouse } from '../../db/schema/warehouses'
+import type { StockMovement, Warehouse } from '../../db/schema/warehouses'
 import type { SessionUser } from '../types/session-user'
 
 export type Actions =
@@ -63,13 +64,19 @@ export type Subjects =
   | 'PurchaseOrder'
   | (PurchaseOrder & ForcedSubject<'PurchaseOrder'>)
   | 'PurchaseOrderItem'
+  // 'Receipt' tagueado (como 'Warehouse') para suportar condições por objeto
+  // (ex.: { companyId }) sem cair em MongoQuery<never>
   | 'Receipt'
+  | (Receipt & ForcedSubject<'Receipt'>)
   // 'Warehouse' tagueado (como 'PurchaseOrder') para suportar condições por objeto
   // via subject('Warehouse', row) no WarehousesService — sem cair em MongoQuery<never>
   | 'Warehouse'
   | (Warehouse & ForcedSubject<'Warehouse'>)
   | 'Inventory'
+  // 'StockMovement' tagueado (como 'Receipt') para suportar condições por objeto
+  // (ex.: { companyId }) sem cair em MongoQuery<never>
   | 'StockMovement'
+  | (StockMovement & ForcedSubject<'StockMovement'>)
   | 'NonConformity'
   | 'Invoice'
   | 'Payment'
@@ -110,9 +117,10 @@ export class AbilityFactory {
         can('update', 'Bid', { companyId })
         can('delete', 'Bid', { companyId })
         can('manage', 'PurchaseOrder')
+        can('manage', 'Receipt', { companyId })
         can('manage', 'Warehouse')
         can('manage', 'Inventory')
-        can('manage', 'StockMovement')
+        can('manage', 'StockMovement', { companyId })
         can('manage', 'NonConformity')
         can('manage', 'Invoice')
         can('manage', 'Payment')
@@ -140,7 +148,8 @@ export class AbilityFactory {
         can('manage', 'PurchaseOrder')
         can('approve', 'PurchaseOrder')
         can('read', 'Warehouse', { companyId })
-        can('read', 'Receipt')
+        can('read', 'Receipt', { companyId })
+        can('read', 'StockMovement', { companyId })
         can('read', 'NonConformity')
         can('read', 'Invoice')
         can('read', 'AuditLog')
@@ -154,10 +163,10 @@ export class AbilityFactory {
         can('read', 'Bid', { companyId })
         can('read', 'PurchaseOrder')
         can('receive', 'PurchaseOrder') // transição SENT→RECEIVED
-        can('manage', 'Receipt')
+        can('manage', 'Receipt', { companyId })
         can('manage', 'Warehouse')
         can('manage', 'Inventory')
-        can('manage', 'StockMovement')
+        can('manage', 'StockMovement', { companyId })
         can('manage', 'NonConformity')
         break
 
@@ -169,7 +178,8 @@ export class AbilityFactory {
         can('read', 'Bid', { companyId })
         can('read', 'PurchaseOrder')
         can('read', 'Warehouse', { companyId })
-        can('read', 'Receipt')
+        can('read', 'Receipt', { companyId })
+        can('read', 'StockMovement', { companyId })
         can('manage', 'Invoice')
         can('manage', 'Payment')
         break
@@ -182,6 +192,7 @@ export class AbilityFactory {
         can('read', 'Bid', { companyId })
         can('read', 'PurchaseOrder')
         can('read', 'Warehouse', { companyId })
+        can('read', 'Receipt', { companyId })
         can('manage', 'Shipment')
         break
 

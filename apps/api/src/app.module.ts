@@ -12,6 +12,7 @@ import { MembersModule } from './modules/members/members.module'
 import { ProductsModule } from './modules/products/products.module'
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module'
 import { QuotationsModule } from './modules/quotations/quotations.module'
+import { ReceiptsModule } from './modules/receipts/receipts.module'
 import { SuppliersModule } from './modules/suppliers/suppliers.module'
 import { WarehousesModule } from './modules/warehouses/warehouses.module'
 
@@ -35,6 +36,7 @@ import { WarehousesModule } from './modules/warehouses/warehouses.module'
     BidsModule,
     PurchaseOrdersModule,
     WarehousesModule,
+    ReceiptsModule,
     // Fases 1–7: módulos de domínio adicionados aqui
   ],
   providers: [
