@@ -32,6 +32,7 @@ export const nonConformities = pgTable('non_conformities', {
   description: text('description').notNull(),
   status: ncStatusEnum('status').notNull().default('OPEN'),
   resolution: text('resolution'),
+  notes: text('notes'),
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
   createdById: text('created_by_id')
     .notNull()

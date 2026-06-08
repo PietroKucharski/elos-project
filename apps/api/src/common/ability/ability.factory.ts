@@ -6,6 +6,7 @@ import {
 } from '@casl/ability'
 import { Injectable } from '@nestjs/common'
 import type { Company, CompanyMember } from '../../db/schema/companies'
+import type { NonConformity } from '../../db/schema/non-conformities'
 import type { Product } from '../../db/schema/products'
 import type { PurchaseOrder } from '../../db/schema/purchase-orders'
 import type { Bid, Quotation } from '../../db/schema/quotations'
@@ -77,7 +78,11 @@ export type Subjects =
   // (ex.: { companyId }) sem cair em MongoQuery<never>
   | 'StockMovement'
   | (StockMovement & ForcedSubject<'StockMovement'>)
+  // 'NonConformity' tagueado (como 'StockMovement') para suportar condições por
+  // objeto via subject('NonConformity', row) no NonConformitiesService — sem cair
+  // em MongoQuery<never>
   | 'NonConformity'
+  | (NonConformity & ForcedSubject<'NonConformity'>)
   | 'Invoice'
   | 'Payment'
   | 'Shipment'
@@ -121,7 +126,7 @@ export class AbilityFactory {
         can('manage', 'Warehouse')
         can('manage', 'Inventory')
         can('manage', 'StockMovement', { companyId })
-        can('manage', 'NonConformity')
+        can('manage', 'NonConformity', { companyId })
         can('manage', 'Invoice')
         can('manage', 'Payment')
         can('manage', 'Shipment')
@@ -150,7 +155,9 @@ export class AbilityFactory {
         can('read', 'Warehouse', { companyId })
         can('read', 'Receipt', { companyId })
         can('read', 'StockMovement', { companyId })
-        can('read', 'NonConformity')
+        can('read', 'NonConformity', { companyId })
+        // analyze/resolve/reject usam a action 'update' (atualizar o status)
+        can('update', 'NonConformity', { companyId })
         can('read', 'Invoice')
         can('read', 'AuditLog')
         break
@@ -167,7 +174,10 @@ export class AbilityFactory {
         can('manage', 'Warehouse')
         can('manage', 'Inventory')
         can('manage', 'StockMovement', { companyId })
-        can('manage', 'NonConformity')
+        // ALMOXARIFE abre e edita (em OPEN) a NC; COMPRADOR/ADMIN resolvem
+        can('read', 'NonConformity', { companyId })
+        can('create', 'NonConformity', { companyId })
+        can('update', 'NonConformity', { companyId })
         break
 
       case 'ANALISTA_FINANCEIRO':
@@ -180,6 +190,7 @@ export class AbilityFactory {
         can('read', 'Warehouse', { companyId })
         can('read', 'Receipt', { companyId })
         can('read', 'StockMovement', { companyId })
+        can('read', 'NonConformity', { companyId })
         can('manage', 'Invoice')
         can('manage', 'Payment')
         break
@@ -193,6 +204,7 @@ export class AbilityFactory {
         can('read', 'PurchaseOrder')
         can('read', 'Warehouse', { companyId })
         can('read', 'Receipt', { companyId })
+        can('read', 'NonConformity', { companyId })
         can('manage', 'Shipment')
         break
 
