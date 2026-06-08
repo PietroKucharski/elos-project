@@ -14,6 +14,8 @@ import type {
   CreateSupplierBankAccountDto,
   CreateSupplierContactDto,
   CreateSupplierDto,
+  CreateWarehouseDto,
+  InventoryResponse,
   InviteMemberDto,
   InviteSupplierToQuotationDto,
   LinkProductSupplierDto,
@@ -40,6 +42,8 @@ import type {
   UpdateSupplierBankAccountDto,
   UpdateSupplierContactDto,
   UpdateSupplierDto,
+  UpdateWarehouseDto,
+  WarehouseResponse,
 } from '@elos/shared'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!
@@ -696,4 +700,91 @@ export async function cancelPurchaseOrder(
   return (await client())
     .post(`v1/companies/${cnpj}/purchase-orders/${id}/cancel`)
     .json<PurchaseOrderResponse>()
+}
+
+// ── Warehouses / Armazéns (server-side) ─────────────────────────────────────
+
+export async function getWarehousesServer(
+  cnpj: string,
+  params?: { includeInactive?: string },
+): Promise<WarehouseResponse[]> {
+  const qs = params ? `?${new URLSearchParams(params as Record<string, string>).toString()}` : ''
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/warehouses${qs}`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  return res.json() as Promise<WarehouseResponse[]>
+}
+
+export async function getWarehouseServer(
+  cnpj: string,
+  id: string,
+): Promise<WarehouseResponse | null> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/warehouses/${id}`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return null
+  return res.json() as Promise<WarehouseResponse>
+}
+
+export async function getInventoryServer(
+  cnpj: string,
+  params?: {
+    warehouseId?: string
+    productId?: string
+    search?: string
+    page?: string
+    limit?: string
+  },
+): Promise<InventoryResponse[]> {
+  const qs = params ? `?${new URLSearchParams(params as Record<string, string>).toString()}` : ''
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/warehouses/inventory${qs}`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  return res.json() as Promise<InventoryResponse[]>
+}
+
+export async function getWarehouseInventoryServer(
+  cnpj: string,
+  warehouseId: string,
+  params?: { search?: string; page?: string; limit?: string },
+): Promise<InventoryResponse[]> {
+  const qs = params ? `?${new URLSearchParams(params as Record<string, string>).toString()}` : ''
+  const res = await fetch(
+    `${API_URL}/v1/companies/${cnpj}/warehouses/${warehouseId}/inventory${qs}`,
+    { headers: await sessionHeaders(), cache: 'no-store' },
+  )
+  if (!res.ok) return []
+  return res.json() as Promise<InventoryResponse[]>
+}
+
+// ── Warehouses / Armazéns (client-side) ─────────────────────────────────────
+
+export async function createWarehouse(
+  cnpj: string,
+  data: CreateWarehouseDto,
+): Promise<WarehouseResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/warehouses`, { json: data })
+    .json<WarehouseResponse>()
+}
+
+export async function updateWarehouse(
+  cnpj: string,
+  id: string,
+  data: UpdateWarehouseDto,
+): Promise<WarehouseResponse> {
+  return (await client())
+    .patch(`v1/companies/${cnpj}/warehouses/${id}`, { json: data })
+    .json<WarehouseResponse>()
+}
+
+export async function deactivateWarehouse(cnpj: string, id: string): Promise<{ success: boolean }> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/warehouses/${id}/deactivate`)
+    .json<{ success: boolean }>()
 }
