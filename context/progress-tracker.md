@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 5 — Recebimento e Estoque** · `Em andamento` (5.1, 5.2, 5.3, 5.4 e 5.5 concluídas) → próxima unidade: UI de Recebimento (5.6) e Não-Conformidades (5.7)
+**Fase 5 — Recebimento e Estoque** · `Em andamento` (5.1, 5.2, 5.3, 5.4, 5.5 e 5.6 concluídas) → próxima unidade: Não-Conformidades UI (5.7)
 
 > **Fase 4 — Pedidos de Compra:** concluída (4.1, 4.2 e 4.3).
 **Fase 4 — Pedidos de Compra** · `Concluída` (4.1, 4.2 e 4.3 concluídas) → próxima fase: **Fase 5 — Recebimento e Estoque**
@@ -835,6 +835,36 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     `noUnusedImports` como erro; a spec o listava sem uso) — mantido nas rotas `[id]`/`[id]/edit` que o
     chamam; ordenação de imports/formatação aplicada pelo `biome check --write`
 
+- [x] **5.6 — Receipts UI (Frontend)** — spec `29-receipts-ui-spec.md`
+  - Commit convencional esperado: `feat(web): add receipts ui linked to purchase order detail`
+  - `lib/api.ts` estendido: 2 funções server-side (`getReceiptsServer` com query `purchaseOrderId`/
+    `warehouseId`/`status`/paginação, `getReceiptServer`) + 1 client-side (`createReceipt`), no padrão
+    `sessionHeaders()` (server) e `client()` ky (client); imports de tipos `CreateReceiptDto`/`ReceiptResponse`
+  - `components/domain/`: `receipt-form.tsx` (Client Component em rota dedicada — select nativo de armazém,
+    `datetime-local` default agora, tabela de itens do PO com Pedido/Já recebido/Pendente/Receber agora +
+    obs por item, itens com pendente 0 desabilitados/esmaecidos, filtra `qty > 0` no submit, toast distinto
+    COMPLETE vs. PARTIAL, redirect ao detalhe do recebimento) e `receipts-list-client.tsx` (busca client-side
+    por PO/armazém, badge de status, estado vazio com ícone `Package`)
+  - Rotas `(app)/[cnpj]/receipts/`: `page.tsx` (SSR lista via Client Component), `loading.tsx`, `error.tsx`,
+    `[id]/page.tsx` (detalhe com itens recebidos — este/total recebido, notas, link ao PO), `[id]/loading.tsx`,
+    `[id]/error.tsx`. Nova rota `(app)/[cnpj]/purchase-orders/[id]/receive/` (`page.tsx` com guards `notFound`/
+    redirect se PO ≠ SENT, role fora de `ADMIN_EMPRESA/ALMOXARIFE/SUPER_ADMIN`, ou sem armazém ativo →
+    `/warehouses`; `loading.tsx`/`error.tsx`). `purchase-orders/[id]/page.tsx` modificado: painel
+    "Recebimentos" quando status SENT/RECEIVED + botão "Registrar Recebimento" (SENT && canMutate)
+  - **Verificado:** `pnpm --filter web type-check` verde; `biome check` dos arquivos novos limpo após
+    `--write` (só os warnings `noNonNullAssertion` padrão do projeto — `next[index]!` do spec e o `API_URL`
+    pré-existente); `pnpm --filter web build` **compila + checa tipos + gera as rotas** (`receipts/page`,
+    `receipts/[id]/page`, `purchase-orders/[id]/receive/page` confirmadas em `.next/server/app`, ✓ 9/9
+    static pages). Passo `output: 'standalone'` falha por `EPERM` de symlink no Windows (mesma limitação de
+    0.5/1.4/1.5/2.4/2.5/5.5). Fluxo runtime (registrar recebimento parcial/completo, conclusão automática do
+    PO, listagem/detalhe) não exercitado — requer API + banco vivos
+  - **Ajustes vs. spec:** `ReceiptForm` usa `poItem.quantity`/`poItem.receivedQuantity` (campos reais de
+    `PurchaseOrderItemResponse`) no lugar de `orderedQuantity`/`totalReceived` do exemplo da spec, que não
+    existem no schema do item de PO — necessário para o type-check passar (invariante "tipos corretos");
+    `po as any` da spec dispensado (`getPurchaseOrderServer` já retorna `& { items }`, então o narrowing
+    pós-`notFound` satisfaz o prop do form); import `ReceiptItemResponse` omitido do `api.ts` (não usado lá —
+    `noUnusedImports` é erro); ordenação de imports/formatação aplicada pelo `biome check --write`
+
 ---
 
 ## Em Progresso
@@ -842,9 +872,10 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 - **Fase 5 — Recebimento e Estoque** em andamento: 5.1 (Shared Schemas), 5.2 (Warehouses Module API),
   5.3 (Receipts Module API — recebimento de mercadoria + movimentações de estoque com upsert em
   `inventory` e conclusão automática do PO), 5.4 (Non-Conformities Module API — abertura, fluxo de
-  status `OPEN→ANALYZING→RESOLVED|REJECTED` e comentários) e 5.5 (Warehouses UI — listagem, form
-  create/edit, desativação e visualização de inventário com alerta de estoque mínimo) concluídas.
-  Próximo: UI de Recebimento (5.6) e de Não-Conformidades (5.7).
+  status `OPEN→ANALYZING→RESOLVED|REJECTED` e comentários), 5.5 (Warehouses UI — listagem, form
+  create/edit, desativação e visualização de inventário com alerta de estoque mínimo) e 5.6 (Receipts
+  UI — formulário de recebimento em rota dedicada a partir do detalhe do PO, listagem e detalhe de
+  recebimentos) concluídas. Próximo: UI de Não-Conformidades (5.7).
 
 ---
 

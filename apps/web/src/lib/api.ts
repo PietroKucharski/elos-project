@@ -11,6 +11,7 @@ import type {
   CreatePurchaseOrderDto,
   CreateQuotationDto,
   CreateQuotationItemDto,
+  CreateReceiptDto,
   CreateSupplierBankAccountDto,
   CreateSupplierContactDto,
   CreateSupplierDto,
@@ -28,6 +29,7 @@ import type {
   QuotationItemResponse,
   QuotationResponse,
   QuotationSupplierResponse,
+  ReceiptResponse,
   RejectSupplierDto,
   SelectWinnerDto,
   SupplierBankAccountResponse,
@@ -787,4 +789,45 @@ export async function deactivateWarehouse(cnpj: string, id: string): Promise<{ s
   return (await client())
     .post(`v1/companies/${cnpj}/warehouses/${id}/deactivate`)
     .json<{ success: boolean }>()
+}
+
+// ── Recebimentos (server-side) ──────────────────────────────────────────────
+
+export async function getReceiptsServer(
+  cnpj: string,
+  params?: {
+    purchaseOrderId?: string
+    warehouseId?: string
+    status?: string
+    page?: string
+    limit?: string
+  },
+): Promise<ReceiptResponse[]> {
+  const qs = params ? `?${new URLSearchParams(params as Record<string, string>).toString()}` : ''
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/receipts${qs}`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  return res.json() as Promise<ReceiptResponse[]>
+}
+
+export async function getReceiptServer(cnpj: string, id: string): Promise<ReceiptResponse | null> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/receipts/${id}`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return null
+  return res.json() as Promise<ReceiptResponse>
+}
+
+// ── Recebimentos (client-side) ──────────────────────────────────────────────
+
+export async function createReceipt(
+  cnpj: string,
+  data: CreateReceiptDto,
+): Promise<ReceiptResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/receipts`, { json: data })
+    .json<ReceiptResponse>()
 }
