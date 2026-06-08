@@ -93,7 +93,7 @@ movimentações manuais de estoque (entrada, saída, transferência).
 
 ## Arquivos a Criar / Modificar
 
-```
+```text
 apps/api/src/
   modules/
     receipts/
@@ -110,7 +110,7 @@ apps/api/src/
   app.module.ts                           ← modificar (importar ReceiptsModule)
   db/
     migrations/
-      0003_receipts_inventory_constraint.sql  ← criar (constraint UNIQUE em inventory)
+      0004_receipts_inventory_constraint.sql  ← criar (constraint UNIQUE em inventory)
 ```
 
 ---
@@ -122,7 +122,7 @@ apps/api/src/
 O upsert `ON CONFLICT (warehouse_id, product_id)` exige um constraint de
 unicidade composto. A tabela `inventory` definida em 0.3 não o incluiu.
 
-Criar `apps/api/src/db/migrations/0003_receipts_inventory_constraint.sql`:
+Criar `apps/api/src/db/migrations/0004_receipts_inventory_constraint.sql`:
 
 ```sql
 -- Adicionar constraint UNIQUE em inventory (warehouse_id, product_id)
@@ -132,7 +132,7 @@ ALTER TABLE inventory
   UNIQUE (warehouse_id, product_id);
 ```
 
-Adicionar a entrada ao `_journal.json` e gerar o snapshot 0003 conforme padrão
+Adicionar a entrada ao `_journal.json` e gerar o snapshot 0004 conforme padrão
 estabelecido em 3.2 (migration escrita à mão + snapshot via script mutando o
 snapshot anterior).
 
@@ -1277,7 +1277,7 @@ ReceiptsModule,
 
 ```bash
 # Migration
-# drizzle-kit check após criar 0003_receipts_inventory_constraint.sql
+# drizzle-kit check após criar 0004_receipts_inventory_constraint.sql
 
 # Testes
 pnpm vitest run   # espera ≥ 185 testes (157 anteriores + ~28 novos)
