@@ -1,10 +1,13 @@
 import {
   type CreateReceiptDto,
   type CreateStockMovementDto,
+  ReceiptStatus,
+  StockMovementType,
   createReceiptSchema,
   createStockMovementSchema,
 } from '@elos/shared'
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -45,6 +48,9 @@ export class ReceiptsController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
+    if (status && !Object.values(ReceiptStatus).includes(status as ReceiptStatus)) {
+      throw new BadRequestException(`Status de recebimento inválido: ${status}.`)
+    }
     return this.receiptsService.findAll(user, {
       purchaseOrderId,
       warehouseId,
@@ -92,6 +98,9 @@ export class ReceiptsController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
+    if (type && !Object.values(StockMovementType).includes(type as StockMovementType)) {
+      throw new BadRequestException(`Tipo de movimentação inválido: ${type}.`)
+    }
     return this.stockMovementsService.findAll(user, {
       warehouseId,
       productId,
