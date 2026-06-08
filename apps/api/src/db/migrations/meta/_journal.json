@@ -29,6 +29,13 @@
       "when": 1780757357345,
       "tag": "0003_careless_blade",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780936827942,
+      "tag": "0004_receipts_inventory_constraint",
+      "breakpoints": true
     }
   ]
 }
