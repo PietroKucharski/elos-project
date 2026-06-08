@@ -1,0 +1,1 @@
+ALTER TABLE "non_conformities" ADD COLUMN "notes" text;

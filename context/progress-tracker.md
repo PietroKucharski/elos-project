@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 5 — Recebimento e Estoque** · `Em andamento` (5.1, 5.2 e 5.3 concluídas) → próxima unidade: 5.4 (Não-Conformidades) e UI
+**Fase 5 — Recebimento e Estoque** · `Em andamento` (5.1, 5.2, 5.3 e 5.4 concluídas) → próxima unidade: UI de Recebimento/Estoque/Não-Conformidades (5.5+)
 
 > **Fase 4 — Pedidos de Compra:** concluída (4.1, 4.2 e 4.3).
 **Fase 4 — Pedidos de Compra** · `Concluída` (4.1, 4.2 e 4.3 concluídas) → próxima fase: **Fase 5 — Recebimento e Estoque**
@@ -771,14 +771,48 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     inline); `getBidsServer` no `Promise.all` sem condicional (a spec tinha snippet quebrado referenciando
     `quotation?.status` dentro do próprio `Promise.all`)
 
+- [x] **5.4 — Non-Conformities Module (API)** — spec `27-non-confromities-api-spec.md`
+  - Commit convencional esperado: `feat(api): add non-conformities module with status flow and comments`
+  - `apps/api/src/modules/non-conformities/`: `non-conformities.module.ts` (importa `AbilityModule`,
+    exporta `NonConformitiesService`), `non-conformities.controller.ts`
+    (`@Controller('companies/:cnpj/non-conformities')`: `GET/POST` lista+abertura, `GET/PATCH :id`,
+    `POST :id/analyze`, `:id/resolve`, `:id/reject`, `:id/comments`; Swagger + `ZodValidationPipe` por
+    rota), `non-conformities.service.ts` (findAll com filtros `status`/`type`/`severity`/`supplierId`/
+    `purchaseOrderId`/`search`/paginação + joins de fornecedor/PO/produto/autor, findOne com lista de
+    comentários, create transacional validando fornecedor e PO opcional escopados à empresa, update só
+    em `OPEN`, transições `analyze` `OPEN→ANALYZING` / `resolve` `ANALYZING→RESOLVED` / `reject`
+    `ANALYZING→REJECTED` com `resolvedAt` em ambos os estados finais, addComment verificando a NC antes
+    de inserir; CASL antes de cada operação e audit log em create/update/analyze/resolve/reject),
+    `non-conformities.service.spec.ts` (14 testes) e `non-conformities.controller.spec.ts` (7 testes) —
+    **208 testes da API passando no total**
+  - `ability.factory.ts` — subject `NonConformity` tagueado (`& ForcedSubject<'NonConformity'>`) para
+    suportar `subject('NonConformity', row)`; regras escopadas a `{ companyId }`: ADMIN_EMPRESA `manage`;
+    ALMOXARIFE `read`+`create`+`update` (abre e edita em OPEN); COMPRADOR `read`+`update` (analyze/resolve/
+    reject usam a action `update`); ANALISTA_FINANCEIRO e TRANSPORTADOR `read` (as regras `manage`/`read`
+    irrestritas pré-existentes foram substituídas pelas escopadas e ALMOXARIFE perdeu o `manage` amplo)
+  - `apps/api/src/db/schema/non-conformities.ts` — coluna **`notes` (`text`, nullable)** adicionada à
+    tabela `non_conformities` (faltava em 0.3, mas os DTOs/response de 5.1 já a referenciavam); migration
+    **`0005_pale_morph.sql`** (`ALTER TABLE … ADD COLUMN "notes" text`) gerada via `drizzle-kit generate`
+  - `app.module.ts` — `NonConformitiesModule` importado
+  - **Verificado:** `vitest run` (208/208), `pnpm type-check` (4 workspaces) e `biome check` dos arquivos
+    novos verdes (só warnings `noNonNullAssertion` de `companyId!`, padrão do projeto). Checklist de
+    segurança coberto pelos testes: 403 sem permissão (create/update/analyze), 404 fornecedor/NC, 400 em
+    transições inválidas (editar fora de OPEN, resolver/rejeitar fora de ANALYZING), queries escopadas a
+    `companyId`, comentário verifica a NC da empresa antes de inserir, audit log em todas as mutações.
+    Banco vivo (migrate) não executado — sem Supabase neste ambiente
+  - **Ajustes vs. spec:** parse de página/limite no padrão `Number.parseInt` + `Number.isNaN` do projeto
+    (a spec usava `Number.isFinite` inline); coluna `notes` + migration `0005` adicionadas (a spec assumia
+    a coluna já existente desde 0.3); ordenação de imports/formatação aplicada pelo `biome check --write`
+
 ---
 
 ## Em Progresso
 
-- **Fase 5 — Recebimento e Estoque** em andamento: 5.1 (Shared Schemas), 5.2 (Warehouses Module API) e
+- **Fase 5 — Recebimento e Estoque** em andamento: 5.1 (Shared Schemas), 5.2 (Warehouses Module API),
   5.3 (Receipts Module API — recebimento de mercadoria + movimentações de estoque com upsert em
-  `inventory` e conclusão automática do PO) concluídas. Próximo: **5.4** — Não-Conformidades (API), e
-  depois a UI correspondente (5.5+).
+  `inventory` e conclusão automática do PO) e 5.4 (Non-Conformities Module API — abertura, fluxo de
+  status `OPEN→ANALYZING→RESOLVED|REJECTED` e comentários) concluídas. Próximo: a UI correspondente da
+  Fase 5 (Recebimento, Estoque e Não-Conformidades — 5.5+).
 
 ---
 
@@ -927,6 +961,10 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 
 | Decisão                            | Motivo                                                                              |
 | ---------------------------------- | ----------------------------------------------------------------------------------- |
+| `analyze`/`resolve`/`reject` usam a action `update` no CASL (5.4) | Não há diferenciação de permissão entre as três transições na v1; quem pode `update` realiza qualquer transição válida (a guarda de status no Service barra transições inválidas). Menos ações customizadas no union de `Actions` |
+| ALMOXARIFE abre a NC, COMPRADOR/ADMIN resolvem (5.4) | Separação de responsabilidade: o almoxarife detecta o problema no recebimento; o comprador (ou admin) tem visão do impacto e decide o tratamento. ALMOXARIFE perdeu o `manage NonConformity` amplo pré-existente, mantendo `read`/`create`/`update` (edição em OPEN) escopados a `{ companyId }` |
+| `resolvedAt` preenchido tanto em `resolve` quanto em `reject` (5.4) | Ambos são estados finais; o campo marca a data de encerramento da NC, não exclusivamente "resolvido positivamente" |
+| Coluna `notes` adicionada a `non_conformities` na 5.4 (migration 0005) | Os DTOs/response de 5.1 já referenciavam `notes`, mas a coluna faltava no schema de 0.3; adicionada como `text` nullable (schema é fonte de verdade — invariante 14) com migration gerada via `drizzle-kit` |
 | `purchaseOrdersService.receive()` chamado fora da transação do recebimento (5.3) | `receive()` abre a própria `db.transaction`; chamá-lo após o commit do recebimento evita transação aninhada e é seguro — `receive()` é idempotente (400 se PO já `RECEIVED`), então falha isolada não deixa dados inconsistentes |
 | `StockMovementsService` no mesmo módulo de receipts (5.3) | Movimentações automáticas (recebimento) e manuais compartilham a lógica de upsert de `inventory`; manter no mesmo módulo evita dependência circular e duplicação |
 | Upsert de `inventory` via `sql\`\`` cru com `ON CONFLICT (warehouse_id, product_id)` (5.3) | O builder do Drizzle não tem helper de `ON CONFLICT … DO UPDATE` para o caso; SQL cru com `gen_random_uuid()` e conflict target explícito é mais legível. Exigiu constraint `UNIQUE` em `inventory` (migration 0004 + schema) |
