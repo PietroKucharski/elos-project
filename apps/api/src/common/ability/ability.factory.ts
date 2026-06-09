@@ -6,6 +6,7 @@ import {
 } from '@casl/ability'
 import { Injectable } from '@nestjs/common'
 import type { Company, CompanyMember } from '../../db/schema/companies'
+import type { Invoice } from '../../db/schema/invoices'
 import type { NonConformity } from '../../db/schema/non-conformities'
 import type { Product } from '../../db/schema/products'
 import type { PurchaseOrder } from '../../db/schema/purchase-orders'
@@ -83,7 +84,10 @@ export type Subjects =
   // em MongoQuery<never>
   | 'NonConformity'
   | (NonConformity & ForcedSubject<'NonConformity'>)
+  // 'Invoice' tagueado (como 'NonConformity') para suportar condições por objeto
+  // via subject('Invoice', row) no InvoicesService — sem cair em MongoQuery<never>
   | 'Invoice'
+  | (Invoice & ForcedSubject<'Invoice'>)
   | 'Payment'
   | 'Shipment'
   | 'AuditLog'
@@ -127,7 +131,7 @@ export class AbilityFactory {
         can('manage', 'Inventory')
         can('manage', 'StockMovement', { companyId })
         can('manage', 'NonConformity', { companyId })
-        can('manage', 'Invoice')
+        can('manage', 'Invoice', { companyId })
         can('manage', 'Payment')
         can('manage', 'Shipment')
         can('read', 'AuditLog')
@@ -158,7 +162,7 @@ export class AbilityFactory {
         can('read', 'NonConformity', { companyId })
         // analyze/resolve/reject usam a action 'update' (atualizar o status)
         can('update', 'NonConformity', { companyId })
-        can('read', 'Invoice')
+        can('read', 'Invoice', { companyId })
         can('read', 'AuditLog')
         break
 
@@ -178,6 +182,7 @@ export class AbilityFactory {
         can('read', 'NonConformity', { companyId })
         can('create', 'NonConformity', { companyId })
         can('update', 'NonConformity', { companyId })
+        can('read', 'Invoice', { companyId })
         break
 
       case 'ANALISTA_FINANCEIRO':
@@ -191,7 +196,7 @@ export class AbilityFactory {
         can('read', 'Receipt', { companyId })
         can('read', 'StockMovement', { companyId })
         can('read', 'NonConformity', { companyId })
-        can('manage', 'Invoice')
+        can('manage', 'Invoice', { companyId })
         can('manage', 'Payment')
         break
 
@@ -205,6 +210,7 @@ export class AbilityFactory {
         can('read', 'Warehouse', { companyId })
         can('read', 'Receipt', { companyId })
         can('read', 'NonConformity', { companyId })
+        can('read', 'Invoice', { companyId })
         can('manage', 'Shipment')
         break
 
