@@ -4,8 +4,10 @@
 // Schemas
 export * from './schemas/bid'
 export * from './schemas/company'
+export * from './schemas/invoice'
 export * from './schemas/member'
 export * from './schemas/non-conformity'
+export * from './schemas/payment'
 export * from './schemas/product'
 export * from './schemas/purchase-order'
 export * from './schemas/quotation'
