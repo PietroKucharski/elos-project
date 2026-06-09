@@ -808,8 +808,11 @@ export async function getReceiptsServer(
     headers: await sessionHeaders(),
     cache: 'no-store',
   })
-  if (!res.ok) return []
-  return res.json() as Promise<ReceiptResponse[]>
+  if (res.ok) return res.json() as Promise<ReceiptResponse[]>
+  // 404 (empresa/rota inexistente) é o único "vazio" esperado; 403/500/auth
+  // devem propagar para o error boundary da rota.
+  if (res.status === 404) return []
+  throw new Error(`getReceiptsServer falhou (${res.status}): ${await res.text()}`)
 }
 
 export async function getReceiptServer(cnpj: string, id: string): Promise<ReceiptResponse | null> {
@@ -817,8 +820,10 @@ export async function getReceiptServer(cnpj: string, id: string): Promise<Receip
     headers: await sessionHeaders(),
     cache: 'no-store',
   })
-  if (!res.ok) return null
-  return res.json() as Promise<ReceiptResponse>
+  if (res.ok) return res.json() as Promise<ReceiptResponse>
+  // 404 (recebimento inexistente) → null para o caller chamar notFound(); demais falhas propagam.
+  if (res.status === 404) return null
+  throw new Error(`getReceiptServer falhou (${res.status}): ${await res.text()}`)
 }
 
 // ── Recebimentos (client-side) ──────────────────────────────────────────────
