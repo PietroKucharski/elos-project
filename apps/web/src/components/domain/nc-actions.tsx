@@ -30,10 +30,13 @@ export function NcActions({ cnpj, id, status, canAct }: NcActionsProps) {
   const [dialog, setDialog] = useState<'analyze' | 'resolve' | 'reject' | null>(null)
   const [loading, setLoading] = useState(false)
 
+  // resolveNcSchema exige resolução com no mínimo 10 caracteres; rejectNcSchema, 5.
+  const minResolution = dialog === 'resolve' ? 10 : 5
+
   async function handleAction() {
     if (!dialog) return
-    if ((dialog === 'resolve' || dialog === 'reject') && resolution.trim().length < 5) {
-      toast.error('Informe o motivo (mínimo 5 caracteres).')
+    if ((dialog === 'resolve' || dialog === 'reject') && resolution.trim().length < minResolution) {
+      toast.error(`Informe o motivo (mínimo ${minResolution} caracteres).`)
       return
     }
 
@@ -109,7 +112,7 @@ export function NcActions({ cnpj, id, status, canAct }: NcActionsProps) {
                 rows={3}
                 value={resolution}
                 onChange={(e) => setResolution(e.target.value)}
-                placeholder="Mínimo 5 caracteres…"
+                placeholder={`Mínimo ${minResolution} caracteres…`}
                 className="flex min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
             </div>

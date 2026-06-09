@@ -74,7 +74,8 @@ export function NcCommentsPanel({ cnpj, ncId, comments }: NcCommentsPanelProps) 
         <textarea
           rows={2}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          maxLength={2000}
+          onChange={(e) => setText(e.target.value.slice(0, 2000))}
           placeholder="Adicionar comentário…"
           className="flex-1 min-h-[60px] rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
           onKeyDown={(e) => {
