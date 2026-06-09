@@ -2,7 +2,8 @@
 import { PurchaseOrderActions } from '@/components/domain/purchase-order-actions'
 import { PurchaseOrderStatusBadge } from '@/components/domain/purchase-order-status-badge'
 import { PurchaseOrderStepper } from '@/components/domain/purchase-order-stepper'
-import { getMyCompaniesServer, getPurchaseOrderServer } from '@/lib/api'
+import { Button } from '@/components/ui/button'
+import { getMyCompaniesServer, getPurchaseOrderServer, getReceiptsServer } from '@/lib/api'
 import { ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -27,9 +28,10 @@ function date(value: string | null) {
 export default async function PurchaseOrderDetailPage({ params }: Props) {
   const { cnpj, id } = await params
 
-  const [po, myCompanies] = await Promise.all([
+  const [po, myCompanies, receipts] = await Promise.all([
     getPurchaseOrderServer(cnpj, id),
     getMyCompaniesServer(),
+    getReceiptsServer(cnpj, { purchaseOrderId: id }),
   ])
 
   if (!po) notFound()
@@ -172,6 +174,65 @@ export default async function PurchaseOrderDetailPage({ params }: Props) {
           </table>
         </div>
       </div>
+
+      {/* Recebimentos */}
+      {(po.status === 'SENT' || po.status === 'RECEIVED') && (
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Recebimentos</h2>
+            {po.status === 'SENT' && canMutate && (
+              <Button asChild variant="outline">
+                <Link href={`/${cnpj}/purchase-orders/${po.id}/receive`}>
+                  Registrar Recebimento
+                </Link>
+              </Button>
+            )}
+          </div>
+          {receipts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum recebimento registrado ainda.</p>
+          ) : (
+            <div className="rounded-lg border overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium">Data</th>
+                    <th className="text-left px-4 py-3 font-medium">Armazém</th>
+                    <th className="text-left px-4 py-3 font-medium">Status</th>
+                    <th className="w-24" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {receipts.map((r) => (
+                    <tr key={r.id} className="hover:bg-muted/30">
+                      <td className="px-4 py-3">
+                        {new Date(r.receivedAt).toLocaleString('pt-BR')}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{r.warehouseName}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`text-xs font-medium ${
+                            r.status === 'COMPLETE' ? 'text-success' : 'text-warning'
+                          }`}
+                        >
+                          {r.status === 'COMPLETE' ? 'Completo' : 'Parcial'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Link
+                          href={`/${cnpj}/receipts/${r.id}`}
+                          className="text-xs text-primary hover:underline"
+                        >
+                          Ver →
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
