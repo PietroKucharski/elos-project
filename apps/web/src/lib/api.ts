@@ -1,4 +1,6 @@
 import type {
+  AddNcCommentDto,
+  AnalyzeNcDto,
   ApproveSupplierDto,
   BidComparisonResponse,
   BidItemResponse,
@@ -7,6 +9,7 @@ import type {
   CreateBidDto,
   CreateBidItemDto,
   CreateCompanyDto,
+  CreateNonConformityDto,
   CreateProductDto,
   CreatePurchaseOrderDto,
   CreateQuotationDto,
@@ -22,6 +25,8 @@ import type {
   LinkProductSupplierDto,
   MemberResponse,
   MyCompany,
+  NcCommentResponse,
+  NonConformityResponse,
   ProductResponse,
   ProductSupplierResponse,
   PurchaseOrderItemResponse,
@@ -30,13 +35,16 @@ import type {
   QuotationResponse,
   QuotationSupplierResponse,
   ReceiptResponse,
+  RejectNcDto,
   RejectSupplierDto,
+  ResolveNcDto,
   SelectWinnerDto,
   SupplierBankAccountResponse,
   SupplierContactResponse,
   SupplierResponse,
   UpdateCompanyDto,
   UpdateMemberRoleDto,
+  UpdateNonConformityDto,
   UpdateProductDto,
   UpdateProductSupplierDto,
   UpdateQuotationDto,
@@ -835,4 +843,101 @@ export async function createReceipt(
   return (await client())
     .post(`v1/companies/${cnpj}/receipts`, { json: data })
     .json<ReceiptResponse>()
+}
+
+// ── Não-Conformidades (server-side) ─────────────────────────────────────────
+
+export async function getNonConformitiesServer(
+  cnpj: string,
+  params?: {
+    status?: string
+    type?: string
+    severity?: string
+    supplierId?: string
+    purchaseOrderId?: string
+    search?: string
+    page?: string
+    limit?: string
+  },
+): Promise<NonConformityResponse[]> {
+  const qs = params ? `?${new URLSearchParams(params as Record<string, string>).toString()}` : ''
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/non-conformities${qs}`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  return res.json() as Promise<NonConformityResponse[]>
+}
+
+export async function getNonConformityServer(
+  cnpj: string,
+  id: string,
+): Promise<NonConformityResponse | null> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/non-conformities/${id}`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return null
+  return res.json() as Promise<NonConformityResponse>
+}
+
+// ── Não-Conformidades (client-side) ─────────────────────────────────────────
+
+export async function createNonConformity(
+  cnpj: string,
+  data: CreateNonConformityDto,
+): Promise<NonConformityResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/non-conformities`, { json: data })
+    .json<NonConformityResponse>()
+}
+
+export async function updateNonConformity(
+  cnpj: string,
+  id: string,
+  data: UpdateNonConformityDto,
+): Promise<NonConformityResponse> {
+  return (await client())
+    .patch(`v1/companies/${cnpj}/non-conformities/${id}`, { json: data })
+    .json<NonConformityResponse>()
+}
+
+export async function analyzeNonConformity(
+  cnpj: string,
+  id: string,
+  data?: AnalyzeNcDto,
+): Promise<NonConformityResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/non-conformities/${id}/analyze`, { json: data ?? {} })
+    .json<NonConformityResponse>()
+}
+
+export async function resolveNonConformity(
+  cnpj: string,
+  id: string,
+  data: ResolveNcDto,
+): Promise<NonConformityResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/non-conformities/${id}/resolve`, { json: data })
+    .json<NonConformityResponse>()
+}
+
+export async function rejectNonConformity(
+  cnpj: string,
+  id: string,
+  data: RejectNcDto,
+): Promise<NonConformityResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/non-conformities/${id}/reject`, { json: data })
+    .json<NonConformityResponse>()
+}
+
+export async function addNcComment(
+  cnpj: string,
+  id: string,
+  data: AddNcCommentDto,
+): Promise<NcCommentResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/non-conformities/${id}/comments`, { json: data })
+    .json<NcCommentResponse>()
 }
