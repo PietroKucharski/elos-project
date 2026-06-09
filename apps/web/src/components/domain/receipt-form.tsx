@@ -28,12 +28,11 @@ interface ItemState {
 export function ReceiptForm({ cnpj, po, warehouses }: ReceiptFormProps) {
   const router = useRouter()
   const [warehouseId, setWarehouseId] = useState(warehouses[0]?.id ?? '')
-  const [receivedAt, setReceivedAt] = useState(
-    // default: agora, no formato datetime-local
-    new Date()
-      .toISOString()
-      .slice(0, 16),
-  )
+  const [receivedAt, setReceivedAt] = useState(() => {
+    // default: agora, no formato datetime-local (hora local de parede, não UTC)
+    const now = new Date()
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+  })
   const [globalNotes, setGlobalNotes] = useState('')
   const [items, setItems] = useState<ItemState[]>(
     po.items.map((item) => ({

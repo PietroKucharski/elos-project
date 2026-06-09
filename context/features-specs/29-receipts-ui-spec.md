@@ -55,7 +55,7 @@ o PO está em status `SENT` ou `RECEIVED`.
 
 ## Arquivos a Criar / Modificar
 
-```
+```text
 apps/web/src/
   lib/
     api.ts                                          ← modificar (funções de receipts)
@@ -181,11 +181,11 @@ export function ReceiptForm({ cnpj, po, warehouses }: ReceiptFormProps) {
     })
   }
 
-  // Calcula quantidade pendente (orderedQuantity - totalReceived até agora)
+  // Calcula quantidade pendente (quantity - receivedQuantity até agora)
   function getPending(item: PurchaseOrderItemResponse) {
     return Math.max(
       0,
-      Number(item.orderedQuantity) - Number(item.receivedQuantity ?? '0'),
+      Number(item.quantity) - Number(item.receivedQuantity ?? '0'),
     )
   }
 
@@ -296,10 +296,10 @@ export function ReceiptForm({ cnpj, po, warehouses }: ReceiptFormProps) {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">
-                      {Number(poItem.orderedQuantity).toFixed(3)} {poItem.unit}
+                      {Number(poItem.quantity).toFixed(3)} {poItem.unit}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
-                      {Number(poItem.totalReceived ?? poItem.receivedQuantity ?? '0').toFixed(3)}
+                      {Number(poItem.receivedQuantity ?? '0').toFixed(3)}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums font-medium">
                       {pending.toFixed(3)}
