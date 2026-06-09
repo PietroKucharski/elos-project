@@ -28,6 +28,7 @@ export function ReceiptsListClient({ cnpj, receipts }: ReceiptsListClientProps) 
     <div className="space-y-4">
       <input
         type="search"
+        aria-label="Buscar por PO ou armazém"
         placeholder="Buscar por PO ou armazém…"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
