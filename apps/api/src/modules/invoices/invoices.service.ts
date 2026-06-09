@@ -397,17 +397,17 @@ export class InvoicesService {
 
   async addItem(invoiceId: string, dto: CreateInvoiceItemDto, user: SessionUser) {
     const ability = this.abilityFactory.createForUser(user)
-    if (ability.cannot('update', 'Invoice')) {
-      throw new ForbiddenException('Sem permissão.')
-    }
 
     const [invoice] = await this.db
-      .select({ id: invoices.id, status: invoices.status })
+      .select()
       .from(invoices)
       .where(and(eq(invoices.id, invoiceId), eq(invoices.companyId, user.companyId!)))
       .limit(1)
 
     if (!invoice) throw new NotFoundException('Nota fiscal não encontrada.')
+    if (ability.cannot('update', subject('Invoice', invoice))) {
+      throw new ForbiddenException('Sem permissão.')
+    }
     if (invoice.status !== 'PENDING') {
       throw new BadRequestException('Itens só podem ser adicionados a NFs pendentes.')
     }
@@ -444,17 +444,17 @@ export class InvoicesService {
 
   async removeItem(invoiceId: string, itemId: string, user: SessionUser) {
     const ability = this.abilityFactory.createForUser(user)
-    if (ability.cannot('update', 'Invoice')) {
-      throw new ForbiddenException('Sem permissão.')
-    }
 
     const [invoice] = await this.db
-      .select({ id: invoices.id, status: invoices.status })
+      .select()
       .from(invoices)
       .where(and(eq(invoices.id, invoiceId), eq(invoices.companyId, user.companyId!)))
       .limit(1)
 
     if (!invoice) throw new NotFoundException('Nota fiscal não encontrada.')
+    if (ability.cannot('update', subject('Invoice', invoice))) {
+      throw new ForbiddenException('Sem permissão.')
+    }
     if (invoice.status !== 'PENDING') {
       throw new BadRequestException('Itens só podem ser removidos de NFs pendentes.')
     }
@@ -487,17 +487,17 @@ export class InvoicesService {
   // invoices.fileUrl. Aceitar uma URL direta enquanto o Storage não estiver configurado.
   async uploadFile(id: string, fileUrl: string, user: SessionUser) {
     const ability = this.abilityFactory.createForUser(user)
-    if (ability.cannot('update', 'Invoice')) {
-      throw new ForbiddenException('Sem permissão.')
-    }
 
     const [invoice] = await this.db
-      .select({ id: invoices.id, status: invoices.status })
+      .select()
       .from(invoices)
       .where(and(eq(invoices.id, id), eq(invoices.companyId, user.companyId!)))
       .limit(1)
 
     if (!invoice) throw new NotFoundException('Nota fiscal não encontrada.')
+    if (ability.cannot('update', subject('Invoice', invoice))) {
+      throw new ForbiddenException('Sem permissão.')
+    }
     if (invoice.status !== 'PENDING') {
       throw new BadRequestException('Upload só permitido em NFs pendentes.')
     }
