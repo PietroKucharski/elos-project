@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 6 — Financeiro (NF + Pagamentos)** · `Em progresso` (6.1 e 6.2 concluídas) → próxima unidade: **6.3**
+**Fase 6 — Financeiro (NF + Pagamentos)** · `Em progresso` (6.1, 6.2 e 6.3 concluídas) → próxima unidade: **6.4**
 
 > **Fase 5 — Recebimento e Estoque:** concluída (5.1, 5.2, 5.3, 5.4, 5.5, 5.6 e 5.7).
 
@@ -955,14 +955,45 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     `_`; `addItem` com guard `if (!item)` antes do audit log (evita `!` em `item!.id`); upload via URL no body
     (`@Body('fileUrl')`), não multipart — o front faz upload direto ao Supabase Storage via signed URL
 
+- [x] **6.3 — Payments Module (API)** — spec `33-payments-api.md`
+  - Commit convencional esperado: `feat(api): add payments module with installments and reconciliation`
+  - `apps/api/src/modules/payments/`: `payments.module.ts` (importa `AbilityModule`, exporta
+    `PaymentsService`), `payments.controller.ts` (`@Controller('companies/:cnpj/payments')`: GET/POST
+    lista+criação, GET `:id` (detalhe com parcelas), PATCH `:id` (notas), POST `:id/cancel` e
+    `:id/installments/:installmentId/pay`; Swagger + `ZodValidationPipe` por rota),
+    `payments.service.ts` (findAll com filtros `status`/`method`/`invoiceId`/`search` por número da NF/
+    paginação, findOne com parcelas ordenadas, create validando NF da empresa em `VALIDATED` + dedup por
+    `invoiceId` (1 pagamento por NF) inserindo parcelas na mesma transação, update só de `notes` em
+    `PENDING`, cancel só em `PENDING` e bloqueado se há parcela `PAID`, payInstallment marca parcela
+    `PENDING→PAID` com `paidAt` e auto-completa o pagamento `PENDING→PAID` quando nenhuma parcela resta
+    pendente; CASL antes de cada mutação e audit log em create/cancel/pay/complete),
+    `payments.service.spec.ts` (14 testes) e `payments.controller.spec.ts` (6 testes) — **252 testes da API no total**
+  - `ability.factory.ts` — subject `Payment` tagueado (`& ForcedSubject<'Payment'>`) para suportar
+    `subject('Payment', row)` no update/cancel; regras `Payment` escopadas a `{ companyId }`:
+    ADMIN_EMPRESA e ANALISTA_FINANCEIRO `manage`, COMPRADOR/ALMOXARIFE/TRANSPORTADOR `read` (antes
+    ADMIN/ANALISTA tinham `manage Payment` sem escopo — agora escopado ao tenant)
+  - `app.module.ts` — `PaymentsModule` importado
+  - **Verificado:** `vitest run` da API (252/252, ≥250 esperados), `pnpm type-check` (3 workspaces) e
+    `biome check` dos arquivos novos/modificados verdes (só warnings `noNonNullAssertion` de `companyId!`,
+    severidade `warn`, padrão do projeto). Checklist de segurança coberto: 403 sem permissão (`create`/
+    `read`/`update`), 404 NF/pagamento não encontrados, 400 NF fora de `VALIDATED`, 409 pagamento duplicado
+    por NF, 400 cancelar com parcela paga, auto-completar `PENDING→PAID`, queries escopadas a `companyId`,
+    audit log nas mutações. Banco vivo não exercitado — sem Supabase neste ambiente
+  - **Ajustes vs. spec:** parse de paginação alinhado ao padrão de `invoices.service` (`Number.parseInt`
+    + `Number.isNaN`, sem ternário inline duplicado), mais limpo e lint-safe; demais comportamentos
+    idênticos à spec. Sem migration nesta unidade — as tabelas `payments`/`payment_installments` já
+    existiam no schema Drizzle (`db/schema/payments.ts`) desde a 0.3
+
 ---
 
 ## Em Progresso
 
 - **Fase 6 — Financeiro (NF + Pagamentos)** em progresso: 6.1 (Shared Schemas — schemas Zod de contrato
-  de API para notas fiscais e pagamentos em `packages/shared`) e 6.2 (Invoices Module API — CRUD,
-  validação/rejeição com fluxo `PENDING→VALIDATED|REJECTED`, sub-recurso de itens e upload de arquivo)
-  concluídas. Próximo: **6.3** (Payments Module API).
+  de API para notas fiscais e pagamentos em `packages/shared`), 6.2 (Invoices Module API — CRUD,
+  validação/rejeição com fluxo `PENDING→VALIDATED|REJECTED`, sub-recurso de itens e upload de arquivo) e
+  6.3 (Payments Module API — pagamentos vinculados a NF `VALIDATED` com parcelas, fluxo
+  `PENDING→PAID|CANCELLED`, pagamento de parcela com auto-conclusão e conciliação por NF) concluídas.
+  Próximo: **6.4** (próxima unidade da fase financeira).
 
 - **Fase 5 — Recebimento e Estoque** concluída: 5.1 (Shared Schemas), 5.2 (Warehouses Module API),
   5.3 (Receipts Module API — recebimento de mercadoria + movimentações de estoque com upsert em
