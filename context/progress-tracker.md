@@ -6,7 +6,9 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 5 — Recebimento e Estoque** · `Concluída` (5.1, 5.2, 5.3, 5.4, 5.5, 5.6 e 5.7 concluídas) → próxima fase: **Fase 6**
+**Fase 6 — Financeiro (NF + Pagamentos)** · `Em progresso` (6.1 concluída) → próxima unidade: **6.2**
+
+> **Fase 5 — Recebimento e Estoque:** concluída (5.1, 5.2, 5.3, 5.4, 5.5, 5.6 e 5.7).
 
 > **Fase 4 — Pedidos de Compra:** concluída (4.1, 4.2 e 4.3).
 **Fase 4 — Pedidos de Compra** · `Concluída` (4.1, 4.2 e 4.3 concluídas) → próxima fase: **Fase 5 — Recebimento e Estoque**
@@ -899,9 +901,37 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     interface mas não desestruturada em `non-conformities-list-client` (o botão de criação vive na página, não na
     lista — evita variável não usada); ordenação de imports/formatação aplicada pelo `biome check --write`
 
+- [x] **6.1 — Shared Schemas: Notas Fiscais e Pagamentos** — spec `31-shared-schemas-invoices-payments-spec.md`
+  - Commit convencional esperado: `feat(shared): add invoice and payment zod schemas`
+  - `packages/shared/src/schemas/invoice.ts` — `invoiceStatusValues` (de `InvoiceStatus`),
+    item da NF (`createInvoiceItemSchema`/`invoiceItemResponseSchema`), NF vinculada a PO+fornecedor
+    (`createInvoiceSchema` — `purchaseOrderId`/`supplierId` obrigatórios, `fileUrl` e `items` opcionais;
+    `updateInvoiceSchema`, `validateInvoiceSchema`, `rejectInvoiceSchema` com motivo min 5,
+    `invoiceResponseSchema` com `items[]` só no GET :id e `itemCount` só na listagem) + tipos via `z.infer`
+  - `packages/shared/src/schemas/payment.ts` — `paymentStatusValues`/`paymentMethodValues` (de enums)
+    e `installmentStatusValues` declarado inline (`['PENDING','PAID','OVERDUE']` — `InstallmentStatus`
+    não existe em `enums.ts`); parcelas (`createInstallmentSchema`/`installmentResponseSchema`),
+    pagamento vinculado a NF (`createPaymentSchema` — `installments` com `min(1)`; `updatePaymentSchema`,
+    `paymentResponseSchema` com `installments[]` só no GET :id e `installmentCount` só na listagem) e
+    `payInstallmentSchema` (todos opcionais) + tipos via `z.infer`
+  - Barrel `packages/shared/src/index.ts` re-exporta `./schemas/invoice` e `./schemas/payment` (ordem alfabética)
+  - **Verificado:** `pnpm --filter @elos/shared build` (tsc), `pnpm type-check` (3 workspaces) e `biome check`
+    dos 3 arquivos verdes; 7 `safeParse` da spec confirmados (NF sem `purchaseOrderId` falha, NF válida passa,
+    NF com `totalAmount` negativo falha, pagamento sem parcelas falha, pagamento válido passa, método inválido
+    falha, `payInstallment` vazio passa). `InvoiceStatus`/`PaymentStatus`/`PaymentMethod` não re-exportados dos
+    schema files (já em `enums.ts`) — só os arrays de valores. `pnpm lint` na raiz do pacote reporta apenas
+    ruído CRLF pré-existente em `stock-movement.ts` (arquivo não tocado, normalizado no CI/Linux)
+  - **Ajuste vs. spec:** formatação aplicada pelo `biome check --fix` (single-space em vez do alinhamento de
+    colunas da spec; import `{ PaymentMethod, PaymentStatus }` reordenado) — padrão do projeto, espelha os
+    demais schema files
+
 ---
 
 ## Em Progresso
+
+- **Fase 6 — Financeiro (NF + Pagamentos)** iniciada: 6.1 (Shared Schemas — schemas Zod de contrato
+  de API para notas fiscais e pagamentos em `packages/shared`) concluída. Próximo: **6.2** (Invoices
+  Module API).
 
 - **Fase 5 — Recebimento e Estoque** concluída: 5.1 (Shared Schemas), 5.2 (Warehouses Module API),
   5.3 (Receipts Module API — recebimento de mercadoria + movimentações de estoque com upsert em
@@ -910,7 +940,7 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
   create/edit, desativação e visualização de inventário com alerta de estoque mínimo), 5.6 (Receipts
   UI — formulário de recebimento em rota dedicada a partir do detalhe do PO, listagem e detalhe de
   recebimentos) e 5.7 (Non-Conformities UI — listagem com filtros, detalhe com transições de status
-  e comentários, card de NCs no detalhe do PO) concluídas. Próximo: **Fase 6**.
+  e comentários, card de NCs no detalhe do PO) concluídas.
 
 ---
 
