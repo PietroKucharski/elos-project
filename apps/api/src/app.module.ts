@@ -8,6 +8,7 @@ import { AuthModule } from './modules/auth/auth.module'
 import { BidsModule } from './modules/bids/bids.module'
 import { CompaniesModule } from './modules/companies/companies.module'
 import { HealthModule } from './modules/health/health.module'
+import { InvoicesModule } from './modules/invoices/invoices.module'
 import { MembersModule } from './modules/members/members.module'
 import { NonConformitiesModule } from './modules/non-conformities/non-conformities.module'
 import { ProductsModule } from './modules/products/products.module'
@@ -39,6 +40,7 @@ import { WarehousesModule } from './modules/warehouses/warehouses.module'
     WarehousesModule,
     ReceiptsModule,
     NonConformitiesModule,
+    InvoicesModule,
     // Fases 1–7: módulos de domínio adicionados aqui
   ],
   providers: [

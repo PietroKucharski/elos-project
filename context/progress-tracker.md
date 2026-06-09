@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 6 — Financeiro (NF + Pagamentos)** · `Em progresso` (6.1 concluída) → próxima unidade: **6.2**
+**Fase 6 — Financeiro (NF + Pagamentos)** · `Em progresso` (6.1 e 6.2 concluídas) → próxima unidade: **6.3**
 
 > **Fase 5 — Recebimento e Estoque:** concluída (5.1, 5.2, 5.3, 5.4, 5.5, 5.6 e 5.7).
 
@@ -925,13 +925,44 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     colunas da spec; import `{ PaymentMethod, PaymentStatus }` reordenado) — padrão do projeto, espelha os
     demais schema files
 
+- [x] **6.2 — Invoices Module (API)** — spec `32-invoices-api-spec.md`
+  - Commit convencional esperado: `feat(api): add invoices module with crud, validation and file upload`
+  - `apps/api/src/modules/invoices/`: `invoices.module.ts` (importa `AbilityModule`, exporta
+    `InvoicesService`), `invoices.controller.ts` (`@Controller('companies/:cnpj/invoices')`: GET/POST
+    lista+criação, GET/PATCH `:id`, POST `:id/validate` e `:id/reject`, sub-recurso de itens
+    `:id/items` POST + `:id/items/:itemId` DELETE, e `:id/upload`; Swagger + `ZodValidationPipe` por rota),
+    `invoices.service.ts` (findAll com filtros `status`/`supplierId`/`purchaseOrderId`/`search`/paginação,
+    findOne com itens e `validatedByName`, create validando PO em `SENT`/`RECEIVED` + fornecedor `APPROVED`
+    com itens opcionais na mesma transação, update só em `PENDING`, validate `PENDING→VALIDATED`, reject
+    `PENDING→REJECTED` com `rejectionReason`, addItem/removeItem só em `PENDING`, uploadFile grava `fileUrl`;
+    CASL antes de cada mutação e audit log em create/update/validate/reject/addItem/removeItem),
+    `invoices.service.spec.ts` (17 testes) e `invoices.controller.spec.ts` (7 testes) — **232 testes da API no total**
+  - `ability.factory.ts` — subject `Invoice` tagueado (`& ForcedSubject<'Invoice'>`) para suportar
+    `subject('Invoice', row)` no update/validate/reject; regras `Invoice` escopadas a `{ companyId }`:
+    ADMIN_EMPRESA e ANALISTA_FINANCEIRO `manage`, COMPRADOR/ALMOXARIFE/TRANSPORTADOR `read`
+  - `db/schema/invoices.ts` — `uniqueIndex('invoices_company_id_number_unique')` em `(companyId, number)`
+    (número fiscal externo, único por empresa); migration `0006_invoices_number_company_unique.sql`
+    (`CREATE UNIQUE INDEX`) + entrada no `_journal.json` e `0006_snapshot.json` derivado do 0005
+  - `app.module.ts` — `InvoicesModule` importado
+  - **Verificado:** `vitest run` da API (232/232, ≥230 esperados), `pnpm type-check` (3 workspaces) e
+    `biome check` dos arquivos novos/modificados verdes (só warnings `noNonNullAssertion` de `companyId!`,
+    severidade `warn`, padrão do projeto). Checklist de segurança coberto: 403 sem permissão (COMPRADOR só
+    lê — `cannot('create','Invoice')`), 404 PO/fornecedor/NF não encontrados, 400 PO fora de SENT/RECEIVED,
+    400 fornecedor não APPROVED, 400 em transições/edições fora de PENDING, queries escopadas a `companyId`,
+    audit log nas mutações. Banco vivo (`db:migrate`) não executado — sem Supabase neste ambiente
+  - **Ajustes vs. spec:** import `inArray`/`ConflictException` não usados removidos do service (evita
+    `noUnusedImports`); `validate(id, _dto, user)` — o param `dto` (notas) não é persistido na v1, prefixado
+    `_`; `addItem` com guard `if (!item)` antes do audit log (evita `!` em `item!.id`); upload via URL no body
+    (`@Body('fileUrl')`), não multipart — o front faz upload direto ao Supabase Storage via signed URL
+
 ---
 
 ## Em Progresso
 
-- **Fase 6 — Financeiro (NF + Pagamentos)** iniciada: 6.1 (Shared Schemas — schemas Zod de contrato
-  de API para notas fiscais e pagamentos em `packages/shared`) concluída. Próximo: **6.2** (Invoices
-  Module API).
+- **Fase 6 — Financeiro (NF + Pagamentos)** em progresso: 6.1 (Shared Schemas — schemas Zod de contrato
+  de API para notas fiscais e pagamentos em `packages/shared`) e 6.2 (Invoices Module API — CRUD,
+  validação/rejeição com fluxo `PENDING→VALIDATED|REJECTED`, sub-recurso de itens e upload de arquivo)
+  concluídas. Próximo: **6.3** (Payments Module API).
 
 - **Fase 5 — Recebimento e Estoque** concluída: 5.1 (Shared Schemas), 5.2 (Warehouses Module API),
   5.3 (Receipts Module API — recebimento de mercadoria + movimentações de estoque com upsert em
@@ -1054,8 +1085,8 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | 2    | Fornecedores e Produtos         | Concluída     |
 | 3    | Cotações e Lances               | Concluída     |
 | 4    | Pedidos de Compra               | Concluída     |
-| 5    | Recebimento e Estoque           | Em andamento  |
-| 6    | Financeiro (NF + Pagamentos)    | Não iniciada  |
+| 5    | Recebimento e Estoque           | Concluída     |
+| 6    | Financeiro (NF + Pagamentos)    | Em andamento  |
 | 7    | Audit Log e Administração       | Não iniciada  |
 
 ---
