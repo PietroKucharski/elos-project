@@ -58,6 +58,10 @@ export const rejectInvoiceSchema = z.object({
   rejectionReason: z.string().min(5).max(2000),
 })
 
+export const uploadInvoiceFileSchema = z.object({
+  fileUrl: z.string().url(),
+})
+
 export const invoiceResponseSchema = z.object({
   id: z.string().uuid(),
   companyId: z.string().uuid(),
@@ -85,6 +89,7 @@ export type CreateInvoiceDto = z.infer<typeof createInvoiceSchema>
 export type UpdateInvoiceDto = z.infer<typeof updateInvoiceSchema>
 export type ValidateInvoiceDto = z.infer<typeof validateInvoiceSchema>
 export type RejectInvoiceDto = z.infer<typeof rejectInvoiceSchema>
+export type UploadInvoiceFileDto = z.infer<typeof uploadInvoiceFileSchema>
 export type CreateInvoiceItemDto = z.infer<typeof createInvoiceItemSchema>
 export type InvoiceResponse = z.infer<typeof invoiceResponseSchema>
 export type InvoiceItemResponse = z.infer<typeof invoiceItemResponseSchema>

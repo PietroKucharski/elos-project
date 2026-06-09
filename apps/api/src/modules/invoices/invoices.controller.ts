@@ -3,11 +3,13 @@ import {
   type CreateInvoiceItemDto,
   type RejectInvoiceDto,
   type UpdateInvoiceDto,
+  type UploadInvoiceFileDto,
   type ValidateInvoiceDto,
   createInvoiceItemSchema,
   createInvoiceSchema,
   rejectInvoiceSchema,
   updateInvoiceSchema,
+  uploadInvoiceFileSchema,
   validateInvoiceSchema,
 } from '@elos/shared'
 import {
@@ -135,11 +137,12 @@ export class InvoicesController {
   @Post(':id/upload')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Upload de arquivo PDF da NF' })
+  @ApiResponse({ status: 400, description: 'fileUrl ausente ou inválido.' })
   uploadFile(
     @Param('id') id: string,
-    @Body('fileUrl') fileUrl: string,
+    @Body(new ZodValidationPipe(uploadInvoiceFileSchema)) body: UploadInvoiceFileDto,
     @CurrentUser() user: SessionUser,
   ) {
-    return this.invoicesService.uploadFile(id, fileUrl, user)
+    return this.invoicesService.uploadFile(id, body.fileUrl, user)
   }
 }
