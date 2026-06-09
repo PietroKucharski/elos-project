@@ -11,6 +11,7 @@ import { HealthModule } from './modules/health/health.module'
 import { InvoicesModule } from './modules/invoices/invoices.module'
 import { MembersModule } from './modules/members/members.module'
 import { NonConformitiesModule } from './modules/non-conformities/non-conformities.module'
+import { PaymentsModule } from './modules/payments/payments.module'
 import { ProductsModule } from './modules/products/products.module'
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module'
 import { QuotationsModule } from './modules/quotations/quotations.module'
@@ -41,6 +42,7 @@ import { WarehousesModule } from './modules/warehouses/warehouses.module'
     ReceiptsModule,
     NonConformitiesModule,
     InvoicesModule,
+    PaymentsModule,
     // Fases 1–7: módulos de domínio adicionados aqui
   ],
   providers: [
