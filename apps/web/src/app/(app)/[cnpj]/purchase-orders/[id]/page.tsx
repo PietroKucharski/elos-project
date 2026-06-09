@@ -1,9 +1,15 @@
 // apps/web/src/app/(app)/[cnpj]/purchase-orders/[id]/page.tsx
+import { NcStatusBadge } from '@/components/domain/nc-status-badge'
 import { PurchaseOrderActions } from '@/components/domain/purchase-order-actions'
 import { PurchaseOrderStatusBadge } from '@/components/domain/purchase-order-status-badge'
 import { PurchaseOrderStepper } from '@/components/domain/purchase-order-stepper'
 import { Button } from '@/components/ui/button'
-import { getMyCompaniesServer, getPurchaseOrderServer, getReceiptsServer } from '@/lib/api'
+import {
+  getMyCompaniesServer,
+  getNonConformitiesServer,
+  getPurchaseOrderServer,
+  getReceiptsServer,
+} from '@/lib/api'
 import { ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -28,10 +34,11 @@ function date(value: string | null) {
 export default async function PurchaseOrderDetailPage({ params }: Props) {
   const { cnpj, id } = await params
 
-  const [po, myCompanies, receipts] = await Promise.all([
+  const [po, myCompanies, receipts, ncs] = await Promise.all([
     getPurchaseOrderServer(cnpj, id),
     getMyCompaniesServer(),
     getReceiptsServer(cnpj, { purchaseOrderId: id }),
+    getNonConformitiesServer(cnpj, { purchaseOrderId: id }),
   ])
 
   if (!po) notFound()
@@ -233,6 +240,46 @@ export default async function PurchaseOrderDetailPage({ params }: Props) {
           )}
         </div>
       )}
+
+      {/* Não-Conformidades */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Não-Conformidades</h2>
+          {canMutate && (
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/${cnpj}/non-conformities/new?purchaseOrderId=${po.id}`}>Abrir NC</Link>
+            </Button>
+          )}
+        </div>
+        {ncs.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma não-conformidade registrada para este pedido.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {ncs.map((nc) => (
+              <div
+                key={nc.id}
+                className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/30"
+              >
+                <div className="flex items-center gap-3">
+                  <NcStatusBadge status={nc.status} />
+                  <span className="text-sm">
+                    {nc.description.slice(0, 80)}
+                    {nc.description.length > 80 ? '…' : ''}
+                  </span>
+                </div>
+                <Link
+                  href={`/${cnpj}/non-conformities/${nc.id}`}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Ver →
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
