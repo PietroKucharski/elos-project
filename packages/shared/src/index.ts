@@ -2,8 +2,10 @@
 // Schemas Zod e tipos TypeScript compartilhados entre apps/api e apps/web
 
 // Schemas
+export * from './schemas/audit-log'
 export * from './schemas/bid'
 export * from './schemas/company'
+export * from './schemas/dashboard'
 export * from './schemas/invoice'
 export * from './schemas/member'
 export * from './schemas/non-conformity'

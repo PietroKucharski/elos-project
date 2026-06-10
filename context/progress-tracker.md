@@ -6,7 +6,9 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 6 — Financeiro (NF + Pagamentos)** · `Concluída` (6.1, 6.2, 6.3, 6.4 e 6.5 concluídas) → fase financeira encerrada
+**Fase 7 — Audit Log e Administração** · `Em andamento` (7.1 concluída) → próxima unidade: **7.2 — Audit Log Module (API)**
+
+> **Fase 6 — Financeiro (NF + Pagamentos):** concluída (6.1, 6.2, 6.3, 6.4 e 6.5) → fase financeira encerrada.
 
 > **Fase 5 — Recebimento e Estoque:** concluída (5.1, 5.2, 5.3, 5.4, 5.5, 5.6 e 5.7).
 
@@ -1071,9 +1073,41 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     por serem dinâmicas (adicionar/remover); (d) status visual de parcela `OVERDUE` derivado no cliente
     (`dueDate < now && PENDING`), já que o job de atualização de parcelas OVERDUE está fora do escopo v1
 
+- [x] **7.1 — Shared Schemas: Audit Log** — spec `36-shared-schemas-audit-log-spec.md`
+  - Commit convencional esperado: `feat(shared): add audit log zod schemas`
+  - `packages/shared/src/schemas/audit-log.ts` — audit log **read-only** (sem schema de criação; os
+    inserts são feitos internamente pelos Services): `auditLogQuerySchema` (filtros `entity`/`entityId`/
+    `action`/`userId`/`startDate`/`endDate` todos opcionais + `page`/`limit` com `z.coerce` e defaults
+    1/50, `limit` máx. 100), `auditLogResponseSchema` (`before`/`after` como `z.record(...).nullable()`,
+    campos de usuário/empresa nullable), arrays const `auditLogEntities` (21 entidades) e `auditLogActions`
+    (18 ações) para alimentar dropdowns de filtro no frontend sem hardcoding + tipos `AuditLogQuery`/
+    `AuditLogResponse` via `z.infer`
+  - `packages/shared/src/schemas/dashboard.ts` — DTOs de KPIs (contrato backend→frontend):
+    `dashboardKpisSchema` (cotações, pedidos, financeiro com `totalPayable`/`totalPaid` como `string` =
+    numeric do postgres.js, estoque, NCs, fornecedores), `dashboardRecentActivitySchema` (com `summary`
+    montado pelo backend) e `dashboardResponseSchema` (`kpis` + `recentActivity[]`) + tipos
+    `DashboardKpis`/`DashboardRecentActivity`/`DashboardResponse` via `z.infer`
+  - Barrel `packages/shared/src/index.ts` re-exporta `./schemas/audit-log` e `./schemas/dashboard`
+    (em ordem alfabética: `audit-log` antes de `bid`, `dashboard` entre `company` e `invoice`)
+  - **Verificado:** `pnpm --filter @elos/shared build` (`tsc --noEmit`) e `pnpm type-check` (4 tasks,
+    3 workspaces) verdes; `biome check` dos 3 arquivos novos/modificados limpo; 5 `safeParse` da spec
+    confirmados via tsx: query vazia passa com defaults `{page:1,limit:50}`, `limit>100` falha,
+    `before`/`after` como objeto passa, `dashboardKpis` com todos os campos numéricos/string passa,
+    `auditLogEntities` tem 21 entidades. `pnpm lint` na raiz do pacote reporta apenas ruído CRLF
+    pré-existente em `stock-movement.ts` (arquivo não tocado, commitado com CRLF; normalizado pelo
+    `--write` do pre-commit / Linux no CI)
+  - **Ajustes vs. spec (Zod 4):** `z.record(z.unknown())` → `z.record(z.string(), z.unknown())` — o Zod 4
+    exige tipo de chave explícito (mesmo padrão de `bid.ts`); a spec usava a forma de arg único do Zod 3,
+    que quebra o `type-check`. Colunas alinhadas e arrays inline da spec colapsados pelo formatter do Biome
+    (sem alinhamento de `:`, um item por linha nos arrays const)
+
 ---
 
 ## Em Progresso
+
+- **Fase 7 — Audit Log e Administração** iniciada: 7.1 (Shared Schemas — schemas Zod de contrato de
+  API para o domínio de audit log e os DTOs de KPIs do dashboard em `packages/shared`) concluída.
+  Próxima unidade: **7.2 — Audit Log Module (API)**.
 
 - **Fase 6 — Financeiro (NF + Pagamentos)** concluída: 6.1 (Shared Schemas — schemas Zod de contrato
   de API para notas fiscais e pagamentos em `packages/shared`), 6.2 (Invoices Module API — CRUD,
