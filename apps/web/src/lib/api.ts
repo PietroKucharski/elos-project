@@ -12,6 +12,7 @@ import type {
   CreateInvoiceDto,
   CreateInvoiceItemDto,
   CreateNonConformityDto,
+  CreatePaymentDto,
   CreateProductDto,
   CreatePurchaseOrderDto,
   CreateQuotationDto,
@@ -21,6 +22,7 @@ import type {
   CreateSupplierContactDto,
   CreateSupplierDto,
   CreateWarehouseDto,
+  InstallmentResponse,
   InventoryResponse,
   InviteMemberDto,
   InviteSupplierToQuotationDto,
@@ -31,6 +33,8 @@ import type {
   MyCompany,
   NcCommentResponse,
   NonConformityResponse,
+  PayInstallmentDto,
+  PaymentResponse,
   ProductResponse,
   ProductSupplierResponse,
   PurchaseOrderItemResponse,
@@ -51,6 +55,7 @@ import type {
   UpdateInvoiceDto,
   UpdateMemberRoleDto,
   UpdateNonConformityDto,
+  UpdatePaymentDto,
   UpdateProductDto,
   UpdateProductSupplierDto,
   UpdateQuotationDto,
@@ -1038,4 +1043,85 @@ export async function addInvoiceItem(
 
 export async function removeInvoiceItem(cnpj: string, id: string, itemId: string): Promise<void> {
   await (await client()).delete(`v1/companies/${cnpj}/invoices/${id}/items/${itemId}`)
+}
+
+// ── Pagamentos / Payments (server-side) ─────────────────────────────────────
+// O detalhe (findOne) traz as parcelas junto; tipamos esse shape aqui pois
+// `paymentResponseSchema` em @elos/shared marca `installments` como opcional.
+
+export type PaymentWithInstallments = PaymentResponse & { installments: InstallmentResponse[] }
+
+export async function getPaymentsServer(
+  cnpj: string,
+  params?: {
+    status?: string
+    method?: string
+    invoiceId?: string
+    search?: string
+    page?: string
+    limit?: string
+  },
+): Promise<PaymentResponse[]> {
+  const qs = params ? `?${new URLSearchParams(params as Record<string, string>).toString()}` : ''
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/payments${qs}`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (res.ok) return res.json() as Promise<PaymentResponse[]>
+  // 404 (empresa/rota inexistente) é o único "vazio" esperado; 403/500/auth
+  // devem propagar para o error boundary da rota.
+  if (res.status === 404) return []
+  throw new Error(`getPaymentsServer falhou (${res.status}): ${await res.text()}`)
+}
+
+export async function getPaymentServer(
+  cnpj: string,
+  id: string,
+): Promise<PaymentWithInstallments | null> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/payments/${id}`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (res.ok) return res.json() as Promise<PaymentWithInstallments>
+  // 404 (pagamento inexistente) → null para o caller chamar notFound(); demais falhas propagam.
+  if (res.status === 404) return null
+  throw new Error(`getPaymentServer falhou (${res.status}): ${await res.text()}`)
+}
+
+// ── Pagamentos / Payments (client-side) ─────────────────────────────────────
+
+export async function createPayment(
+  cnpj: string,
+  data: CreatePaymentDto,
+): Promise<PaymentResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/payments`, { json: data })
+    .json<PaymentResponse>()
+}
+
+export async function updatePayment(
+  cnpj: string,
+  id: string,
+  data: UpdatePaymentDto,
+): Promise<PaymentResponse> {
+  return (await client())
+    .patch(`v1/companies/${cnpj}/payments/${id}`, { json: data })
+    .json<PaymentResponse>()
+}
+
+export async function cancelPayment(cnpj: string, id: string): Promise<PaymentResponse> {
+  return (await client()).post(`v1/companies/${cnpj}/payments/${id}/cancel`).json<PaymentResponse>()
+}
+
+export async function payInstallment(
+  cnpj: string,
+  paymentId: string,
+  installmentId: string,
+  data: PayInstallmentDto,
+): Promise<InstallmentResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/payments/${paymentId}/installments/${installmentId}/pay`, {
+      json: data,
+    })
+    .json<InstallmentResponse>()
 }
