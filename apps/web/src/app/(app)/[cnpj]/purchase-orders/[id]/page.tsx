@@ -1,10 +1,12 @@
 // apps/web/src/app/(app)/[cnpj]/purchase-orders/[id]/page.tsx
+import { InvoiceStatusBadge } from '@/components/domain/invoice-status-badge'
 import { NcStatusBadge } from '@/components/domain/nc-status-badge'
 import { PurchaseOrderActions } from '@/components/domain/purchase-order-actions'
 import { PurchaseOrderStatusBadge } from '@/components/domain/purchase-order-status-badge'
 import { PurchaseOrderStepper } from '@/components/domain/purchase-order-stepper'
 import { Button } from '@/components/ui/button'
 import {
+  getInvoicesServer,
   getMyCompaniesServer,
   getNonConformitiesServer,
   getPurchaseOrderServer,
@@ -15,6 +17,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 const MUTATE_ROLES = ['COMPRADOR', 'ADMIN_EMPRESA', 'SUPER_ADMIN']
+const INVOICE_ROLES = ['SUPER_ADMIN', 'ADMIN_EMPRESA', 'ANALISTA_FINANCEIRO']
 
 const TH =
   'border-b border-border px-3 pb-2.5 text-left text-[11.5px] font-semibold tracking-[0.04em] text-muted-foreground uppercase'
@@ -34,17 +37,19 @@ function date(value: string | null) {
 export default async function PurchaseOrderDetailPage({ params }: Props) {
   const { cnpj, id } = await params
 
-  const [po, myCompanies, receipts, ncs] = await Promise.all([
+  const [po, myCompanies, receipts, ncs, invoices] = await Promise.all([
     getPurchaseOrderServer(cnpj, id),
     getMyCompaniesServer(),
     getReceiptsServer(cnpj, { purchaseOrderId: id }),
     getNonConformitiesServer(cnpj, { purchaseOrderId: id }),
+    getInvoicesServer(cnpj, { purchaseOrderId: id }),
   ])
 
   if (!po) notFound()
 
   const role = myCompanies.find((c) => c.cnpj === cnpj)?.role ?? ''
   const canMutate = MUTATE_ROLES.includes(role)
+  const canRegisterInvoice = INVOICE_ROLES.includes(role)
   const items = po.items ?? []
 
   return (
@@ -236,6 +241,51 @@ export default async function PurchaseOrderDetailPage({ params }: Props) {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Notas Fiscais */}
+      {(po.status === 'SENT' || po.status === 'RECEIVED') && (
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Notas Fiscais</h2>
+            {canRegisterInvoice && (
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/${cnpj}/invoices/new?purchaseOrderId=${po.id}`}>Registrar NF</Link>
+              </Button>
+            )}
+          </div>
+          {invoices.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma nota fiscal vinculada a este pedido.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {invoices.map((inv) => (
+                <div
+                  key={inv.id}
+                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/30"
+                >
+                  <div className="flex items-center gap-3">
+                    <InvoiceStatusBadge status={inv.status} />
+                    <span className="font-mono text-[13px] font-medium">NF {inv.number}</span>
+                    <span className="font-mono-nums text-sm text-muted-foreground">
+                      {Number(inv.totalAmount).toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                      })}
+                    </span>
+                  </div>
+                  <Link
+                    href={`/${cnpj}/invoices/${inv.id}`}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Ver →
+                  </Link>
+                </div>
+              ))}
             </div>
           )}
         </div>
