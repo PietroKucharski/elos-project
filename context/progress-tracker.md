@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 6 — Financeiro (NF + Pagamentos)** · `Em progresso` (6.1, 6.2 e 6.3 concluídas) → próxima unidade: **6.4**
+**Fase 6 — Financeiro (NF + Pagamentos)** · `Em progresso` (6.1, 6.2, 6.3 e 6.4 concluídas) → próxima unidade: **6.5**
 
 > **Fase 5 — Recebimento e Estoque:** concluída (5.1, 5.2, 5.3, 5.4, 5.5, 5.6 e 5.7).
 
@@ -984,16 +984,62 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     idênticos à spec. Sem migration nesta unidade — as tabelas `payments`/`payment_installments` já
     existiam no schema Drizzle (`db/schema/payments.ts`) desde a 0.3
 
+- [x] **6.4 — Invoices UI (Frontend)** — spec `34-invoices-ui-spec.md`
+  - Commit convencional esperado: `feat(web): add invoices ui with list, form, detail and validation`
+  - `lib/api.ts` estendido: 2 funções server-side (`getInvoicesServer` com query `status`/`supplierId`/
+    `purchaseOrderId`/`search`/`page`/`limit` — 404 → `[]`, demais falhas propagam; `getInvoiceServer`
+    — 404 → `null` para `notFound()`) + 6 client-side (`createInvoice`/`updateInvoice`/`validateInvoice`/
+    `rejectInvoice`/`addInvoiceItem`/`removeInvoiceItem`), no padrão `sessionHeaders()` (server) e
+    `client()` ky (client); imports de tipos de `@elos/shared`
+  - `components/domain/`: `invoice-status-badge.tsx` (PENDING→muted, VALIDATED→success, REJECTED→destructive),
+    `invoice-form.tsx` (Client Component: selects de PO SENT/RECEIVED e fornecedor APPROVED, número,
+    `datetime-local` de emissão, valor total + impostos, URL de arquivo opcional; pré-seleciona PO via
+    `?purchaseOrderId`; redirect ao detalhe após criar), `invoices-list-client.tsx` (Client Component:
+    tabs de status Todas/Pendentes/Validadas/Rejeitadas + busca por número client-side + tabela com
+    kebab menu hand-rolled — Ver sempre, Validar/Rejeitar só em PENDING e só se `canMutate`, com
+    `AlertDialog` de confirmação/motivo), `invoice-items-panel.tsx` (Client Component: tabela de itens
+    com form inline de adição e remoção só em PENDING, totalização no rodapé e comparação visual
+    Valor NF × Valor PO × Diferença) e `invoice-actions.tsx` (Client Component: Validar com `AlertDialog`
+    de confirmação e Rejeitar com `AlertDialog` + textarea de motivo min 5 chars, só visível se `canMutate`
+    e status PENDING)
+  - Rotas `(app)/[cnpj]/invoices/`: `page.tsx` (SSR lista via Client Component + botão "Registrar NF" se
+    `canMutate`), `loading.tsx` (skeleton), `error.tsx` (boundary com `console.error`), `new/page.tsx`
+    (SSR carrega POs SENT/RECEIVED + fornecedores APPROVED e passa ao form, lê `?purchaseOrderId`),
+    `[id]/page.tsx` (SSR detalhe + itens + ações; carrega o PO vinculado para o `poTotal` da comparação),
+    `[id]/loading.tsx` e `[id]/error.tsx`
+  - `purchase-orders/[id]/page.tsx` — card "Notas Fiscais" adicionado após o painel de recebimentos
+    (só em PO `SENT`/`RECEIVED`): lista NFs vinculadas via `getInvoicesServer({ purchaseOrderId })`, link
+    "Registrar NF" com `?purchaseOrderId=` e cada NF com número, valor e status badge. Sidebar (1.4) já
+    tinha o item "Notas Fiscais" no grupo Financeiro — nenhuma mudança necessária
+  - **Verificado:** `pnpm --filter web type-check` (3 workspaces) verde; `biome check` dos arquivos
+    novos/modificados limpo (só o warning `noNonNullAssertion` pré-existente em `API_URL`, severidade
+    `warn`, padrão do projeto); `pnpm --filter web build` **compila + checa tipos + gera as rotas de
+    invoices** (✓ Compiled successfully, ✓ 9/9 static pages). Passo `output: 'standalone'` falha por
+    `EPERM` de symlink no Windows (mesma limitação de 0.5/1.4/1.5/2.4/2.5). Fluxo runtime (criar NF,
+    validar/rejeitar, adicionar/remover itens, comparação de valores, card no detalhe do PO) não
+    exercitado — requer API + banco vivos
+  - **Ajustes vs. spec:** (a) selects de PO/fornecedor do `invoice-form` carregados **server-side** no
+    `new/page.tsx` e passados como props (padrão de `non-conformity-form`), em vez de fetch client-side —
+    a seção "API Functions em lib/api.ts" da spec enumera apenas funções de invoice, sem fetchers
+    client-side de PO/fornecedor; o form permanece Client Component; (b) kebab menu da listagem
+    implementado hand-rolled (botão + menu posicionado + overlay de clique-fora), pois não há primitivo
+    `dropdown-menu` em `components/ui` e a invariante proíbe escrever primitivos shadcn à mão; (c) link
+    "Registrar NF" no detalhe do PO gateado por papéis de mutação de NF (SUPER_ADMIN/ADMIN_EMPRESA/
+    ANALISTA_FINANCEIRO) em vez do `canMutate` de PO (COMPRADOR/ADMIN/SUPER) — evita exibir uma ação que
+    resultaria em 403, já que COMPRADOR não pode criar NF
+
 ---
 
 ## Em Progresso
 
 - **Fase 6 — Financeiro (NF + Pagamentos)** em progresso: 6.1 (Shared Schemas — schemas Zod de contrato
   de API para notas fiscais e pagamentos em `packages/shared`), 6.2 (Invoices Module API — CRUD,
-  validação/rejeição com fluxo `PENDING→VALIDATED|REJECTED`, sub-recurso de itens e upload de arquivo) e
+  validação/rejeição com fluxo `PENDING→VALIDATED|REJECTED`, sub-recurso de itens e upload de arquivo),
   6.3 (Payments Module API — pagamentos vinculados a NF `VALIDATED` com parcelas, fluxo
-  `PENDING→PAID|CANCELLED`, pagamento de parcela com auto-conclusão e conciliação por NF) concluídas.
-  Próximo: **6.4** (próxima unidade da fase financeira).
+  `PENDING→PAID|CANCELLED`, pagamento de parcela com auto-conclusão e conciliação por NF) e 6.4 (Invoices
+  UI — listagem com tabs de status e busca, form de criação vinculado a PO, detalhe com itens e comparação
+  de valores NF × PO, ações de validação/rejeição e card de NFs no detalhe do PO) concluídas.
+  Próximo: **6.5** (Payments UI — próxima e última unidade da fase financeira).
 
 - **Fase 5 — Recebimento e Estoque** concluída: 5.1 (Shared Schemas), 5.2 (Warehouses Module API),
   5.3 (Receipts Module API — recebimento de mercadoria + movimentações de estoque com upsert em

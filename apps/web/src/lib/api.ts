@@ -9,6 +9,8 @@ import type {
   CreateBidDto,
   CreateBidItemDto,
   CreateCompanyDto,
+  CreateInvoiceDto,
+  CreateInvoiceItemDto,
   CreateNonConformityDto,
   CreateProductDto,
   CreatePurchaseOrderDto,
@@ -22,6 +24,8 @@ import type {
   InventoryResponse,
   InviteMemberDto,
   InviteSupplierToQuotationDto,
+  InvoiceItemResponse,
+  InvoiceResponse,
   LinkProductSupplierDto,
   MemberResponse,
   MyCompany,
@@ -35,6 +39,7 @@ import type {
   QuotationResponse,
   QuotationSupplierResponse,
   ReceiptResponse,
+  RejectInvoiceDto,
   RejectNcDto,
   RejectSupplierDto,
   ResolveNcDto,
@@ -43,6 +48,7 @@ import type {
   SupplierContactResponse,
   SupplierResponse,
   UpdateCompanyDto,
+  UpdateInvoiceDto,
   UpdateMemberRoleDto,
   UpdateNonConformityDto,
   UpdateProductDto,
@@ -53,6 +59,7 @@ import type {
   UpdateSupplierContactDto,
   UpdateSupplierDto,
   UpdateWarehouseDto,
+  ValidateInvoiceDto,
   WarehouseResponse,
 } from '@elos/shared'
 
@@ -940,4 +947,95 @@ export async function addNcComment(
   return (await client())
     .post(`v1/companies/${cnpj}/non-conformities/${id}/comments`, { json: data })
     .json<NcCommentResponse>()
+}
+
+// ── Notas Fiscais / Invoices (server-side) ──────────────────────────────────
+
+export async function getInvoicesServer(
+  cnpj: string,
+  params?: {
+    status?: string
+    supplierId?: string
+    purchaseOrderId?: string
+    search?: string
+    page?: string
+    limit?: string
+  },
+): Promise<InvoiceResponse[]> {
+  const qs = params ? `?${new URLSearchParams(params as Record<string, string>).toString()}` : ''
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/invoices${qs}`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (res.ok) return res.json() as Promise<InvoiceResponse[]>
+  // 404 (empresa/rota inexistente) é o único "vazio" esperado; 403/500/auth
+  // devem propagar para o error boundary da rota.
+  if (res.status === 404) return []
+  throw new Error(`getInvoicesServer falhou (${res.status}): ${await res.text()}`)
+}
+
+export async function getInvoiceServer(cnpj: string, id: string): Promise<InvoiceResponse | null> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/invoices/${id}`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (res.ok) return res.json() as Promise<InvoiceResponse>
+  // 404 (NF inexistente) → null para o caller chamar notFound(); demais falhas propagam.
+  if (res.status === 404) return null
+  throw new Error(`getInvoiceServer falhou (${res.status}): ${await res.text()}`)
+}
+
+// ── Notas Fiscais / Invoices (client-side) ──────────────────────────────────
+
+export async function createInvoice(
+  cnpj: string,
+  data: CreateInvoiceDto,
+): Promise<InvoiceResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/invoices`, { json: data })
+    .json<InvoiceResponse>()
+}
+
+export async function updateInvoice(
+  cnpj: string,
+  id: string,
+  data: UpdateInvoiceDto,
+): Promise<InvoiceResponse> {
+  return (await client())
+    .patch(`v1/companies/${cnpj}/invoices/${id}`, { json: data })
+    .json<InvoiceResponse>()
+}
+
+export async function validateInvoice(
+  cnpj: string,
+  id: string,
+  data: ValidateInvoiceDto,
+): Promise<InvoiceResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/invoices/${id}/validate`, { json: data })
+    .json<InvoiceResponse>()
+}
+
+export async function rejectInvoice(
+  cnpj: string,
+  id: string,
+  data: RejectInvoiceDto,
+): Promise<InvoiceResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/invoices/${id}/reject`, { json: data })
+    .json<InvoiceResponse>()
+}
+
+export async function addInvoiceItem(
+  cnpj: string,
+  id: string,
+  data: CreateInvoiceItemDto,
+): Promise<InvoiceItemResponse> {
+  return (await client())
+    .post(`v1/companies/${cnpj}/invoices/${id}/items`, { json: data })
+    .json<InvoiceItemResponse>()
+}
+
+export async function removeInvoiceItem(cnpj: string, id: string, itemId: string): Promise<void> {
+  await (await client()).delete(`v1/companies/${cnpj}/invoices/${id}/items/${itemId}`)
 }
