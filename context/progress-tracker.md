@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 6 — Financeiro (NF + Pagamentos)** · `Em progresso` (6.1, 6.2, 6.3 e 6.4 concluídas) → próxima unidade: **6.5**
+**Fase 6 — Financeiro (NF + Pagamentos)** · `Concluída` (6.1, 6.2, 6.3, 6.4 e 6.5 concluídas) → fase financeira encerrada
 
 > **Fase 5 — Recebimento e Estoque:** concluída (5.1, 5.2, 5.3, 5.4, 5.5, 5.6 e 5.7).
 
@@ -1028,18 +1028,63 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     ANALISTA_FINANCEIRO) em vez do `canMutate` de PO (COMPRADOR/ADMIN/SUPER) — evita exibir uma ação que
     resultaria em 403, já que COMPRADOR não pode criar NF
 
+- [x] **6.5 — Payments UI (Frontend)** — spec `35-payments-ui-spec.md`
+  - Commit convencional esperado: `feat(web): add payments ui with list, detail, installments and reconciliation`
+  - `lib/api.ts` estendido: 2 funções server-side (`getPaymentsServer` com query
+    `status`/`method`/`invoiceId`/`search`/`page`/`limit` — 404 → `[]`, demais falhas propagam;
+    `getPaymentServer` — 404 → `null` para `notFound()`, retorna `PaymentWithInstallments`) + 4 client-side
+    (`createPayment`/`updatePayment`/`cancelPayment`/`payInstallment`), no padrão `sessionHeaders()` (server)
+    e `client()` ky (client); tipo exportado `PaymentWithInstallments = PaymentResponse & { installments[] }`;
+    imports de tipos de `@elos/shared` (`CreatePaymentDto`/`UpdatePaymentDto`/`PayInstallmentDto`/
+    `PaymentResponse`/`InstallmentResponse`)
+  - `components/domain/`: `payment-status-badge.tsx` (PENDING→muted, PAID→success, CANCELLED→destructive),
+    `payment-method-badge.tsx` (BOLETO/TRANSFER/CHECK→outline, PIX→info), `create-payment-dialog.tsx`
+    (Client Component **autocontido** — renderiza o próprio botão "Registrar Pagamento" + `Sheet` com estado
+    interno: valor total default = valor da NF, select de método, notas, seção de parcelas dinâmica com
+    "Adicionar parcela"/remover, default 1 parcela com vencimento hoje+30d, validação soma ≥ total, redirect
+    ao detalhe após criar), `payments-list-client.tsx` (Client Component: tabs de status
+    Todos/Pendentes/Pagos/Cancelados + filtro de método + busca por número da NF client-side + tabela com
+    kebab menu hand-rolled — Ver sempre, Cancelar só em PENDING e só se `canMutate`, com `AlertDialog`),
+    `installments-panel.tsx` (Client Component: tabela de parcelas com destaque vermelho para vencidas
+    (`dueDate < now && PENDING`), botão "Pagar" por parcela via `AlertDialog`, barra de progresso
+    pagas/total e banner "Pagamento concluído" quando status PAID/todas pagas) e `payment-actions.tsx`
+    (Client Component: "Cancelar Pagamento" com `AlertDialog`, só visível em PENDING + `canMutate`)
+  - Rotas `(app)/[cnpj]/payments/`: `page.tsx` (SSR lista via Client Component), `loading.tsx` (skeleton),
+    `error.tsx` (boundary com `console.error`), `[id]/page.tsx` (SSR detalhe + grid Informações/Financeiro +
+    painel de parcelas + ações), `[id]/loading.tsx` e `[id]/error.tsx`
+  - `invoices/[id]/page.tsx` — seção "Pagamento" adicionada antes dos itens: busca pagamento existente via
+    `getPaymentsServer({ invoiceId })` (1:1 por NF); se houver, card com status badge + valor + link ao
+    detalhe; senão, em NF `VALIDATED` e `canMutate`, renderiza `<CreatePaymentDialog>`. Sidebar (1.4) já
+    tinha o item "Pagamentos" (`CreditCard`) no grupo Financeiro — nenhuma mudança necessária
+  - **Verificado:** `pnpm --filter web type-check` (3 workspaces) verde; `biome check` dos arquivos
+    novos/modificados limpo (só o warning `noNonNullAssertion` pré-existente em `API_URL`, severidade
+    `warn`, padrão do projeto); `pnpm --filter web build` **compila + checa tipos + gera as rotas de
+    payments** (`page`/`[id]`). Passo `output: 'standalone'` falha por `EPERM` de symlink no Windows
+    (mesma limitação de 0.5/1.4/1.5/2.4/2.5/6.4). Fluxo runtime (criar pagamento, pagar parcela com
+    auto-conclusão, cancelar, integração no detalhe da NF) não exercitado — requer API + banco vivos
+  - **Ajustes vs. spec:** (a) `create-payment-dialog` é **autocontido** (renderiza seu próprio botão +
+    gerencia `open` internamente) em vez de receber `open`/`onOpenChange`, já que é invocado apenas do
+    detalhe da NF (Server Component, sem estado) e a criação não parte da listagem; (b) kebab menu da
+    listagem implementado hand-rolled (botão + menu posicionado + overlay de clique-fora), pois não há
+    primitivo `dropdown-menu` em `components/ui` e a invariante proíbe escrever primitivos shadcn à mão;
+    (c) parcelas usam estado local posicional (input `type="date"` → ISO no submit), sem react-hook-form,
+    por serem dinâmicas (adicionar/remover); (d) status visual de parcela `OVERDUE` derivado no cliente
+    (`dueDate < now && PENDING`), já que o job de atualização de parcelas OVERDUE está fora do escopo v1
+
 ---
 
 ## Em Progresso
 
-- **Fase 6 — Financeiro (NF + Pagamentos)** em progresso: 6.1 (Shared Schemas — schemas Zod de contrato
+- **Fase 6 — Financeiro (NF + Pagamentos)** concluída: 6.1 (Shared Schemas — schemas Zod de contrato
   de API para notas fiscais e pagamentos em `packages/shared`), 6.2 (Invoices Module API — CRUD,
   validação/rejeição com fluxo `PENDING→VALIDATED|REJECTED`, sub-recurso de itens e upload de arquivo),
   6.3 (Payments Module API — pagamentos vinculados a NF `VALIDATED` com parcelas, fluxo
-  `PENDING→PAID|CANCELLED`, pagamento de parcela com auto-conclusão e conciliação por NF) e 6.4 (Invoices
+  `PENDING→PAID|CANCELLED`, pagamento de parcela com auto-conclusão e conciliação por NF), 6.4 (Invoices
   UI — listagem com tabs de status e busca, form de criação vinculado a PO, detalhe com itens e comparação
-  de valores NF × PO, ações de validação/rejeição e card de NFs no detalhe do PO) concluídas.
-  Próximo: **6.5** (Payments UI — próxima e última unidade da fase financeira).
+  de valores NF × PO, ações de validação/rejeição e card de NFs no detalhe do PO) e 6.5 (Payments UI —
+  listagem com tabs de status/filtro de método/busca, criação vinculada a NF validada com parcelas,
+  detalhe com painel de parcelas e barra de progresso, pagamento de parcela com auto-conclusão,
+  cancelamento e integração de pagamento no detalhe da NF) concluídas.
 
 - **Fase 5 — Recebimento e Estoque** concluída: 5.1 (Shared Schemas), 5.2 (Warehouses Module API),
   5.3 (Receipts Module API — recebimento de mercadoria + movimentações de estoque com upsert em

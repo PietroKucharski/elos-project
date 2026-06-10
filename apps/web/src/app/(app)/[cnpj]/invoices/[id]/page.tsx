@@ -1,7 +1,14 @@
+import { CreatePaymentDialog } from '@/components/domain/create-payment-dialog'
 import { InvoiceActions } from '@/components/domain/invoice-actions'
 import { InvoiceItemsPanel } from '@/components/domain/invoice-items-panel'
 import { InvoiceStatusBadge } from '@/components/domain/invoice-status-badge'
-import { getInvoiceServer, getMyCompaniesServer, getPurchaseOrderServer } from '@/lib/api'
+import { PaymentStatusBadge } from '@/components/domain/payment-status-badge'
+import {
+  getInvoiceServer,
+  getMyCompaniesServer,
+  getPaymentsServer,
+  getPurchaseOrderServer,
+} from '@/lib/api'
 import { ChevronLeft, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -26,9 +33,14 @@ export default async function InvoiceDetailPage({
 
   if (!invoice) notFound()
 
-  // Total do PO vinculado para a comparação de valores NF × PO.
-  const po = await getPurchaseOrderServer(cnpj, invoice.purchaseOrderId)
+  // Total do PO vinculado para a comparação de valores NF × PO, e pagamento
+  // existente para esta NF (1:1) para a seção de pagamento.
+  const [po, invoicePayments] = await Promise.all([
+    getPurchaseOrderServer(cnpj, invoice.purchaseOrderId),
+    getPaymentsServer(cnpj, { invoiceId: invoice.id }),
+  ])
   const poTotal = po?.totalAmount ?? '0'
+  const payment = invoicePayments[0] ?? null
 
   const role = myCompanies.find((c) => c.cnpj === cnpj)?.role ?? null
   const canMutate = role !== null && MUTATE_ROLES.includes(role)
@@ -144,6 +156,49 @@ export default async function InvoiceDetailPage({
             </div>
           </dl>
         </div>
+      </div>
+
+      {/* Pagamento */}
+      <div className="mb-5">
+        {payment ? (
+          <Link
+            href={`/${cnpj}/payments/${payment.id}`}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-4 no-underline transition-colors hover:bg-muted/40"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-[13px] font-semibold tracking-[0.04em] text-muted-foreground uppercase">
+                Pagamento
+              </span>
+              <PaymentStatusBadge status={payment.status} />
+            </div>
+            <span className="flex items-center gap-3 text-[13.5px]">
+              <span className="font-mono-nums font-semibold text-foreground">
+                {brl(payment.totalAmount)}
+              </span>
+              <span className="text-primary hover:underline">Ver detalhe</span>
+            </span>
+          </Link>
+        ) : (
+          invoice.status === 'VALIDATED' &&
+          canMutate && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-4">
+              <div>
+                <h2 className="text-[13px] font-semibold tracking-[0.04em] text-muted-foreground uppercase">
+                  Pagamento
+                </h2>
+                <p className="mt-0.5 text-[13.5px] text-muted-foreground">
+                  Nenhum pagamento registrado para esta nota fiscal.
+                </p>
+              </div>
+              <CreatePaymentDialog
+                cnpj={cnpj}
+                invoiceId={invoice.id}
+                invoiceNumber={invoice.number}
+                invoiceTotal={invoice.totalAmount}
+              />
+            </div>
+          )
+        )}
       </div>
 
       {/* Itens + comparação NF × PO */}
