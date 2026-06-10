@@ -48,6 +48,11 @@ export function InvoiceForm({
       toast.error('Selecione o fornecedor.')
       return
     }
+    const trimmedNumber = number.trim()
+    if (trimmedNumber === '') {
+      toast.error('Informe o número da nota fiscal.')
+      return
+    }
     const total = Number.parseFloat(totalAmount)
     if (Number.isNaN(total) || total <= 0) {
       toast.error('Informe um valor total válido.')
@@ -59,7 +64,7 @@ export function InvoiceForm({
       const invoice = await createInvoice(cnpj, {
         purchaseOrderId: purchaseOrder,
         supplierId,
-        number: number.trim(),
+        number: trimmedNumber,
         issueDate: new Date(issueDate).toISOString(),
         totalAmount: total,
         taxAmount: taxAmount ? Number.parseFloat(taxAmount) : undefined,
