@@ -76,8 +76,8 @@ export const auditLogResponseSchema = z.object({
   entity:     z.string(),
   entityId:   z.string().uuid(),
   action:     z.string(),
-  before:     z.record(z.unknown()).nullable(),
-  after:      z.record(z.unknown()).nullable(),
+  before:     z.record(z.string(), z.unknown()).nullable(),
+  after:      z.record(z.string(), z.unknown()).nullable(),
   ipAddress:  z.string().nullable(),
   createdAt:  z.string().datetime(),
 })

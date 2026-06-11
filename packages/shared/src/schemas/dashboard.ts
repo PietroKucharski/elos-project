@@ -5,33 +5,33 @@ import { z } from 'zod'
 
 export const dashboardKpisSchema = z.object({
   // Cotações
-  quotationsOpen: z.number(),
-  quotationsClosed: z.number(),
+  quotationsOpen: z.number().int().nonnegative(),
+  quotationsClosed: z.number().int().nonnegative(),
 
   // Pedidos de Compra
-  purchaseOrdersDraft: z.number(),
-  purchaseOrdersApproved: z.number(),
-  purchaseOrdersSent: z.number(),
-  purchaseOrdersReceived: z.number(),
+  purchaseOrdersDraft: z.number().int().nonnegative(),
+  purchaseOrdersApproved: z.number().int().nonnegative(),
+  purchaseOrdersSent: z.number().int().nonnegative(),
+  purchaseOrdersReceived: z.number().int().nonnegative(),
 
   // Financeiro
-  invoicesPending: z.number(),
-  invoicesValidated: z.number(),
-  paymentsPending: z.number(),
-  paymentsPaid: z.number(),
+  invoicesPending: z.number().int().nonnegative(),
+  invoicesValidated: z.number().int().nonnegative(),
+  paymentsPending: z.number().int().nonnegative(),
+  paymentsPaid: z.number().int().nonnegative(),
   totalPayable: z.string(), // numeric → string (total a pagar em NFs validadas sem pagamento PAID)
   totalPaid: z.string(), // numeric → string (total pago em pagamentos PAID)
 
   // Estoque
-  lowStockAlerts: z.number(), // produtos com quantity < minStock
+  lowStockAlerts: z.number().int().nonnegative(), // produtos com quantity < minStock
 
   // NCs
-  nonConformitiesOpen: z.number(),
-  nonConformitiesAnalyzing: z.number(),
+  nonConformitiesOpen: z.number().int().nonnegative(),
+  nonConformitiesAnalyzing: z.number().int().nonnegative(),
 
   // Fornecedores
-  suppliersPending: z.number(),
-  suppliersApproved: z.number(),
+  suppliersPending: z.number().int().nonnegative(),
+  suppliersApproved: z.number().int().nonnegative(),
 })
 
 export const dashboardRecentActivitySchema = z.object({
