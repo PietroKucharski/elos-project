@@ -15,9 +15,12 @@ const PAGE_LIMIT = 50
 // ou fim do dia no fuso local do runtime. Construir a Date pelos componentes
 // (em vez de `${date}T00:00:00.000Z`) evita o deslocamento de dia que a
 // interpretação fixa em UTC causaria em fusos != UTC.
-function dayBoundaryIso(date: string, edge: 'start' | 'end'): string {
+function dayBoundaryIso(date: string, edge: 'start' | 'end'): string | null {
   const [y, mo, d] = date.split('-')
   const dt = new Date(Number(y), Number(mo) - 1, Number(d))
+  // Entrada malformada (ex.: ?startDate=abc) produz Invalid Date — descarta o
+  // filtro em vez de deixar toISOString() lançar RangeError.
+  if (Number.isNaN(dt.getTime())) return null
   if (edge === 'end') dt.setHours(23, 59, 59, 999)
   return dt.toISOString()
 }
@@ -48,13 +51,16 @@ export default async function AuditLogsPage({
 
   // O input é `date` (YYYY-MM-DD); a API espera ISO datetime. Cobrimos o dia
   // inteiro no fuso local: início à meia-noite, fim ao último instante.
+  const startIso = startDate ? dayBoundaryIso(startDate, 'start') : null
+  const endIso = endDate ? dayBoundaryIso(endDate, 'end') : null
+
   const params_ = {
     page: String(page),
     limit: String(PAGE_LIMIT),
     ...(entity ? { entity } : {}),
     ...(action ? { action } : {}),
-    ...(startDate ? { startDate: dayBoundaryIso(startDate, 'start') } : {}),
-    ...(endDate ? { endDate: dayBoundaryIso(endDate, 'end') } : {}),
+    ...(startIso ? { startDate: startIso } : {}),
+    ...(endIso ? { endDate: endIso } : {}),
   }
 
   const [logs, entities, actions] = await Promise.all([
