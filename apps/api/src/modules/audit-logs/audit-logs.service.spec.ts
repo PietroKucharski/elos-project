@@ -84,18 +84,20 @@ describe('AuditLogsService', () => {
   describe('findAll', () => {
     it('retorna lista de logs', async () => {
       enqueueMany([mockLog])
-      const result = await service.findAll(adminUser, {})
+      const result = await service.findAll(adminUser, { page: 1, limit: 50 })
       expect(result).toEqual([mockLog])
     })
 
     it('lança ForbiddenException sem permissão (COMPRADOR)', async () => {
       mockAbility.cannot.mockReturnValue(true)
-      await expect(service.findAll(adminUser, {})).rejects.toThrow(ForbiddenException)
+      await expect(service.findAll(adminUser, { page: 1, limit: 50 })).rejects.toThrow(
+        ForbiddenException,
+      )
     })
 
     it('aplica filtro de entity', async () => {
       enqueueMany([mockLog])
-      const result = await service.findAll(adminUser, { entity: 'Supplier' })
+      const result = await service.findAll(adminUser, { entity: 'Supplier', page: 1, limit: 50 })
       expect(result).toEqual([mockLog])
     })
 
@@ -104,6 +106,8 @@ describe('AuditLogsService', () => {
       const result = await service.findAll(adminUser, {
         startDate: '2026-01-01T00:00:00.000Z',
         endDate: '2026-12-31T23:59:59.000Z',
+        page: 1,
+        limit: 50,
       })
       expect(result).toEqual([mockLog])
     })
