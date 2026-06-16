@@ -1,3 +1,4 @@
+import type { AuditLogQuery } from '@elos/shared'
 import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { type SQL, and, desc, eq, gte, lte } from 'drizzle-orm'
 import { AbilityFactory } from '../../common/ability/ability.factory'
@@ -16,29 +17,14 @@ export class AuditLogsService {
 
   // ─── findAll ──────────────────────────────────────────────────────────────
 
-  async findAll(
-    user: SessionUser,
-    query: {
-      entity?: string | undefined
-      entityId?: string | undefined
-      action?: string | undefined
-      userId?: string | undefined
-      startDate?: string | undefined
-      endDate?: string | undefined
-      page?: string | undefined
-      limit?: string | undefined
-    },
-  ) {
+  async findAll(user: SessionUser, query: AuditLogQuery) {
     const ability = this.abilityFactory.createForUser(user)
     if (ability.cannot('read', 'AuditLog')) {
       throw new ForbiddenException('Sem permissão para consultar audit logs.')
     }
 
-    // Parse seguro: `?page=abc`/`?limit=` produzem NaN; cai no default.
-    const parsedPage = Number.parseInt(query.page ?? '', 10)
-    const parsedLimit = Number.parseInt(query.limit ?? '', 10)
-    const page = Math.max(1, Number.isNaN(parsedPage) ? 1 : parsedPage)
-    const limit = Math.min(100, Math.max(1, Number.isNaN(parsedLimit) ? 50 : parsedLimit))
+    // page/limit já validados e com default pelo auditLogQuerySchema na borda.
+    const { page, limit } = query
     const offset = (page - 1) * limit
 
     const conditions: SQL[] = [eq(auditLogs.companyId, user.companyId!)]

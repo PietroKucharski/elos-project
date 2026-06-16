@@ -30,7 +30,7 @@ describe('AuditLogsController', () => {
   })
 
   it('GET / — lista logs', async () =>
-    expect(await controller.findAll(mockUser)).toEqual([mockLog]))
+    expect(await controller.findAll(mockUser, { page: 1, limit: 50 })).toEqual([mockLog]))
   it('GET /:id — detalhe', async () =>
     expect(await controller.findOne('log1', mockUser)).toMatchObject({ id: 'log1' }))
   it('GET /entities — lista entidades', async () =>
