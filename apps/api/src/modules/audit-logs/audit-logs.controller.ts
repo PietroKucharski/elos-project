@@ -1,7 +1,9 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common'
+import { type AuditLogQuery, auditLogQuerySchema } from '@elos/shared'
+import { Controller, Get, Param, ParseUUIDPipe, Query, UseGuards } from '@nestjs/common'
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { CurrentUser } from '../../common/decorators/current-user.decorator'
 import { AuthGuard } from '../../common/guards/auth.guard'
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe'
 import type { SessionUser } from '../../common/types/session-user'
 import { AuditLogsService } from './audit-logs.service'
 
@@ -29,30 +31,14 @@ export class AuditLogsController {
   @ApiOperation({ summary: 'Listar audit logs' })
   findAll(
     @CurrentUser() user: SessionUser,
-    @Query('entity') entity?: string,
-    @Query('entityId') entityId?: string,
-    @Query('action') action?: string,
-    @Query('userId') userId?: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @Query(new ZodValidationPipe(auditLogQuerySchema)) query: AuditLogQuery,
   ) {
-    return this.auditLogsService.findAll(user, {
-      entity,
-      entityId,
-      action,
-      userId,
-      startDate,
-      endDate,
-      page,
-      limit,
-    })
+    return this.auditLogsService.findAll(user, query)
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Detalhe do audit log' })
-  findOne(@Param('id') id: string, @CurrentUser() user: SessionUser) {
+  findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: SessionUser) {
     return this.auditLogsService.findOne(id, user)
   }
 }
