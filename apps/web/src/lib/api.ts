@@ -2,6 +2,7 @@ import type {
   AddNcCommentDto,
   AnalyzeNcDto,
   ApproveSupplierDto,
+  AuditLogResponse,
   BidComparisonResponse,
   BidItemResponse,
   BidResponse,
@@ -1124,4 +1125,72 @@ export async function payInstallment(
       json: data,
     })
     .json<InstallmentResponse>()
+}
+
+// ── Audit Logs (server-side) ────────────────────────────────────────────────
+// Read-only: o audit log não tem mutações no frontend (o insert é interno aos
+// Services da API). Apenas consultas server-side.
+
+export async function getAuditLogsServer(
+  cnpj: string,
+  params?: {
+    entity?: string
+    action?: string
+    userId?: string
+    startDate?: string
+    endDate?: string
+    page?: string
+    limit?: string
+  },
+): Promise<AuditLogResponse[]> {
+  const url = new URL(`${API_URL}/v1/companies/${cnpj}/audit-logs`)
+  if (params?.entity) url.searchParams.set('entity', params.entity)
+  if (params?.action) url.searchParams.set('action', params.action)
+  if (params?.userId) url.searchParams.set('userId', params.userId)
+  if (params?.startDate) url.searchParams.set('startDate', params.startDate)
+  if (params?.endDate) url.searchParams.set('endDate', params.endDate)
+  if (params?.page) url.searchParams.set('page', params.page)
+  if (params?.limit) url.searchParams.set('limit', params.limit)
+
+  const res = await fetch(url.toString(), {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (res.ok) return res.json() as Promise<AuditLogResponse[]>
+  // 404 (empresa/rota inexistente) é o único "vazio" esperado; 403/500/auth
+  // devem propagar para o error boundary da rota.
+  if (res.status === 404) return []
+  throw new Error(`getAuditLogsServer falhou (${res.status}): ${await res.text()}`)
+}
+
+export async function getAuditLogServer(
+  cnpj: string,
+  id: string,
+): Promise<AuditLogResponse | null> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/audit-logs/${id}`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (res.ok) return res.json() as Promise<AuditLogResponse>
+  // 404 (registro inexistente) → null para o caller chamar notFound(); demais falhas propagam.
+  if (res.status === 404) return null
+  throw new Error(`getAuditLogServer falhou (${res.status}): ${await res.text()}`)
+}
+
+export async function getAuditLogEntitiesServer(cnpj: string): Promise<string[]> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/audit-logs/entities`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  return res.json() as Promise<string[]>
+}
+
+export async function getAuditLogActionsServer(cnpj: string): Promise<string[]> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/audit-logs/actions`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  return res.json() as Promise<string[]>
 }
