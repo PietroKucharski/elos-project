@@ -11,6 +11,17 @@ import { notFound } from 'next/navigation'
 const ALLOWED_ROLES = ['ADMIN_EMPRESA', 'SUPER_ADMIN']
 const PAGE_LIMIT = 50
 
+// Converte uma data `YYYY-MM-DD` (input `date`) no instante ISO/UTC do início
+// ou fim do dia no fuso local do runtime. Construir a Date pelos componentes
+// (em vez de `${date}T00:00:00.000Z`) evita o deslocamento de dia que a
+// interpretação fixa em UTC causaria em fusos != UTC.
+function dayBoundaryIso(date: string, edge: 'start' | 'end'): string {
+  const [y, mo, d] = date.split('-')
+  const dt = new Date(Number(y), Number(mo) - 1, Number(d))
+  if (edge === 'end') dt.setHours(23, 59, 59, 999)
+  return dt.toISOString()
+}
+
 export default async function AuditLogsPage({
   params,
   searchParams,
@@ -36,14 +47,14 @@ export default async function AuditLogsPage({
   const page = Math.max(1, Number(str(sp.page)) || 1)
 
   // O input é `date` (YYYY-MM-DD); a API espera ISO datetime. Cobrimos o dia
-  // inteiro: início à meia-noite, fim ao último instante.
+  // inteiro no fuso local: início à meia-noite, fim ao último instante.
   const params_ = {
     page: String(page),
     limit: String(PAGE_LIMIT),
     ...(entity ? { entity } : {}),
     ...(action ? { action } : {}),
-    ...(startDate ? { startDate: `${startDate}T00:00:00.000Z` } : {}),
-    ...(endDate ? { endDate: `${endDate}T23:59:59.999Z` } : {}),
+    ...(startDate ? { startDate: dayBoundaryIso(startDate, 'start') } : {}),
+    ...(endDate ? { endDate: dayBoundaryIso(endDate, 'end') } : {}),
   }
 
   const [logs, entities, actions] = await Promise.all([
