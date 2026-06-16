@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 7 — Audit Log e Administração** · `Em andamento` (7.1 e 7.2 concluídas) → próxima unidade: **7.3 — Audit Log UI**
+**Fase 7 — Audit Log e Administração** · `Em andamento` (7.1, 7.2 e 7.3 concluídas) → próxima unidade: **7.4 — Dashboard UI**
 
 > **Fase 6 — Financeiro (NF + Pagamentos):** concluída (6.1, 6.2, 6.3, 6.4 e 6.5) → fase financeira encerrada.
 
@@ -1133,15 +1133,61 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     `DRIZZLE` de `../../db.module`, `DrizzleDB` de `../../db`); specs com mock thenable-fila
     (`makeDb` + `enqueue`, padrão de 2.2+) com `selectDistinct` adicionado ao `qb`
 
+- [x] **7.3 — Audit Logs UI (Frontend)** — spec `38-audit-logs-ui-spec.md`
+  - Commit convencional esperado: `feat(web): add audit logs ui with filters and detail viewer`
+  - `lib/api.ts` estendido: 4 funções server-side read-only (`getAuditLogsServer` com query
+    `entity`/`action`/`userId`/`startDate`/`endDate`/`page`/`limit`, `getAuditLogServer`,
+    `getAuditLogEntitiesServer`, `getAuditLogActionsServer`) no padrão `sessionHeaders()` +
+    `cache: 'no-store'`; 404 → vazio/null, demais status propagam ao error boundary. Tipo
+    `AuditLogResponse` importado de `@elos/shared` (sem mutações — o audit log é append-only,
+    insert interno aos Services da API)
+  - `lib/audit-log-labels.ts` (novo helper compartilhado): rótulos PT-BR de entidades (com gênero
+    p/ concordância) e ações; `entityLabel`/`actionLabel` p/ dropdowns e tabela e `changeSummary`
+    (frase curta com particípio concordado — "Cotação criada", "Fornecedor aprovado", "NF validada")
+  - `components/domain/`: `audit-log-filters.tsx` (Client Component: selects de entidade/ação
+    populados via `/entities` e `/actions`, inputs `date` de início/fim, busca por nome de usuário,
+    "Limpar filtros"; todos os filtros vão à URL via `router.push` e resetam a paginação),
+    `audit-logs-list-client.tsx` (Client Component: tabela data/hora·usuário·entidade·ação·resumo,
+    linha clicável via Link "esticado" `absolute inset-0` — âncora real a11y, navegável por teclado;
+    busca por nome filtra client-side — o backend só filtra por `userId`; paginação server-side
+    via `page` na URL com next/prev; estado vazio `History` + "Nenhum registro encontrado") e
+    `audit-log-diff-viewer.tsx` (Client Component: grid before/after lado a lado, célula destacada
+    por status — adicionado `success-soft`/removido `destructive-soft`/alterado `warning-soft`;
+    create `before=null` → só "Depois", delete `after=null` → só "Antes"; `JsonValue` recursivo
+    expansível p/ objetos/arrays aninhados)
+  - Rotas `(app)/[cnpj]/audit-logs/`: `page.tsx` (SSR lista + filtros; converte `date` YYYY-MM-DD
+    → ISO datetime cobrindo o dia inteiro antes de chamar a API), `loading.tsx`, `error.tsx`,
+    `[id]/page.tsx` (SSR detalhe com metadados + diff viewer), `[id]/loading.tsx`, `[id]/error.tsx`.
+    **Guard de acesso:** ambas as páginas resolvem o papel via `getMyCompaniesServer` e chamam
+    `notFound()` se `role ∉ {ADMIN_EMPRESA, SUPER_ADMIN}` (o CASL na API já garante 403; o guard
+    evita renderizar a página para papéis sem permissão)
+  - `sidebar.tsx` — item "Audit Log" atualizado: `key: 'audit'`/ícone `ScrollText` → `key:
+    'audit-logs'` (href `/${cnpj}/audit-logs`)/ícone `History`; visível apenas para SUPER_ADMIN e
+    ADMIN_EMPRESA (papéis já corretos no grupo "Administração")
+  - **Verificado:** `pnpm --filter web type-check` (3 workspaces) verde; `biome check` dos arquivos
+    novos limpo (a11y do Link esticado satisfeita — sem `role`/handler em `<tr>`); `pnpm --filter web
+    build` **compila + gera as 2 rotas de audit-logs** (`page.js` e `[id]/page.js` confirmados em
+    `.next/server/app`, 9/9 páginas). Passo `output: 'standalone'` falha por `EPERM` de symlink no
+    Windows (mesma limitação de 0.5/1.4/1.5/2.4/2.5/…). Fluxo runtime (filtros, paginação, diff,
+    guard 404 p/ papéis operacionais) não exercitado — requer API + banco vivos
+  - **Ajustes vs. spec:** busca por nome de usuário roteada via URL (`user` param) e aplicada
+    client-side na lista (mantém os dois componentes desacoplados, no padrão URL do projeto); linha
+    clicável implementada com Link "esticado" em vez de `onClick` no `<tr>` (o Biome bloqueia
+    handlers/`role` em elemento não-interativo — âncora real é a forma a11y); rótulos PT-BR e
+    `changeSummary` extraídos p/ helper compartilhado (`lib/audit-log-labels.ts`) reusado por
+    filtros, lista e detalhe
+
 ---
 
 ## Em Progresso
 
 - **Fase 7 — Audit Log e Administração** em andamento: 7.1 (Shared Schemas — schemas Zod de contrato
-  de API para o domínio de audit log e os DTOs de KPIs do dashboard em `packages/shared`) e 7.2
+  de API para o domínio de audit log e os DTOs de KPIs do dashboard em `packages/shared`), 7.2
   (Audit Logs Module API — consulta read-only de audit logs com filtros avançados, detalhe e
-  endpoints de entidades/ações distintas p/ dropdowns; restrita a ADMIN_EMPRESA/SUPER_ADMIN)
-  concluídas. Próxima unidade: **7.3 — Audit Log UI**.
+  endpoints de entidades/ações distintas p/ dropdowns; restrita a ADMIN_EMPRESA/SUPER_ADMIN) e 7.3
+  (Audit Logs UI — listagem filtrada com paginação server-side, busca por usuário client-side, diff
+  viewer before/after com destaque por status e JSON tree expansível, guard de acesso `notFound()`
+  p/ papéis operacionais e item de sidebar) concluídas. Próxima unidade: **7.4 — Dashboard UI**.
 
 - **Fase 6 — Financeiro (NF + Pagamentos)** concluída: 6.1 (Shared Schemas — schemas Zod de contrato
   de API para notas fiscais e pagamentos em `packages/shared`), 6.2 (Invoices Module API — CRUD,
