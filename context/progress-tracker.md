@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 7 — Audit Log e Administração** · `Em andamento` (7.1 concluída) → próxima unidade: **7.2 — Audit Log Module (API)**
+**Fase 7 — Audit Log e Administração** · `Em andamento` (7.1 e 7.2 concluídas) → próxima unidade: **7.3 — Audit Log UI**
 
 > **Fase 6 — Financeiro (NF + Pagamentos):** concluída (6.1, 6.2, 6.3, 6.4 e 6.5) → fase financeira encerrada.
 
@@ -1101,13 +1101,47 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     que quebra o `type-check`. Colunas alinhadas e arrays inline da spec colapsados pelo formatter do Biome
     (sem alinhamento de `:`, um item por linha nos arrays const)
 
+- [x] **7.2 — Audit Logs Module (API)** — spec `37-audit-logs-api-spec.md`
+  - Commit convencional esperado: `feat(api): add audit-logs module with query and filters`
+  - `apps/api/src/modules/audit-logs/`: `audit-logs.module.ts` (exporta `AuditLogsService`),
+    `audit-logs.controller.ts` (`@Controller('companies/:cnpj/audit-logs')`, **read-only** —
+    `GET /entities` e `GET /actions` registrados ANTES de `GET /:id` (NestJS avalia rotas na ordem),
+    `GET /` com filtros `entity`/`entityId`/`action`/`userId`/`startDate`/`endDate`/`page`/`limit` e
+    `GET /:id`; Swagger tags, sem endpoints de escrita — audit log é append-only),
+    `audit-logs.service.ts` (findAll com filtros dinâmicos + `leftJoin` em `users` p/ `userName`/
+    `userEmail`, ordenação fixa `createdAt DESC`, paginação default 50/máx. 100; findOne com 404;
+    `getDistinctEntities`/`getDistinctActions` via `selectDistinct` p/ dropdowns de filtro do frontend;
+    CASL `cannot('read','AuditLog')` antes de **toda** query e todas escopadas a `companyId`),
+    `audit-logs.service.spec.ts` (11 testes) e `audit-logs.controller.spec.ts` (4 testes) —
+    **267 testes da API passando no total** (15 novos; o "≥ 275" da checklist da spec assumia
+    baseline maior que os 252 reais pré-unidade)
+  - `ability.factory.ts` — **COMPRADOR perdeu `can('read','AuditLog')`** (pré-existente da
+    configuração inicial): a spec restringe a leitura de audit logs a ADMIN_EMPRESA e SUPER_ADMIN
+    (papéis operacionais não veem o log) e a checklist exige 403 para COMPRADOR. ADMIN_EMPRESA já
+    tinha a regra e `'AuditLog'` já estava no union `Subjects` (string-only, sem `ForcedSubject` —
+    não há checagem CASL por instância; o isolamento é via `companyId` nas queries)
+  - `app.module.ts` — `AuditLogsModule` importado (após `PaymentsModule`)
+  - **Verificado:** `vitest run` (267/267, 31 arquivos), `pnpm type-check` (3 workspaces) verdes;
+    `biome check` dos arquivos da unidade sem erros (só warnings `noNonNullAssertion` de
+    `companyId!` e `suppressions/unused` nos specs — mesmos warnings warn-only dos módulos
+    existentes, padrão do projeto). Checklist de segurança coberto: CASL antes de cada query,
+    queries escopadas a `companyId`, 403 p/ papéis sem regra `AuditLog`, sem endpoints de escrita,
+    `before`/`after` nunca contêm senhas (Better-Auth gerencia hash — invariante 4)
+  - **Ajustes vs. spec:** ver Decisões Arquiteturais (7.2) — remoção do `read AuditLog` do
+    COMPRADOR; parse de paginação no padrão do projeto (`Number.parseInt` + `Number.isNaN`,
+    semanticamente igual ao snippet); imports no padrão real (`type SQL` inline,
+    `DRIZZLE` de `../../db.module`, `DrizzleDB` de `../../db`); specs com mock thenable-fila
+    (`makeDb` + `enqueue`, padrão de 2.2+) com `selectDistinct` adicionado ao `qb`
+
 ---
 
 ## Em Progresso
 
-- **Fase 7 — Audit Log e Administração** iniciada: 7.1 (Shared Schemas — schemas Zod de contrato de
-  API para o domínio de audit log e os DTOs de KPIs do dashboard em `packages/shared`) concluída.
-  Próxima unidade: **7.2 — Audit Log Module (API)**.
+- **Fase 7 — Audit Log e Administração** em andamento: 7.1 (Shared Schemas — schemas Zod de contrato
+  de API para o domínio de audit log e os DTOs de KPIs do dashboard em `packages/shared`) e 7.2
+  (Audit Logs Module API — consulta read-only de audit logs com filtros avançados, detalhe e
+  endpoints de entidades/ações distintas p/ dropdowns; restrita a ADMIN_EMPRESA/SUPER_ADMIN)
+  concluídas. Próxima unidade: **7.3 — Audit Log UI**.
 
 - **Fase 6 — Financeiro (NF + Pagamentos)** concluída: 6.1 (Shared Schemas — schemas Zod de contrato
   de API para notas fiscais e pagamentos em `packages/shared`), 6.2 (Invoices Module API — CRUD,
@@ -1276,6 +1310,8 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 
 | Decisão                            | Motivo                                                                              |
 | ---------------------------------- | ----------------------------------------------------------------------------------- |
+| COMPRADOR perdeu `can('read','AuditLog')` (7.2) | A regra existia desde a configuração inicial do `AbilityFactory`, mas a spec 7.2 decide que **apenas ADMIN_EMPRESA e SUPER_ADMIN** consultam audit logs (contêm dados sensíveis de negócio — valores, status, quem fez o quê; papéis operacionais não precisam dessa visibilidade) e a checklist exige 403 p/ COMPRADOR/ALMOXARIFE/ANALISTA_FINANCEIRO/TRANSPORTADOR. Removida a linha do `case 'COMPRADOR'`; nenhum teste existente dependia dela |
+| `AuditLog` sem `ForcedSubject` + rotas `entities`/`actions` antes de `:id` (7.2) | Não há checagem CASL por instância (`subject('AuditLog', row)` nunca é chamado) — a restrição é por tipo (`cannot('read','AuditLog')`) e o isolamento de tenant é via `eq(auditLogs.companyId, …)` em toda query. `'AuditLog'` permanece string-only no union `Subjects` (já existia desde 0.4). No controller, `GET /entities` e `GET /actions` são registrados ANTES de `GET /:id` — o NestJS avalia rotas na ordem de declaração; depois, "entities" casaria `:id` |
 | `analyze`/`resolve`/`reject` usam a action `update` no CASL (5.4) | Não há diferenciação de permissão entre as três transições na v1; quem pode `update` realiza qualquer transição válida (a guarda de status no Service barra transições inválidas). Menos ações customizadas no union de `Actions` |
 | ALMOXARIFE abre a NC, COMPRADOR/ADMIN resolvem (5.4) | Separação de responsabilidade: o almoxarife detecta o problema no recebimento; o comprador (ou admin) tem visão do impacto e decide o tratamento. ALMOXARIFE perdeu o `manage NonConformity` amplo pré-existente, mantendo `read`/`create`/`update` (edição em OPEN) escopados a `{ companyId }` |
 | `resolvedAt` preenchido tanto em `resolve` quanto em `reject` (5.4) | Ambos são estados finais; o campo marca a data de encerramento da NC, não exclusivamente "resolvido positivamente" |
