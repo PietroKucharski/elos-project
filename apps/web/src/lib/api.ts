@@ -1182,8 +1182,10 @@ export async function getAuditLogEntitiesServer(cnpj: string): Promise<string[]>
     headers: await sessionHeaders(),
     cache: 'no-store',
   })
-  if (!res.ok) return []
-  return res.json() as Promise<string[]>
+  if (res.ok) return res.json() as Promise<string[]>
+  // 404 (empresa/rota inexistente) → vazio; 401/403/500 propagam ao error boundary.
+  if (res.status === 404) return []
+  throw new Error(`getAuditLogEntitiesServer falhou (${res.status}): ${await res.text()}`)
 }
 
 export async function getAuditLogActionsServer(cnpj: string): Promise<string[]> {
@@ -1191,6 +1193,8 @@ export async function getAuditLogActionsServer(cnpj: string): Promise<string[]> 
     headers: await sessionHeaders(),
     cache: 'no-store',
   })
-  if (!res.ok) return []
-  return res.json() as Promise<string[]>
+  if (res.ok) return res.json() as Promise<string[]>
+  // 404 (empresa/rota inexistente) → vazio; 401/403/500 propagam ao error boundary.
+  if (res.status === 404) return []
+  throw new Error(`getAuditLogActionsServer falhou (${res.status}): ${await res.text()}`)
 }

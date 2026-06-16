@@ -92,7 +92,7 @@ function fieldStatus(
   const inAfter = key in after
   if (!inBefore) return 'added'
   if (!inAfter) return 'removed'
-  return JSON.stringify(before[key]) === JSON.stringify(after[key]) ? 'changed' : 'unchanged'
+  return JSON.stringify(before[key]) === JSON.stringify(after[key]) ? 'unchanged' : 'changed'
 }
 
 const CELL_BG: Record<FieldStatus, string> = {
