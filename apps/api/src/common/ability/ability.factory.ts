@@ -168,7 +168,6 @@ export class AbilityFactory {
         can('update', 'NonConformity', { companyId })
         can('read', 'Invoice', { companyId })
         can('read', 'Payment', { companyId })
-        can('read', 'AuditLog')
         break
 
       case 'ALMOXARIFE':

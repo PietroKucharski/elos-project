@@ -4,6 +4,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { AbilityModule } from './common/ability/ability.module'
 import { AuthGuard } from './common/guards/auth.guard'
 import { DrizzleModule } from './db.module'
+import { AuditLogsModule } from './modules/audit-logs/audit-logs.module'
 import { AuthModule } from './modules/auth/auth.module'
 import { BidsModule } from './modules/bids/bids.module'
 import { CompaniesModule } from './modules/companies/companies.module'
@@ -43,6 +44,7 @@ import { WarehousesModule } from './modules/warehouses/warehouses.module'
     NonConformitiesModule,
     InvoicesModule,
     PaymentsModule,
+    AuditLogsModule,
     // Fases 1–7: módulos de domínio adicionados aqui
   ],
   providers: [
