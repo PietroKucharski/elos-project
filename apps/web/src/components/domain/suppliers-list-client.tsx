@@ -11,25 +11,42 @@ import type { SupplierResponse } from '@elos/shared'
 import {
   Building2,
   CheckCircle,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Eye,
   MoreHorizontal,
   Pencil,
+  RotateCcw,
   Search,
   User,
   XCircle,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 type StatusFilter = 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
 
-const STATUS_TABS: { key: StatusFilter; label: string }[] = [
+const STATUS_OPTIONS: { key: StatusFilter; label: string }[] = [
   { key: 'ALL', label: 'Todos' },
   { key: 'PENDING', label: 'Pendentes' },
   { key: 'APPROVED', label: 'Aprovados' },
   { key: 'REJECTED', label: 'Reprovados' },
 ]
+
+const PAGE_SIZE = 8
+
+// Janela de até 5 números de página centrada na página atual.
+function pageWindow(current: number, totalPages: number, span = 5): number[] {
+  if (totalPages <= span) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1)
+  }
+  let start = Math.max(1, current - Math.floor(span / 2))
+  const end = Math.min(totalPages, start + span - 1)
+  start = Math.max(1, end - span + 1)
+  return Array.from({ length: end - start + 1 }, (_, i) => start + i)
+}
 
 const TYPE_LABELS: Record<string, string> = { PJ: 'Pessoa Jurídica', PF: 'Pessoa Física' }
 
@@ -52,6 +69,7 @@ export function SuppliersListClient({
   const router = useRouter()
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
   const [approveTarget, setApproveTarget] = useState<SupplierResponse | null>(null)
   const [rejectTarget, setRejectTarget] = useState<SupplierResponse | null>(null)
@@ -65,49 +83,75 @@ export function SuppliersListClient({
     })
   }, [initialSuppliers, statusFilter, search])
 
+  const total = filtered.length
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  // Volta para a primeira página sempre que os filtros mudam.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset on filter change
+  useEffect(() => setPage(1), [statusFilter, search])
+
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const rangeEnd = Math.min(page * PAGE_SIZE, total)
+  const hasFilters = statusFilter !== 'ALL' || search.trim() !== ''
+
+  function clearFilters() {
+    setStatusFilter('ALL')
+    setSearch('')
+  }
+
   return (
     <>
-      {/* Filtros: tabs de status + busca */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-        <div className="inline-flex gap-1 rounded-lg bg-muted p-1">
-          {STATUS_TABS.map((tab) => {
-            const active = statusFilter === tab.key
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setStatusFilter(tab.key)}
-                className={cn(
-                  'cursor-pointer rounded-md px-3.5 py-1.5 text-[13px] transition-colors',
-                  active
-                    ? 'bg-card font-semibold text-foreground shadow-sm'
-                    : 'font-medium text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {tab.label}
-              </button>
-            )
-          })}
-        </div>
-
-        <div className="relative min-w-[240px]">
-          <Search
-            size={15}
-            strokeWidth={1.6}
-            className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground"
-          />
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome..."
-            className="h-[38px] w-full rounded-md border border-input bg-card pr-3 pl-8 text-[13.5px] text-foreground outline-none focus:border-ring focus:ring-3 focus:ring-ring/[0.13]"
-          />
-        </div>
-      </div>
-
-      {/* Tabela */}
+      {/* Tabela com barra de filtros e paginação no mesmo card */}
       <div className="overflow-visible rounded-lg border border-border bg-card shadow-card">
+        {/* Barra de filtros */}
+        <div className="flex flex-wrap items-center gap-3 p-4">
+          <div className="relative min-w-[240px] flex-1">
+            <Search
+              size={15}
+              strokeWidth={1.6}
+              className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground"
+            />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar..."
+              className="h-[38px] w-full rounded-md border border-input bg-card pr-3 pl-8 text-[13.5px] text-foreground outline-none focus:border-ring focus:ring-3 focus:ring-ring/[0.13]"
+            />
+          </div>
+
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+              aria-label="Filtrar por status"
+              className="h-[38px] w-[150px] cursor-pointer appearance-none rounded-md border border-input bg-card pr-8 pl-3 text-[13.5px] text-foreground outline-none focus:border-ring focus:ring-3 focus:ring-ring/[0.13]"
+            >
+              {STATUS_OPTIONS.map((opt) => (
+                <option key={opt.key} value={opt.key}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              size={15}
+              strokeWidth={1.6}
+              className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-muted-foreground"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={clearFilters}
+            disabled={!hasFilters}
+            className="inline-flex h-[38px] cursor-pointer items-center gap-1.5 text-[13px] text-muted-foreground transition-colors hover:text-foreground disabled:cursor-default disabled:opacity-50 disabled:hover:text-muted-foreground"
+          >
+            <RotateCcw size={14} strokeWidth={1.7} />
+            Limpar filtros
+          </button>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-[13.5px]">
             <thead>
@@ -121,14 +165,14 @@ export function SuppliersListClient({
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && (
+              {total === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-sm text-muted-foreground">
                     Nenhum fornecedor encontrado.
                   </td>
                 </tr>
               )}
-              {filtered.map((supplier, index) => {
+              {paged.map((supplier, index) => {
                 const isPending = supplier.status === 'PENDING'
                 const detailHref = `/${cnpj}/suppliers/${supplier.id}`
                 const editHref = `/${cnpj}/suppliers/${supplier.id}/edit`
@@ -259,6 +303,58 @@ export function SuppliersListClient({
             </tbody>
           </table>
         </div>
+
+        {/* Paginação */}
+        {total > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
+            <p className="text-[13px] text-muted-foreground">
+              Mostrando{' '}
+              <span className="font-semibold text-foreground">
+                {rangeStart}–{rangeEnd}
+              </span>{' '}
+              de <span className="font-semibold text-foreground">{total}</span> resultados
+            </p>
+
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-md border border-border px-2.5 text-[13px] font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
+              >
+                <ChevronLeft size={15} strokeWidth={1.8} />
+                Anterior
+              </button>
+
+              {pageWindow(page, totalPages).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPage(p)}
+                  aria-current={p === page ? 'page' : undefined}
+                  className={cn(
+                    'inline-flex h-8 min-w-8 cursor-pointer items-center justify-center rounded-md px-2 text-[13px] transition-colors',
+                    p === page
+                      ? 'border border-primary bg-primary/10 font-semibold text-primary'
+                      : 'font-medium text-muted-foreground hover:bg-muted hover:text-foreground',
+                  )}
+                >
+                  {p}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-md border border-border px-2.5 text-[13px] font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
+              >
+                Próximo
+                <ChevronRight size={15} strokeWidth={1.8} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {approveTarget && (

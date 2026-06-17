@@ -24,9 +24,11 @@ export type SupplierAddressDto = z.infer<typeof supplierAddressSchema>
 export const createSupplierSchema = z
   .object({
     name: z.string().min(2).max(255),
+    tradeName: z.string().max(255).optional(),
     type: z.enum(['PJ', 'PF']),
     cnpj: cnpjSchema.optional(),
     cpf: cpfSchema.optional(),
+    stateRegistration: z.string().max(20).optional(),
     email: z.string().email().optional(),
     phone: z.string().max(20).optional(),
     notes: z.string().max(2000).optional(),
@@ -54,8 +56,10 @@ export type CreateSupplierDto = z.infer<typeof createSupplierSchema>
 // Atualização — type é imutável após criação; cnpj/cpf podem ser corrigidos
 export const updateSupplierSchema = z.object({
   name: z.string().min(2).max(255).optional(),
+  tradeName: z.string().max(255).optional(),
   cnpj: cnpjSchema.optional(),
   cpf: cpfSchema.optional(),
+  stateRegistration: z.string().max(20).optional(),
   email: z.string().email().optional(),
   phone: z.string().max(20).optional(),
   notes: z.string().max(2000).optional(),
@@ -84,9 +88,11 @@ export const supplierResponseSchema = z.object({
   id: z.string().uuid(),
   companyId: z.string().uuid(),
   name: z.string(),
+  tradeName: z.string().nullable(),
   type: z.enum(['PJ', 'PF']),
   cnpj: z.string().nullable(),
   cpf: z.string().nullable(),
+  stateRegistration: z.string().nullable(),
   email: z.string().nullable(),
   phone: z.string().nullable(),
   status: z.enum(['PENDING', 'APPROVED', 'REJECTED']),
@@ -108,6 +114,45 @@ export const supplierResponseSchema = z.object({
 })
 
 export type SupplierResponse = z.infer<typeof supplierResponseSchema>
+
+// ─── Produtos fornecidos (aba "Produtos") ─────────────────────────────────────
+// Produto vinculado ao fornecedor via product_suppliers, com o flag de preferência.
+export const supplierProductResponseSchema = z.object({
+  linkId: z.string().uuid(),
+  productId: z.string().uuid(),
+  name: z.string(),
+  code: z.string().nullable(),
+  unit: z.string(),
+  isPreferred: z.boolean(),
+})
+
+export type SupplierProductResponse = z.infer<typeof supplierProductResponseSchema>
+
+// ─── Pedidos emitidos (aba "Pedidos") ─────────────────────────────────────────
+// Resumo de pedido de compra do fornecedor (sem o array de itens).
+export const supplierPurchaseOrderResponseSchema = z.object({
+  id: z.string().uuid(),
+  number: z.string(),
+  status: z.enum(['DRAFT', 'APPROVED', 'SENT', 'RECEIVED', 'CANCELLED']),
+  totalAmount: z.string(), // numeric do postgres.js
+  itemCount: z.number().int().nonnegative(),
+  createdAt: z.string().datetime(),
+})
+
+export type SupplierPurchaseOrderResponse = z.infer<typeof supplierPurchaseOrderResponseSchema>
+
+// ─── Avaliações (aba "Avaliações") ────────────────────────────────────────────
+// Derivado dos audit logs de APPROVE/REJECT — não há tabela de histórico de
+// avaliação dedicada; cada evento traz o rating e as observações registrados.
+export const supplierEvaluationResponseSchema = z.object({
+  id: z.string().uuid(),
+  action: z.enum(['APPROVE', 'REJECT']),
+  rating: z.number().min(0).max(5).nullable(),
+  notes: z.string().nullable(),
+  createdAt: z.string().datetime(),
+})
+
+export type SupplierEvaluationResponse = z.infer<typeof supplierEvaluationResponseSchema>
 
 // ─── Supplier Contact ────────────────────────────────────────────────────────
 

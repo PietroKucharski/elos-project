@@ -51,6 +51,9 @@ import type {
   SelectWinnerDto,
   SupplierBankAccountResponse,
   SupplierContactResponse,
+  SupplierEvaluationResponse,
+  SupplierProductResponse,
+  SupplierPurchaseOrderResponse,
   SupplierResponse,
   UpdateCompanyDto,
   UpdateInvoiceDto,
@@ -208,6 +211,45 @@ export async function getSupplierBankAccountsServer(
   })
   if (!res.ok) return []
   return res.json() as Promise<SupplierBankAccountResponse[]>
+}
+
+export async function getSupplierProductsServer(
+  cnpj: string,
+  supplierId: string,
+): Promise<SupplierProductResponse[]> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/suppliers/${supplierId}/products`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  return res.json() as Promise<SupplierProductResponse[]>
+}
+
+export async function getSupplierPurchaseOrdersServer(
+  cnpj: string,
+  supplierId: string,
+): Promise<SupplierPurchaseOrderResponse[]> {
+  const res = await fetch(
+    `${API_URL}/v1/companies/${cnpj}/suppliers/${supplierId}/purchase-orders`,
+    {
+      headers: await sessionHeaders(),
+      cache: 'no-store',
+    },
+  )
+  if (!res.ok) return []
+  return res.json() as Promise<SupplierPurchaseOrderResponse[]>
+}
+
+export async function getSupplierEvaluationsServer(
+  cnpj: string,
+  supplierId: string,
+): Promise<SupplierEvaluationResponse[]> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/suppliers/${supplierId}/evaluations`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  return res.json() as Promise<SupplierEvaluationResponse[]>
 }
 
 // ── Suppliers (client-side) ─────────────────────────────────────────────────

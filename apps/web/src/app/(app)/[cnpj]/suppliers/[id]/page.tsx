@@ -1,14 +1,15 @@
 // apps/web/src/app/(app)/[cnpj]/suppliers/[id]/page.tsx
 import { Stars } from '@/components/domain/stars'
-import { SupplierBankAccountsPanel } from '@/components/domain/supplier-bank-accounts-panel'
-import { SupplierContactsPanel } from '@/components/domain/supplier-contacts-panel'
+import { SupplierDetailTabs } from '@/components/domain/supplier-detail-tabs'
 import { SupplierStatusBadge } from '@/components/domain/supplier-status-badge'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   getMyCompaniesServer,
   getSupplierBankAccountsServer,
   getSupplierContactsServer,
+  getSupplierEvaluationsServer,
+  getSupplierProductsServer,
+  getSupplierPurchaseOrdersServer,
   getSupplierServer,
 } from '@/lib/api'
 import { Building2, ChevronRight, Pencil, User } from 'lucide-react'
@@ -24,12 +25,16 @@ const MUTATE_ROLES = ['COMPRADOR', 'ADMIN_EMPRESA', 'SUPER_ADMIN']
 export default async function SupplierDetailPage({ params }: Props) {
   const { cnpj, id } = await params
 
-  const [supplier, contacts, bankAccounts, myCompanies] = await Promise.all([
-    getSupplierServer(cnpj, id),
-    getSupplierContactsServer(cnpj, id),
-    getSupplierBankAccountsServer(cnpj, id),
-    getMyCompaniesServer(),
-  ])
+  const [supplier, contacts, bankAccounts, products, orders, evaluations, myCompanies] =
+    await Promise.all([
+      getSupplierServer(cnpj, id),
+      getSupplierContactsServer(cnpj, id),
+      getSupplierBankAccountsServer(cnpj, id),
+      getSupplierProductsServer(cnpj, id),
+      getSupplierPurchaseOrdersServer(cnpj, id),
+      getSupplierEvaluationsServer(cnpj, id),
+      getMyCompaniesServer(),
+    ])
 
   if (!supplier) notFound()
 
@@ -38,16 +43,17 @@ export default async function SupplierDetailPage({ params }: Props) {
 
   const doc = supplier.type === 'PJ' ? supplier.cnpj : supplier.cpf
   const since = new Date(supplier.createdAt).toLocaleDateString('pt-BR')
+  const crumb = supplier.tradeName ?? supplier.name
 
   return (
-    <div className="max-w-[960px]">
+    <div className="w-full">
       {/* Breadcrumb */}
       <nav className="mb-3 flex items-center gap-1.5 text-[13px] text-muted-foreground">
         <Link href={`/${cnpj}/suppliers`} className="transition-colors hover:text-foreground">
           Fornecedores
         </Link>
         <ChevronRight size={14} className="text-subtle-foreground" />
-        <span className="font-medium text-foreground">{supplier.name}</span>
+        <span className="font-medium text-foreground">{crumb}</span>
       </nav>
 
       {/* Header */}
@@ -82,6 +88,7 @@ export default async function SupplierDetailPage({ params }: Props) {
           </div>
         </div>
         <div className="ml-auto flex gap-7">
+          <Metric label="Pedidos emitidos" value={String(orders.length)} mono />
           <Metric label="Cliente desde" value={since} mono />
           <Metric
             label="Tipo"
@@ -90,56 +97,17 @@ export default async function SupplierDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="info">
-        <TabsList>
-          <TabsTrigger value="info">Informações</TabsTrigger>
-          <TabsTrigger value="contacts">Contatos</TabsTrigger>
-          <TabsTrigger value="bank-accounts">Contas Bancárias</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="info">
-          <div className="mt-4 rounded-lg border border-border bg-card p-6">
-            <div className="grid grid-cols-2 gap-5">
-              <InfoField label="Telefone" value={supplier.phone} />
-              <InfoField label="E-mail" value={supplier.email} />
-              {supplier.address && (
-                <InfoField
-                  label="Endereço"
-                  value={[
-                    `${supplier.address.street}, ${supplier.address.number}`,
-                    supplier.address.complement,
-                    `${supplier.address.city}/${supplier.address.state}`,
-                    `CEP ${supplier.address.zipCode}`,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                  fullWidth
-                />
-              )}
-              {supplier.notes && <InfoField label="Observações" value={supplier.notes} fullWidth />}
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="contacts">
-          <SupplierContactsPanel
-            cnpj={cnpj}
-            supplierId={id}
-            initialContacts={contacts}
-            canMutate={canMutate}
-          />
-        </TabsContent>
-
-        <TabsContent value="bank-accounts">
-          <SupplierBankAccountsPanel
-            cnpj={cnpj}
-            supplierId={id}
-            initialAccounts={bankAccounts}
-            canMutate={canMutate}
-          />
-        </TabsContent>
-      </Tabs>
+      <SupplierDetailTabs
+        cnpj={cnpj}
+        supplierId={id}
+        canMutate={canMutate}
+        supplier={supplier}
+        contacts={contacts}
+        bankAccounts={bankAccounts}
+        products={products}
+        orders={orders}
+        evaluations={evaluations}
+      />
     </div>
   )
 }
@@ -151,23 +119,6 @@ function Metric({ label, value, mono }: { label: string; value: string; mono?: b
       <div className={`text-[13.5px] font-medium text-foreground ${mono ? 'font-mono' : ''}`}>
         {value}
       </div>
-    </div>
-  )
-}
-
-function InfoField({
-  label,
-  value,
-  fullWidth,
-}: {
-  label: string
-  value: string | null | undefined
-  fullWidth?: boolean
-}) {
-  return (
-    <div className={fullWidth ? 'col-span-2' : undefined}>
-      <p className="mb-1 text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm text-foreground">{value ?? '—'}</p>
     </div>
   )
 }

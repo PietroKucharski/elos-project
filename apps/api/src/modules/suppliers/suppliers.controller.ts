@@ -134,6 +134,26 @@ export class SuppliersController {
     return this.suppliersService.reject(id, body, user)
   }
 
+  // ─── Sub-recursos (abas do detalhe) ──────────────────────────────────────────
+
+  @Get(':id/products')
+  @ApiOperation({ summary: 'Produtos fornecidos por este fornecedor' })
+  findProducts(@Param('id') id: string, @CurrentUser() user: SessionUser) {
+    return this.suppliersService.findProducts(id, user)
+  }
+
+  @Get(':id/purchase-orders')
+  @ApiOperation({ summary: 'Pedidos de compra emitidos para este fornecedor' })
+  findPurchaseOrders(@Param('id') id: string, @CurrentUser() user: SessionUser) {
+    return this.suppliersService.findPurchaseOrders(id, user)
+  }
+
+  @Get(':id/evaluations')
+  @ApiOperation({ summary: 'Histórico de avaliações (aprovações/rejeições)' })
+  findEvaluations(@Param('id') id: string, @CurrentUser() user: SessionUser) {
+    return this.suppliersService.findEvaluations(id, user)
+  }
+
   // ─── Contacts ──────────────────────────────────────────────────────────────
 
   @Get(':id/contacts')

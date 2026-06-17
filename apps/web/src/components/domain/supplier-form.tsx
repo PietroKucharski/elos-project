@@ -30,6 +30,7 @@ interface SupplierFormProps {
   supplierId?: string // id do fornecedor (modo edit)
   defaultValues?: Partial<CreateSupplierDto>
   onSuccess?: (supplier: SupplierResponse) => void
+  onCancel?: () => void // se ausente, "Cancelar" volta na navegação (router.back)
 }
 
 export function SupplierForm({
@@ -38,6 +39,7 @@ export function SupplierForm({
   supplierId,
   defaultValues,
   onSuccess,
+  onCancel,
 }: SupplierFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -60,6 +62,8 @@ export function SupplierForm({
   })
 
   const supplierType = watch('type')
+  // Pessoa Jurídica em ambos os modos (no edit o type é imutável e vem em defaultValues)
+  const isPJ = mode === 'create' ? supplierType !== 'PF' : defaultValues?.type !== 'PF'
 
   async function onSubmit(data: CreateSupplierDto) {
     setLoading(true)
@@ -113,8 +117,24 @@ export function SupplierForm({
         {errors.name && <span className={ERROR}>{errors.name.message}</span>}
       </div>
 
+      {/* Nome fantasia — apenas PJ */}
+      {isPJ && (
+        <div className={FIELD}>
+          <label htmlFor="tradeName" className={LABEL}>
+            Nome fantasia
+          </label>
+          <input
+            id="tradeName"
+            {...register('tradeName')}
+            className={INPUT}
+            placeholder="NovaPack"
+          />
+          {errors.tradeName && <span className={ERROR}>{errors.tradeName.message}</span>}
+        </div>
+      )}
+
       {/* CNPJ / CPF */}
-      {(mode === 'create' ? supplierType !== 'PF' : defaultValues?.type !== 'PF') ? (
+      {isPJ ? (
         <div className={FIELD}>
           <label htmlFor="cnpj" className={LABEL}>
             CNPJ *
@@ -143,6 +163,25 @@ export function SupplierForm({
             maxLength={11}
           />
           {errors.cpf && <span className={ERROR}>{errors.cpf.message}</span>}
+        </div>
+      )}
+
+      {/* Inscrição estadual — apenas PJ */}
+      {isPJ && (
+        <div className={FIELD}>
+          <label htmlFor="stateRegistration" className={LABEL}>
+            Inscrição estadual
+          </label>
+          <input
+            id="stateRegistration"
+            {...register('stateRegistration')}
+            className={INPUT}
+            placeholder="Isento ou número da IE"
+            maxLength={20}
+          />
+          {errors.stateRegistration && (
+            <span className={ERROR}>{errors.stateRegistration.message}</span>
+          )}
         </div>
       )}
 
@@ -262,7 +301,7 @@ export function SupplierForm({
 
       {/* Submit */}
       <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="outline" onClick={() => router.back()}>
+        <Button type="button" variant="outline" onClick={onCancel ?? (() => router.back())}>
           Cancelar
         </Button>
         <Button type="submit" disabled={loading}>

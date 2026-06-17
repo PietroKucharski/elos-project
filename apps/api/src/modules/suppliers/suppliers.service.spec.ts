@@ -58,6 +58,8 @@ describe('SuppliersService', () => {
       offset: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
       innerJoin: vi.fn().mockReturnThis(),
+      leftJoin: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockReturnThis(),
       insert: vi.fn().mockReturnThis(),
       values: vi.fn().mockReturnThis(),
       returning: vi.fn().mockResolvedValue([mockSupplier]),
@@ -179,6 +181,57 @@ describe('SuppliersService', () => {
       await expect(
         service.reject('supplier-1', { notes: 'Motivo' }, compradorUser),
       ).rejects.toThrow(ForbiddenException)
+    })
+  })
+
+  describe('findProducts', () => {
+    it('retorna lista de produtos fornecidos', async () => {
+      enqueue(mockSupplier) // assertSupplierBelongsToCompany + query final
+      const result = await service.findProducts('supplier-1', compradorUser)
+      expect(Array.isArray(result)).toBe(true)
+    })
+
+    it('lança ForbiddenException sem permissão', async () => {
+      mockAbility.cannot = vi.fn().mockReturnValue(true)
+      await expect(service.findProducts('supplier-1', compradorUser)).rejects.toThrow(
+        ForbiddenException,
+      )
+    })
+  })
+
+  describe('findPurchaseOrders', () => {
+    it('retorna lista de pedidos de compra', async () => {
+      enqueue(mockSupplier)
+      const result = await service.findPurchaseOrders('supplier-1', compradorUser)
+      expect(Array.isArray(result)).toBe(true)
+    })
+
+    it('lança ForbiddenException sem permissão', async () => {
+      mockAbility.cannot = vi.fn().mockReturnValue(true)
+      await expect(service.findPurchaseOrders('supplier-1', compradorUser)).rejects.toThrow(
+        ForbiddenException,
+      )
+    })
+  })
+
+  describe('findEvaluations', () => {
+    it('retorna o histórico de avaliações mapeado', async () => {
+      enqueue({
+        id: 'audit-1',
+        action: 'APPROVE',
+        after: { status: 'APPROVED', rating: 4.5 },
+        createdAt: new Date(),
+      })
+      const result = await service.findEvaluations('supplier-1', compradorUser)
+      expect(Array.isArray(result)).toBe(true)
+      expect(result[0]).toMatchObject({ action: 'APPROVE', rating: 4.5 })
+    })
+
+    it('lança ForbiddenException sem permissão', async () => {
+      mockAbility.cannot = vi.fn().mockReturnValue(true)
+      await expect(service.findEvaluations('supplier-1', compradorUser)).rejects.toThrow(
+        ForbiddenException,
+      )
     })
   })
 })
