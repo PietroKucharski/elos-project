@@ -4,10 +4,20 @@
 
 import { ApproveSupplierDialog } from '@/components/domain/approve-supplier-dialog'
 import { RejectSupplierDialog } from '@/components/domain/reject-supplier-dialog'
+import { Stars } from '@/components/domain/stars'
 import { SupplierStatusBadge } from '@/components/domain/supplier-status-badge'
 import { cn } from '@/lib/utils'
 import type { SupplierResponse } from '@elos/shared'
-import { CheckCircle, Eye, MoreHorizontal, Pencil, Search, XCircle } from 'lucide-react'
+import {
+  Building2,
+  CheckCircle,
+  Eye,
+  MoreHorizontal,
+  Pencil,
+  Search,
+  User,
+  XCircle,
+} from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
@@ -102,11 +112,11 @@ export function SuppliersListClient({
           <table className="w-full border-collapse text-[13.5px]">
             <thead>
               <tr>
-                <th className={TH}>Nome</th>
-                <th className={TH}>Tipo</th>
+                <th className={TH}>Razão social</th>
                 <th className={TH}>CNPJ/CPF</th>
+                <th className={TH}>Contato</th>
                 <th className={TH}>Status</th>
-                <th className={TH}>E-mail</th>
+                <th className={TH}>Avaliação</th>
                 <th className={cn(TH, 'w-12 text-right')} />
               </tr>
             </thead>
@@ -130,23 +140,45 @@ export function SuppliersListClient({
                     style={{ animationDelay: `${Math.min(index * 0.025, 0.3)}s` }}
                   >
                     <td className="px-4 py-3">
-                      <Link
-                        href={detailHref}
-                        className="font-semibold text-foreground no-underline"
-                      >
-                        {supplier.name}
-                      </Link>
+                      <div className="flex items-center gap-[11px]">
+                        <div className="flex size-[34px] shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                          {supplier.type === 'PF' ? (
+                            <User size={16} strokeWidth={1.6} />
+                          ) : (
+                            <Building2 size={16} strokeWidth={1.6} />
+                          )}
+                        </div>
+                        <div>
+                          <Link
+                            href={detailHref}
+                            className="font-semibold text-foreground no-underline"
+                          >
+                            {supplier.name}
+                          </Link>
+                          <div className="text-xs text-muted-foreground">
+                            {TYPE_LABELS[supplier.type] ?? supplier.type}
+                            {supplier.address?.city ? ` · ${supplier.address.city}` : ''}
+                          </div>
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {TYPE_LABELS[supplier.type] ?? supplier.type}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-[12.5px]">
+                    <td className="px-4 py-3 font-mono text-[12.5px] text-muted-foreground">
                       {supplier.cnpj ?? supplier.cpf ?? '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-[13px] text-foreground">{supplier.email ?? '—'}</div>
+                      {supplier.phone && (
+                        <div className="font-mono text-xs text-muted-foreground">
+                          {supplier.phone}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <SupplierStatusBadge status={supplier.status} />
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">{supplier.email ?? '—'}</td>
+                    <td className="px-4 py-3">
+                      <Stars value={supplier.rating != null ? Number(supplier.rating) : null} />
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <div className="relative inline-block">
                         <button
