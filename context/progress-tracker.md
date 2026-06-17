@@ -1253,6 +1253,29 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     sem risco de dados). Endpoint `GET /v1/companies/:cnpj/dashboard` confirmado **HTTP 200** (login
     seed + curl). Snapshot/journal inalterados (mesmo estado final), `db:generate` futuro não acusa drift
 
+- [ ] **7.4c — Fidelidade Claude Design: primitivos + Suppliers** — bundle `lvmB8qpz7E0j4f0kIYm9OA`
+  - Decisão do usuário: **"everything, end to end"** — varrer todas as telas em ordem recomendada,
+    commitando progressivamente. Branch dedicada `feat/design-fidelity` (carrega o trabalho do
+    Dashboard 7.4b, antes não commitado, como primeiro commit). Confirmado de novo que **auth
+    (sign-in/up), sidebar, topbar e dashboard já casam pixel a pixel** com o protótipo — o app foi
+    construído a partir do mesmo design, então a fidelidade é correção pontual por tela, não rebuild
+  - **Badges unificados (toca todas as páginas):** novo `status-badge.tsx` replica o `Badge` do design
+    (pílula `rounded-full` + ponto colorido `bg-current` + borda tonal + peso 600 + tokens `-soft`/`-border`,
+    tamanhos md/lg). Os 8 componentes de badge (supplier, quotation, purchase-order, invoice, payment,
+    nc status+severity, bid, payment-method) passaram a delegar pra ele preservando seus tons/labels;
+    os que usavam `bg-*/10` migraram pros tokens `-soft`. Token `--color-critical` adicionado ao
+    `globals.css` (faltava; usado por severidade "Crítica"). Payment-method renderiza sem ponto (é etiqueta)
+  - **Suppliers list** (`suppliers-list-client.tsx`): linhas enriquecidas conforme o template do design —
+    célula nome com **tile de ícone** (building/user por tipo) + subtítulo `tipo · cidade` (de `address.city`),
+    coluna **Contato** (e-mail + telefone), coluna **Avaliação** com novo `stars.tsx` (de `rating`). Colunas
+    realinhadas (removida "Tipo" isolada, agora no tile). Filtro por abas mantido (já estilizado como o design)
+  - **Supplier detail** (`suppliers/[id]/page.tsx`): bloco de identidade fiel ao design — breadcrumb
+    (Fornecedores › nome), tile 48px indigo-soft, documento mono, `StatusBadge size="lg"` + `Stars`, e
+    métricas à direita (Cliente desde = `createdAt`, Tipo). Sem fabricar campos só-mock (fantasia, nº de pedidos)
+  - **Verificado:** `pnpm --filter web type-check` verde após cada etapa. `components/ui/*` **não tocado**
+    (regra #10). Pendentes: Quotations, Orders, Receipts, Non-Conformities, Invoices, Payments, Audit Log,
+    Users/Settings, Products/Warehouses, e paginação/filter-bar consistentes nas listagens
+
 ---
 
 ## Em Progresso
