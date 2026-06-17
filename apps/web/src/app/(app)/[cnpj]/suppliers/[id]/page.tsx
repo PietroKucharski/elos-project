@@ -1,4 +1,5 @@
 // apps/web/src/app/(app)/[cnpj]/suppliers/[id]/page.tsx
+import { Stars } from '@/components/domain/stars'
 import { SupplierBankAccountsPanel } from '@/components/domain/supplier-bank-accounts-panel'
 import { SupplierContactsPanel } from '@/components/domain/supplier-contacts-panel'
 import { SupplierStatusBadge } from '@/components/domain/supplier-status-badge'
@@ -10,7 +11,7 @@ import {
   getSupplierContactsServer,
   getSupplierServer,
 } from '@/lib/api'
-import { Pencil } from 'lucide-react'
+import { Building2, ChevronRight, Pencil, User } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
@@ -35,20 +36,23 @@ export default async function SupplierDetailPage({ params }: Props) {
   const role = myCompanies.find((c) => c.cnpj === cnpj)?.role ?? ''
   const canMutate = MUTATE_ROLES.includes(role)
 
+  const doc = supplier.type === 'PJ' ? supplier.cnpj : supplier.cpf
+  const since = new Date(supplier.createdAt).toLocaleDateString('pt-BR')
+
   return (
     <div className="max-w-[960px]">
+      {/* Breadcrumb */}
+      <nav className="mb-3 flex items-center gap-1.5 text-[13px] text-muted-foreground">
+        <Link href={`/${cnpj}/suppliers`} className="transition-colors hover:text-foreground">
+          Fornecedores
+        </Link>
+        <ChevronRight size={14} className="text-subtle-foreground" />
+        <span className="font-medium text-foreground">{supplier.name}</span>
+      </nav>
+
       {/* Header */}
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <div className="mb-1.5 flex items-center gap-3">
-            <h1 className="text-[22px] font-semibold text-foreground">{supplier.name}</h1>
-            <SupplierStatusBadge status={supplier.status} />
-          </div>
-          <p className="text-[13px] text-muted-foreground">
-            {supplier.type === 'PJ' ? `CNPJ: ${supplier.cnpj}` : `CPF: ${supplier.cpf}`}
-            {supplier.email && ` · ${supplier.email}`}
-          </p>
-        </div>
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <h1 className="text-[22px] font-semibold text-foreground">{supplier.name}</h1>
         {canMutate && (
           <Link href={`/${cnpj}/suppliers/${id}/edit`}>
             <Button variant="outline" size="sm">
@@ -57,6 +61,33 @@ export default async function SupplierDetailPage({ params }: Props) {
             </Button>
           </Link>
         )}
+      </div>
+
+      {/* Bloco de identificação: ícone + documento + status + avaliação + métricas */}
+      <div className="mb-6 flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-[13px]">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+            {supplier.type === 'PF' ? (
+              <User size={24} strokeWidth={1.6} />
+            ) : (
+              <Building2 size={24} strokeWidth={1.6} />
+            )}
+          </div>
+          <div>
+            <div className="font-mono text-[13px] text-muted-foreground">{doc ?? '—'}</div>
+            <div className="mt-1 flex items-center gap-2.5">
+              <SupplierStatusBadge status={supplier.status} size="lg" />
+              <Stars value={supplier.rating != null ? Number(supplier.rating) : null} />
+            </div>
+          </div>
+        </div>
+        <div className="ml-auto flex gap-7">
+          <Metric label="Cliente desde" value={since} mono />
+          <Metric
+            label="Tipo"
+            value={supplier.type === 'PJ' ? 'Pessoa Jurídica' : 'Pessoa Física'}
+          />
+        </div>
       </div>
 
       {/* Tabs */}
@@ -71,7 +102,7 @@ export default async function SupplierDetailPage({ params }: Props) {
           <div className="mt-4 rounded-lg border border-border bg-card p-6">
             <div className="grid grid-cols-2 gap-5">
               <InfoField label="Telefone" value={supplier.phone} />
-              <InfoField label="Avaliação" value={supplier.rating ? `${supplier.rating}/5` : '—'} />
+              <InfoField label="E-mail" value={supplier.email} />
               {supplier.address && (
                 <InfoField
                   label="Endereço"
@@ -109,6 +140,17 @@ export default async function SupplierDetailPage({ params }: Props) {
           />
         </TabsContent>
       </Tabs>
+    </div>
+  )
+}
+
+function Metric({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div>
+      <div className="mb-1 text-xs text-muted-foreground">{label}</div>
+      <div className={`text-[13.5px] font-medium text-foreground ${mono ? 'font-mono' : ''}`}>
+        {value}
+      </div>
     </div>
   )
 }
