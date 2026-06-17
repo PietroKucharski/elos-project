@@ -8,6 +8,7 @@ import { AuditLogsModule } from './modules/audit-logs/audit-logs.module'
 import { AuthModule } from './modules/auth/auth.module'
 import { BidsModule } from './modules/bids/bids.module'
 import { CompaniesModule } from './modules/companies/companies.module'
+import { DashboardModule } from './modules/dashboard/dashboard.module'
 import { HealthModule } from './modules/health/health.module'
 import { InvoicesModule } from './modules/invoices/invoices.module'
 import { MembersModule } from './modules/members/members.module'
@@ -45,6 +46,7 @@ import { WarehousesModule } from './modules/warehouses/warehouses.module'
     InvoicesModule,
     PaymentsModule,
     AuditLogsModule,
+    DashboardModule,
     // Fases 1–7: módulos de domínio adicionados aqui
   ],
   providers: [

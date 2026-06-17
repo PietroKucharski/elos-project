@@ -10,6 +10,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Param,
   Patch,
   Post,
@@ -28,7 +29,10 @@ import { PurchaseOrdersService } from './purchase-orders.service'
 @Controller('companies/:cnpj/purchase-orders')
 @UseGuards(AuthGuard)
 export class PurchaseOrdersController {
-  constructor(private readonly purchaseOrdersService: PurchaseOrdersService) {}
+  // @Inject explícito: tsx/esbuild não emite metadata de tipo para a DI.
+  constructor(
+    @Inject(PurchaseOrdersService) private readonly purchaseOrdersService: PurchaseOrdersService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Listar pedidos de compra' })

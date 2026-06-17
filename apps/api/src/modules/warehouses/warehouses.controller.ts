@@ -10,6 +10,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Param,
   Patch,
   Post,
@@ -28,7 +29,8 @@ import { WarehousesService } from './warehouses.service'
 @Controller('companies/:cnpj/warehouses')
 @UseGuards(AuthGuard)
 export class WarehousesController {
-  constructor(private readonly warehousesService: WarehousesService) {}
+  // @Inject explícito: tsx/esbuild não emite metadata de tipo para a DI.
+  constructor(@Inject(WarehousesService) private readonly warehousesService: WarehousesService) {}
 
   @Get()
   @ApiOperation({ summary: 'Listar armazéns' })

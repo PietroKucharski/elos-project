@@ -1,5 +1,5 @@
 import { type AuditLogQuery, auditLogQuerySchema } from '@elos/shared'
-import { Controller, Get, Param, ParseUUIDPipe, Query, UseGuards } from '@nestjs/common'
+import { Controller, Get, Inject, Param, ParseUUIDPipe, Query, UseGuards } from '@nestjs/common'
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { CurrentUser } from '../../common/decorators/current-user.decorator'
 import { AuthGuard } from '../../common/guards/auth.guard'
@@ -12,7 +12,8 @@ import { AuditLogsService } from './audit-logs.service'
 @Controller('companies/:cnpj/audit-logs')
 @UseGuards(AuthGuard)
 export class AuditLogsController {
-  constructor(private readonly auditLogsService: AuditLogsService) {}
+  // @Inject explícito: tsx/esbuild não emite metadata de tipo para a DI.
+  constructor(@Inject(AuditLogsService) private readonly auditLogsService: AuditLogsService) {}
 
   // Rotas sem parâmetros dinâmicos ANTES de :id
   @Get('entities')

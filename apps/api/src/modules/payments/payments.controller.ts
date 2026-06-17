@@ -12,6 +12,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Param,
   Patch,
   Post,
@@ -30,7 +31,8 @@ import { PaymentsService } from './payments.service'
 @Controller('companies/:cnpj/payments')
 @UseGuards(AuthGuard)
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  // @Inject explícito: tsx/esbuild não emite metadata de tipo para a DI.
+  constructor(@Inject(PaymentsService) private readonly paymentsService: PaymentsService) {}
 
   @Get()
   @ApiOperation({ summary: 'Listar pagamentos' })

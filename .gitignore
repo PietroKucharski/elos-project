@@ -37,3 +37,6 @@ pnpm-debug.log*
 
 # Coverage
 coverage/
+
+# Claude Design handoff bundle (scratch — not committed)
+.design-bundle/

@@ -67,6 +67,18 @@
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 
+/* Raw HSL triplets for SVG fills/strokes (the --color-* tokens above are already
+   wrapped in hsl() for Tailwind, so they can't be re-wrapped inside hsl()). Used
+   by the dashboard chart to stay token-driven. */
+:root {
+  --chart-primary: 243 75% 59%;
+  --chart-border: 214 32% 91%;
+  --chart-subtle: 215 20% 65%;
+  --chart-muted: 215 16% 47%;
+  --chart-fg: 222 47% 11%;
+  --chart-card: 0 0% 100%;
+}
+
 /* --- Base --- */
 *,
 *::before,
@@ -92,6 +104,16 @@ body {
 
 ::selection {
   background: hsl(243 75% 59% / 0.18);
+}
+
+/* Typography helpers (mirror Claude Design): monospaced numerics for codes/IDs
+   and tabular figures for aligned columns. */
+.mono {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum";
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Scrollbars */
@@ -185,9 +207,21 @@ body {
     opacity: 1;
   }
 }
+@keyframes drawLine {
+  from {
+    stroke-dashoffset: var(--dash);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
 
 .page-enter {
   animation: pageIn 0.26s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+.chart-line {
+  animation: drawLine 1.1s ease forwards;
 }
 
 /* Skeleton shimmer */
