@@ -1,18 +1,23 @@
+import { type BadgeTone, StatusBadge } from '@/components/domain/status-badge'
 import type { PaymentStatus } from '@elos/shared'
 
-const STATUS_CONFIG: Record<PaymentStatus, { label: string; className: string }> = {
-  PENDING: { label: 'Pendente', className: 'bg-muted text-muted-foreground' },
-  PAID: { label: 'Pago', className: 'bg-success/10 text-success' },
-  CANCELLED: { label: 'Cancelado', className: 'bg-destructive/10 text-destructive' },
+const STATUS_CONFIG: Record<PaymentStatus, { label: string; tone: BadgeTone }> = {
+  PENDING: { label: 'Pendente', tone: 'muted' },
+  PAID: { label: 'Pago', tone: 'success' },
+  CANCELLED: { label: 'Cancelado', tone: 'destructive' },
 }
 
-export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
+export function PaymentStatusBadge({
+  status,
+  size,
+}: {
+  status: PaymentStatus
+  size?: 'md' | 'lg'
+}) {
   const config = STATUS_CONFIG[status]
   return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${config.className}`}
-    >
+    <StatusBadge tone={config.tone} size={size}>
       {config.label}
-    </span>
+    </StatusBadge>
   )
 }

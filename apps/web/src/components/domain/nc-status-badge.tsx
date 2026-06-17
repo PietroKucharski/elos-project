@@ -1,43 +1,40 @@
+import { type BadgeTone, StatusBadge } from '@/components/domain/status-badge'
 import type { NonConformityStatus } from '@elos/shared'
 
-const STATUS_CONFIG: Record<NonConformityStatus, { label: string; className: string }> = {
-  OPEN: { label: 'Aberta', className: 'bg-warning/10 text-warning' },
-  ANALYZING: { label: 'Em Análise', className: 'bg-info/10 text-info' },
-  RESOLVED: { label: 'Resolvida', className: 'bg-success/10 text-success' },
-  REJECTED: { label: 'Rejeitada', className: 'bg-destructive/10 text-destructive' },
+const STATUS_CONFIG: Record<NonConformityStatus, { label: string; tone: BadgeTone }> = {
+  OPEN: { label: 'Aberta', tone: 'warning' },
+  ANALYZING: { label: 'Em Análise', tone: 'info' },
+  RESOLVED: { label: 'Resolvida', tone: 'success' },
+  REJECTED: { label: 'Rejeitada', tone: 'destructive' },
 }
 
-const SEVERITY_CONFIG: Record<string, { label: string; className: string }> = {
-  LOW: { label: 'Baixa', className: 'bg-muted text-muted-foreground' },
-  MEDIUM: { label: 'Média', className: 'bg-warning/10 text-warning' },
-  HIGH: { label: 'Alta', className: 'bg-destructive/10 text-destructive' },
-  CRITICAL: { label: 'Crítica', className: 'bg-destructive text-destructive-foreground' },
+const SEVERITY_CONFIG: Record<string, { label: string; tone: BadgeTone }> = {
+  LOW: { label: 'Baixa', tone: 'muted' },
+  MEDIUM: { label: 'Média', tone: 'warning' },
+  HIGH: { label: 'Alta', tone: 'destructive' },
+  CRITICAL: { label: 'Crítica', tone: 'critical' },
 }
 
-export function NcStatusBadge({ status }: { status: NonConformityStatus }) {
-  const config = STATUS_CONFIG[status] ?? {
-    label: status,
-    className: 'bg-muted text-muted-foreground',
-  }
+export function NcStatusBadge({
+  status,
+  size,
+}: {
+  status: NonConformityStatus
+  size?: 'md' | 'lg'
+}) {
+  const config = STATUS_CONFIG[status] ?? { label: status, tone: 'muted' as const }
   return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${config.className}`}
-    >
+    <StatusBadge tone={config.tone} size={size}>
       {config.label}
-    </span>
+    </StatusBadge>
   )
 }
 
-export function NcSeverityBadge({ severity }: { severity: string }) {
-  const config = SEVERITY_CONFIG[severity] ?? {
-    label: severity,
-    className: 'bg-muted text-muted-foreground',
-  }
+export function NcSeverityBadge({ severity, size }: { severity: string; size?: 'md' | 'lg' }) {
+  const config = SEVERITY_CONFIG[severity] ?? { label: severity, tone: 'muted' as const }
   return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${config.className}`}
-    >
+    <StatusBadge tone={config.tone} size={size}>
       {config.label}
-    </span>
+    </StatusBadge>
   )
 }

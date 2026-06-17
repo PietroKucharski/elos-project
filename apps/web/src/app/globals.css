@@ -44,6 +44,7 @@
   --color-info: hsl(199 89% 42%);
   --color-info-soft: hsl(199 90% 95%);
   --color-info-border: hsl(199 80% 82%);
+  --color-critical: hsl(0 63% 38%);
 
   /* Radii */
   --radius: 0.5rem;

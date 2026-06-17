@@ -1,22 +1,25 @@
+import { type BadgeTone, StatusBadge } from '@/components/domain/status-badge'
 import type { PaymentMethod } from '@elos/shared'
 
-const OUTLINE = 'border border-border bg-card text-foreground-2'
-const INFO = 'bg-info/10 text-info'
-
-const METHOD_CONFIG: Record<PaymentMethod, { label: string; className: string }> = {
-  BOLETO: { label: 'Boleto', className: OUTLINE },
-  PIX: { label: 'PIX', className: INFO },
-  TRANSFER: { label: 'Transferência', className: OUTLINE },
-  CHECK: { label: 'Cheque', className: OUTLINE },
+// Forma de pagamento é uma etiqueta, não um status — renderiza sem o ponto.
+const METHOD_CONFIG: Record<PaymentMethod, { label: string; tone: BadgeTone }> = {
+  BOLETO: { label: 'Boleto', tone: 'muted' },
+  PIX: { label: 'PIX', tone: 'info' },
+  TRANSFER: { label: 'Transferência', tone: 'muted' },
+  CHECK: { label: 'Cheque', tone: 'muted' },
 }
 
-export function PaymentMethodBadge({ method }: { method: PaymentMethod }) {
+export function PaymentMethodBadge({
+  method,
+  size,
+}: {
+  method: PaymentMethod
+  size?: 'md' | 'lg'
+}) {
   const config = METHOD_CONFIG[method]
   return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${config.className}`}
-    >
+    <StatusBadge tone={config.tone} dot={false} size={size}>
       {config.label}
-    </span>
+    </StatusBadge>
   )
 }
