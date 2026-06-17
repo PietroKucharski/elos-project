@@ -19,6 +19,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Param,
   Patch,
   Post,
@@ -37,7 +38,8 @@ import { InvoicesService } from './invoices.service'
 @Controller('companies/:cnpj/invoices')
 @UseGuards(AuthGuard)
 export class InvoicesController {
-  constructor(private readonly invoicesService: InvoicesService) {}
+  // @Inject explícito: tsx/esbuild não emite metadata de tipo para a DI.
+  constructor(@Inject(InvoicesService) private readonly invoicesService: InvoicesService) {}
 
   @Get()
   @ApiOperation({ summary: 'Listar notas fiscais' })

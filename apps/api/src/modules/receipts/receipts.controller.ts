@@ -13,6 +13,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Param,
   Post,
   Query,
@@ -31,9 +32,10 @@ import { StockMovementsService } from './stock-movements.service'
 @Controller('companies/:cnpj')
 @UseGuards(AuthGuard)
 export class ReceiptsController {
+  // @Inject explícito: tsx/esbuild não emite metadata de tipo para a DI.
   constructor(
-    private readonly receiptsService: ReceiptsService,
-    private readonly stockMovementsService: StockMovementsService,
+    @Inject(ReceiptsService) private readonly receiptsService: ReceiptsService,
+    @Inject(StockMovementsService) private readonly stockMovementsService: StockMovementsService,
   ) {}
 
   // ─── Receipts ─────────────────────────────────────────────────────────────

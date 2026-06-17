@@ -17,12 +17,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
-import { and, desc, eq, ilike } from 'drizzle-orm'
+import { and, count, desc, eq, ilike, inArray } from 'drizzle-orm'
 import { AbilityFactory } from '../../common/ability/ability.factory'
 import type { SessionUser } from '../../common/types/session-user'
 import type { DrizzleDB } from '../../db'
 import { DRIZZLE } from '../../db.module'
 import { auditLogs } from '../../db/schema/audit-logs'
+import { productSuppliers, products } from '../../db/schema/products'
+import { purchaseOrderItems, purchaseOrders } from '../../db/schema/purchase-orders'
 import {
   supplierAddresses,
   supplierBankAccounts,
@@ -440,6 +442,99 @@ export class SuppliersService {
       .where(and(eq(supplierContacts.id, contactId), eq(supplierContacts.supplierId, supplierId)))
 
     return { success: true }
+  }
+
+  // ─── Produtos fornecidos ─────────────────────────────────────────────────────
+
+  async findProducts(supplierId: string, user: SessionUser) {
+    const ability = this.abilityFactory.createForUser(user)
+    if (ability.cannot('read', 'Supplier')) {
+      throw new ForbiddenException('Sem permissão.')
+    }
+
+    await this.assertSupplierBelongsToCompany(supplierId, user.companyId!)
+
+    return this.db
+      .select({
+        linkId: productSuppliers.id,
+        productId: products.id,
+        name: products.name,
+        code: products.code,
+        unit: products.unit,
+        isPreferred: productSuppliers.isPreferred,
+      })
+      .from(productSuppliers)
+      .innerJoin(products, eq(products.id, productSuppliers.productId))
+      .where(
+        and(eq(productSuppliers.supplierId, supplierId), eq(products.companyId, user.companyId!)),
+      )
+      .orderBy(desc(productSuppliers.isPreferred), products.name)
+  }
+
+  // ─── Pedidos emitidos ──────────────────────────────────────────────────────
+
+  async findPurchaseOrders(supplierId: string, user: SessionUser) {
+    const ability = this.abilityFactory.createForUser(user)
+    if (ability.cannot('read', 'Supplier')) {
+      throw new ForbiddenException('Sem permissão.')
+    }
+
+    await this.assertSupplierBelongsToCompany(supplierId, user.companyId!)
+
+    return this.db
+      .select({
+        id: purchaseOrders.id,
+        number: purchaseOrders.number,
+        status: purchaseOrders.status,
+        totalAmount: purchaseOrders.totalAmount,
+        itemCount: count(purchaseOrderItems.id),
+        createdAt: purchaseOrders.createdAt,
+      })
+      .from(purchaseOrders)
+      .leftJoin(purchaseOrderItems, eq(purchaseOrderItems.purchaseOrderId, purchaseOrders.id))
+      .where(
+        and(
+          eq(purchaseOrders.supplierId, supplierId),
+          eq(purchaseOrders.companyId, user.companyId!),
+        ),
+      )
+      .groupBy(purchaseOrders.id)
+      .orderBy(desc(purchaseOrders.createdAt))
+  }
+
+  // ─── Avaliações (timeline de APPROVE/REJECT a partir dos audit logs) ─────────
+
+  async findEvaluations(supplierId: string, user: SessionUser) {
+    const ability = this.abilityFactory.createForUser(user)
+    if (ability.cannot('read', 'Supplier')) {
+      throw new ForbiddenException('Sem permissão.')
+    }
+
+    await this.assertSupplierBelongsToCompany(supplierId, user.companyId!)
+
+    const rows = await this.db
+      .select()
+      .from(auditLogs)
+      .where(
+        and(
+          eq(auditLogs.entity, 'Supplier'),
+          eq(auditLogs.entityId, supplierId),
+          eq(auditLogs.companyId, user.companyId!),
+          inArray(auditLogs.action, ['APPROVE', 'REJECT']),
+        ),
+      )
+      .orderBy(desc(auditLogs.createdAt))
+
+    return rows.map((row) => {
+      const after = (row.after ?? null) as { rating?: number; notes?: string } | null
+      return {
+        id: row.id,
+        action: row.action as 'APPROVE' | 'REJECT',
+        rating: after?.rating ?? null,
+        notes: after?.notes ?? null,
+        createdAt: row.createdAt,
+      }
+    })
   }
 
   // ─── Bank Accounts ─────────────────────────────────────────────────────────

@@ -1,29 +1,25 @@
 // apps/web/src/components/domain/supplier-status-badge.tsx
 
-import { cn } from '@/lib/utils'
+import { type BadgeTone, StatusBadge } from '@/components/domain/status-badge'
 
 const STATUS_CONFIG = {
-  PENDING: { label: 'Pendente', className: 'text-warning bg-warning-soft' },
-  APPROVED: { label: 'Aprovado', className: 'text-success bg-success-soft' },
-  REJECTED: { label: 'Reprovado', className: 'text-destructive bg-destructive-soft' },
-} as const
+  PENDING: { label: 'Pendente', tone: 'warning' },
+  APPROVED: { label: 'Aprovado', tone: 'success' },
+  REJECTED: { label: 'Reprovado', tone: 'destructive' },
+} as const satisfies Record<string, { label: string; tone: BadgeTone }>
 
 type SupplierStatus = keyof typeof STATUS_CONFIG
 
 interface SupplierStatusBadgeProps {
   status: SupplierStatus
+  size?: 'md' | 'lg'
 }
 
-export function SupplierStatusBadge({ status }: SupplierStatusBadgeProps) {
+export function SupplierStatusBadge({ status, size }: SupplierStatusBadgeProps) {
   const config = STATUS_CONFIG[status]
   return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-        config.className,
-      )}
-    >
+    <StatusBadge tone={config.tone} size={size}>
       {config.label}
-    </span>
+    </StatusBadge>
   )
 }

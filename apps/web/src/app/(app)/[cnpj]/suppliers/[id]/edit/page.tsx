@@ -22,8 +22,10 @@ export default async function EditSupplierPage({ params }: Props) {
           supplierId={id}
           defaultValues={{
             name: supplier.name,
+            tradeName: supplier.tradeName ?? undefined,
             cnpj: supplier.cnpj ?? undefined,
             cpf: supplier.cpf ?? undefined,
+            stateRegistration: supplier.stateRegistration ?? undefined,
             email: supplier.email ?? undefined,
             phone: supplier.phone ?? undefined,
             notes: supplier.notes ?? undefined,

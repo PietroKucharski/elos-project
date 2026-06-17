@@ -1,29 +1,25 @@
 // apps/web/src/components/domain/quotation-status-badge.tsx
 
-import { cn } from '@/lib/utils'
+import { type BadgeTone, StatusBadge } from '@/components/domain/status-badge'
 import type { QuotationStatus } from '@elos/shared'
 
-const STATUS_CONFIG: Record<QuotationStatus, { label: string; className: string }> = {
-  DRAFT: { label: 'Rascunho', className: 'text-muted-foreground bg-muted' },
-  OPEN: { label: 'Aberta', className: 'text-success bg-success-soft' },
-  CLOSED: { label: 'Fechada', className: 'text-info bg-info-soft' },
-  CANCELLED: { label: 'Cancelada', className: 'text-destructive bg-destructive-soft' },
+const STATUS_CONFIG: Record<QuotationStatus, { label: string; tone: BadgeTone }> = {
+  DRAFT: { label: 'Rascunho', tone: 'muted' },
+  OPEN: { label: 'Aberta', tone: 'success' },
+  CLOSED: { label: 'Fechada', tone: 'info' },
+  CANCELLED: { label: 'Cancelada', tone: 'destructive' },
 }
 
 interface QuotationStatusBadgeProps {
   status: QuotationStatus
+  size?: 'md' | 'lg'
 }
 
-export function QuotationStatusBadge({ status }: QuotationStatusBadgeProps) {
+export function QuotationStatusBadge({ status, size }: QuotationStatusBadgeProps) {
   const config = STATUS_CONFIG[status]
   return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-        config.className,
-      )}
-    >
+    <StatusBadge tone={config.tone} size={size}>
       {config.label}
-    </span>
+    </StatusBadge>
   )
 }

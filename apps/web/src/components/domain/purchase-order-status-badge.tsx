@@ -1,26 +1,27 @@
 // apps/web/src/components/domain/purchase-order-status-badge.tsx
 
-import { cn } from '@/lib/utils'
+import { type BadgeTone, StatusBadge } from '@/components/domain/status-badge'
 import type { PurchaseOrderStatus } from '@elos/shared'
 
-const STATUS_CONFIG: Record<PurchaseOrderStatus, { label: string; className: string }> = {
-  DRAFT: { label: 'Rascunho', className: 'text-muted-foreground bg-muted' },
-  APPROVED: { label: 'Aprovado', className: 'text-info bg-info-soft' },
-  SENT: { label: 'Enviado', className: 'text-warning bg-warning-soft' },
-  RECEIVED: { label: 'Recebido', className: 'text-success bg-success-soft' },
-  CANCELLED: { label: 'Cancelado', className: 'text-destructive bg-destructive-soft' },
+const STATUS_CONFIG: Record<PurchaseOrderStatus, { label: string; tone: BadgeTone }> = {
+  DRAFT: { label: 'Rascunho', tone: 'muted' },
+  APPROVED: { label: 'Aprovado', tone: 'info' },
+  SENT: { label: 'Enviado', tone: 'warning' },
+  RECEIVED: { label: 'Recebido', tone: 'success' },
+  CANCELLED: { label: 'Cancelado', tone: 'destructive' },
 }
 
-export function PurchaseOrderStatusBadge({ status }: { status: PurchaseOrderStatus }) {
+export function PurchaseOrderStatusBadge({
+  status,
+  size,
+}: {
+  status: PurchaseOrderStatus
+  size?: 'md' | 'lg'
+}) {
   const config = STATUS_CONFIG[status]
   return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap',
-        config.className,
-      )}
-    >
+    <StatusBadge tone={config.tone} size={size}>
       {config.label}
-    </span>
+    </StatusBadge>
   )
 }

@@ -11,9 +11,11 @@ export const suppliers = pgTable('suppliers', {
     .notNull()
     .references(() => companies.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
+  tradeName: varchar('trade_name', { length: 255 }),
   type: supplierTypeEnum('type').notNull().default('PJ'),
   cnpj: varchar('cnpj', { length: 14 }),
   cpf: varchar('cpf', { length: 11 }),
+  stateRegistration: varchar('state_registration', { length: 20 }),
   email: varchar('email', { length: 255 }),
   phone: varchar('phone', { length: 20 }),
   status: supplierStatusEnum('status').notNull().default('PENDING'),
