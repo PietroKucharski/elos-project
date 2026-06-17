@@ -35,7 +35,13 @@ import {
   warehouses,
 } from './schema'
 
-const DEV_PASSWORD = 'Elos@2024!' // dev only — alterar em produção
+// Senha dos usuários de dev vem do ambiente — nunca literal no código (segredo
+// fora do source). Defina SEED_PASSWORD no .env antes de rodar o seed.
+const seedPassword = process.env.SEED_PASSWORD
+if (!seedPassword) {
+  throw new Error('SEED_PASSWORD não definida. Configure-a no .env antes de rodar o seed.')
+}
+const DEV_PASSWORD: string = seedPassword
 
 // Helpers de data relativos a "agora" — mantêm o seed coerente a cada execução.
 const now = new Date()
@@ -43,6 +49,12 @@ const daysAgo = (n: number) => new Date(now.getTime() - n * 86_400_000)
 const daysAhead = (n: number) => new Date(now.getTime() + n * 86_400_000)
 
 async function seed() {
+  // Gate de segurança: o seed executa TRUNCATE … CASCADE (apaga todas as tabelas).
+  // Nunca pode rodar em produção, mesmo que a DATABASE_URL aponte para lá por engano.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Seed bloqueado: NODE_ENV=production. Este script apaga todos os dados.')
+  }
+
   const client = postgres(process.env.DATABASE_URL!)
   const db = drizzle(client, { schema })
 
@@ -686,7 +698,7 @@ async function seed() {
 
   console.log('✅ Seed concluído.')
   console.log(`   Empresa: ${company.name} (CNPJ: ${company.cnpj})`)
-  console.log('   Usuários (senha dev: Elos@2024!):')
+  console.log('   Usuários (senha definida em SEED_PASSWORD):')
   console.log('     SUPER_ADMIN ........ admin@elos.com.br')
   console.log('     ADMIN_EMPRESA ...... admin-empresa@elosdemo.com.br')
   console.log('     COMPRADOR .......... comprador@elosdemo.com.br')
