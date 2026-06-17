@@ -1423,8 +1423,8 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
 | 3    | Cotações e Lances               | Concluída     |
 | 4    | Pedidos de Compra               | Concluída     |
 | 5    | Recebimento e Estoque           | Concluída     |
-| 6    | Financeiro (NF + Pagamentos)    | Em andamento  |
-| 7    | Audit Log e Administração       | Não iniciada  |
+| 6    | Financeiro (NF + Pagamentos)    | Concluída     |
+| 7    | Audit Log e Administração       | Concluída     |
 
 ---
 

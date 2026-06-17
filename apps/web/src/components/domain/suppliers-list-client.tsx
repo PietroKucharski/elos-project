@@ -90,9 +90,13 @@ export function SuppliersListClient({
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset on filter change
   useEffect(() => setPage(1), [statusFilter, search])
 
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-  const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
-  const rangeEnd = Math.min(page * PAGE_SIZE, total)
+  // Clampa a página: após um refresh a lista pode encolher (ex.: fornecedor
+  // removido) e deixar `page` além de `totalPages` — sem isso o slice ficaria
+  // vazio mesmo havendo resultados.
+  const currentPage = Math.min(page, totalPages)
+  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const rangeStart = total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
+  const rangeEnd = Math.min(currentPage * PAGE_SIZE, total)
   const hasFilters = statusFilter !== 'ALL' || search.trim() !== ''
 
   function clearFilters() {
@@ -318,23 +322,23 @@ export function SuppliersListClient({
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
+                onClick={() => setPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
                 className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-md border border-border px-2.5 text-[13px] font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 <ChevronLeft size={15} strokeWidth={1.8} />
                 Anterior
               </button>
 
-              {pageWindow(page, totalPages).map((p) => (
+              {pageWindow(currentPage, totalPages).map((p) => (
                 <button
                   key={p}
                   type="button"
                   onClick={() => setPage(p)}
-                  aria-current={p === page ? 'page' : undefined}
+                  aria-current={p === currentPage ? 'page' : undefined}
                   className={cn(
                     'inline-flex h-8 min-w-8 cursor-pointer items-center justify-center rounded-md px-2 text-[13px] transition-colors',
-                    p === page
+                    p === currentPage
                       ? 'border border-primary bg-primary/10 font-semibold text-primary'
                       : 'font-medium text-muted-foreground hover:bg-muted hover:text-foreground',
                   )}
@@ -345,8 +349,8 @@ export function SuppliersListClient({
 
               <button
                 type="button"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
+                onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
                 className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-md border border-border px-2.5 text-[13px] font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 Próximo
