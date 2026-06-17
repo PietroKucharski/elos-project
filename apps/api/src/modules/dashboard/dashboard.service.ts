@@ -30,7 +30,8 @@ export class DashboardService {
       lowStockData,
       ncsData,
       suppliersData,
-      financialData,
+      payableData,
+      paidData,
     ] = await Promise.all([
       // Cotações
       this.db
@@ -87,15 +88,29 @@ export class DashboardService {
         .where(eq(suppliers.companyId, cid))
         .groupBy(suppliers.status),
 
-      // Total a pagar (NFs validadas sem pagamento PAID) e total pago
+      // Total a pagar: NFs validadas SEM nenhum pagamento PAID. Agregado direto
+      // sobre invoices (sem join com payments) para não multiplicar o valor da NF
+      // quando ela tem mais de um pagamento.
       this.db
         .select({
-          totalPayable: sql<string>`COALESCE(SUM(CASE WHEN ${invoices.status} = 'VALIDATED' THEN ${invoices.totalAmount}::numeric ELSE 0 END), 0)::text`,
-          totalPaid: sql<string>`COALESCE(SUM(CASE WHEN ${payments.status} = 'PAID' THEN ${payments.totalAmount}::numeric ELSE 0 END), 0)::text`,
+          total: sql<string>`COALESCE(SUM(${invoices.totalAmount}::numeric), 0)::text`,
         })
         .from(invoices)
-        .leftJoin(payments, eq(payments.invoiceId, invoices.id))
-        .where(eq(invoices.companyId, cid)),
+        .where(
+          and(
+            eq(invoices.companyId, cid),
+            eq(invoices.status, 'VALIDATED'),
+            sql`NOT EXISTS (SELECT 1 FROM ${payments} WHERE ${payments.invoiceId} = ${invoices.id} AND ${payments.status} = 'PAID')`,
+          ),
+        ),
+
+      // Total pago: soma dos pagamentos PAID, agregado direto sobre payments.
+      this.db
+        .select({
+          total: sql<string>`COALESCE(SUM(${payments.totalAmount}::numeric), 0)::text`,
+        })
+        .from(payments)
+        .where(and(eq(payments.companyId, cid), eq(payments.status, 'PAID'))),
     ])
 
     // Helper para extrair contagem por status
@@ -114,8 +129,8 @@ export class DashboardService {
         invoicesValidated: countByStatus(invoicesData, 'VALIDATED'),
         paymentsPending: countByStatus(paymentsData, 'PENDING'),
         paymentsPaid: countByStatus(paymentsData, 'PAID'),
-        totalPayable: financialData[0]?.totalPayable ?? '0',
-        totalPaid: financialData[0]?.totalPaid ?? '0',
+        totalPayable: payableData[0]?.total ?? '0',
+        totalPaid: paidData[0]?.total ?? '0',
         lowStockAlerts: lowStockData[0]?.count ?? 0,
         nonConformitiesOpen: countByStatus(ncsData, 'OPEN'),
         nonConformitiesAnalyzing: countByStatus(ncsData, 'ANALYZING'),

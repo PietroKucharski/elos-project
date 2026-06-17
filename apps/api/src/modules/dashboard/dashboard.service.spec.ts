@@ -37,7 +37,7 @@ function makeDb() {
   return { mockDb, enqueueMany }
 }
 
-// Enfileira, na ordem do serviço, os 8 grupos de KPIs e a atividade recente.
+// Enfileira, na ordem do serviço, os grupos de KPIs e a atividade recente.
 function enqueueDashboard(enqueueMany: (rows: unknown[]) => void, activity: unknown[] = []) {
   enqueueMany([
     { status: 'OPEN', count: 3 },
@@ -52,7 +52,8 @@ function enqueueDashboard(enqueueMany: (rows: unknown[]) => void, activity: unkn
   enqueueMany([{ count: 7 }]) // estoque baixo
   enqueueMany([{ status: 'OPEN', count: 1 }]) // NCs
   enqueueMany([{ status: 'APPROVED', count: 9 }]) // fornecedores
-  enqueueMany([{ totalPayable: '1000.00', totalPaid: '500.00' }]) // financeiro
+  enqueueMany([{ total: '1000.00' }]) // total a pagar (NFs validadas sem pagamento PAID)
+  enqueueMany([{ total: '500.00' }]) // total pago (pagamentos PAID)
   enqueueMany(activity) // atividade recente
   enqueueMany([{ key: '2026-05', value: 4 }]) // chart (PO por mês)
   enqueueMany([
