@@ -1,29 +1,25 @@
 // apps/web/src/components/domain/bid-status-badge.tsx
 
-import { cn } from '@/lib/utils'
+import { type BadgeTone, StatusBadge } from '@/components/domain/status-badge'
 import type { BidStatus } from '@elos/shared'
 
-const STATUS_CONFIG: Record<BidStatus, { label: string; className: string }> = {
-  DRAFT: { label: 'Rascunho', className: 'text-muted-foreground bg-muted' },
-  SUBMITTED: { label: 'Enviado', className: 'text-info bg-info-soft' },
-  SELECTED: { label: 'Vencedor', className: 'text-success bg-success-soft' },
-  REJECTED: { label: 'Rejeitado', className: 'text-destructive bg-destructive-soft' },
+const STATUS_CONFIG: Record<BidStatus, { label: string; tone: BadgeTone }> = {
+  DRAFT: { label: 'Rascunho', tone: 'muted' },
+  SUBMITTED: { label: 'Enviado', tone: 'info' },
+  SELECTED: { label: 'Vencedor', tone: 'success' },
+  REJECTED: { label: 'Rejeitado', tone: 'destructive' },
 }
 
 interface BidStatusBadgeProps {
   status: BidStatus
+  size?: 'md' | 'lg'
 }
 
-export function BidStatusBadge({ status }: BidStatusBadgeProps) {
+export function BidStatusBadge({ status, size }: BidStatusBadgeProps) {
   const config = STATUS_CONFIG[status]
   return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-        config.className,
-      )}
-    >
+    <StatusBadge tone={config.tone} size={size}>
       {config.label}
-    </span>
+    </StatusBadge>
   )
 }

@@ -51,6 +51,9 @@ import type {
   SelectWinnerDto,
   SupplierBankAccountResponse,
   SupplierContactResponse,
+  SupplierEvaluationResponse,
+  SupplierProductResponse,
+  SupplierPurchaseOrderResponse,
   SupplierResponse,
   UpdateCompanyDto,
   UpdateInvoiceDto,
@@ -208,6 +211,45 @@ export async function getSupplierBankAccountsServer(
   })
   if (!res.ok) return []
   return res.json() as Promise<SupplierBankAccountResponse[]>
+}
+
+export async function getSupplierProductsServer(
+  cnpj: string,
+  supplierId: string,
+): Promise<SupplierProductResponse[]> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/suppliers/${supplierId}/products`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  return res.json() as Promise<SupplierProductResponse[]>
+}
+
+export async function getSupplierPurchaseOrdersServer(
+  cnpj: string,
+  supplierId: string,
+): Promise<SupplierPurchaseOrderResponse[]> {
+  const res = await fetch(
+    `${API_URL}/v1/companies/${cnpj}/suppliers/${supplierId}/purchase-orders`,
+    {
+      headers: await sessionHeaders(),
+      cache: 'no-store',
+    },
+  )
+  if (!res.ok) return []
+  return res.json() as Promise<SupplierPurchaseOrderResponse[]>
+}
+
+export async function getSupplierEvaluationsServer(
+  cnpj: string,
+  supplierId: string,
+): Promise<SupplierEvaluationResponse[]> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/suppliers/${supplierId}/evaluations`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  return res.json() as Promise<SupplierEvaluationResponse[]>
 }
 
 // ── Suppliers (client-side) ─────────────────────────────────────────────────
@@ -1197,4 +1239,68 @@ export async function getAuditLogActionsServer(cnpj: string): Promise<string[]> 
   // 404 (empresa/rota inexistente) → vazio; 401/403/500 propagam ao error boundary.
   if (res.status === 404) return []
   throw new Error(`getAuditLogActionsServer falhou (${res.status}): ${await res.text()}`)
+}
+
+// ── Dashboard (server-side) ─────────────────────────────────────────────────
+// O backend retorna todos os KPIs; o frontend filtra os cards por papel. Os
+// valores monetários (`totalPayable`/`totalPaid`) vêm como string (numeric do
+// postgres.js) para preservar a precisão decimal.
+
+export interface DashboardKpis {
+  quotationsOpen: number
+  quotationsClosed: number
+  purchaseOrdersDraft: number
+  purchaseOrdersApproved: number
+  purchaseOrdersSent: number
+  purchaseOrdersReceived: number
+  invoicesPending: number
+  invoicesValidated: number
+  paymentsPending: number
+  paymentsPaid: number
+  totalPayable: string
+  totalPaid: string
+  lowStockAlerts: number
+  nonConformitiesOpen: number
+  nonConformitiesAnalyzing: number
+  suppliersPending: number
+  suppliersApproved: number
+}
+
+export interface DashboardActivity {
+  id: string
+  entity: string
+  action: string
+  userName: string | null
+  createdAt: string
+  summary: string
+}
+
+export interface DashboardChartPoint {
+  month: string
+  value: number
+}
+
+export interface DashboardDeadline {
+  id: string
+  number: string
+  title: string
+  deadline: string
+}
+
+export interface DashboardData {
+  kpis: DashboardKpis
+  recentActivity: DashboardActivity[]
+  chart: DashboardChartPoint[]
+  deadlines: DashboardDeadline[]
+}
+
+export async function getDashboardServer(cnpj: string): Promise<DashboardData | null> {
+  const res = await fetch(`${API_URL}/v1/companies/${cnpj}/dashboard`, {
+    headers: await sessionHeaders(),
+    cache: 'no-store',
+  })
+  if (res.ok) return res.json() as Promise<DashboardData>
+  // 404 (empresa/rota inexistente) → null para o caller chamar notFound(); demais falhas propagam.
+  if (res.status === 404) return null
+  throw new Error(`getDashboardServer falhou (${res.status}): ${await res.text()}`)
 }

@@ -5,8 +5,9 @@ ALTER TABLE "quotation_suppliers" DROP CONSTRAINT "quotation_invites_supplier_id
 ALTER TABLE "quotations" DROP CONSTRAINT "quotations_created_by_id_user_id_fk";--> statement-breakpoint
 ALTER TABLE "quotations" RENAME COLUMN "created_by_id" TO "created_by";--> statement-breakpoint
 ALTER TABLE "quotation_suppliers" ALTER COLUMN "status" SET DATA TYPE text;--> statement-breakpoint
-ALTER TABLE "quotation_suppliers" ALTER COLUMN "status" SET DEFAULT 'INVITED';--> statement-breakpoint
+ALTER TABLE "quotation_suppliers" ALTER COLUMN "status" DROP DEFAULT;--> statement-breakpoint
 ALTER TABLE "quotation_suppliers" ALTER COLUMN "status" SET DATA TYPE "public"."quotation_supplier_status" USING "status"::"public"."quotation_supplier_status";--> statement-breakpoint
+ALTER TABLE "quotation_suppliers" ALTER COLUMN "status" SET DEFAULT 'INVITED';--> statement-breakpoint
 ALTER TABLE "quotation_suppliers" ADD COLUMN "invited_at" timestamp with time zone DEFAULT now() NOT NULL;--> statement-breakpoint
 ALTER TABLE "quotation_suppliers" DROP COLUMN "sent_at";--> statement-breakpoint
 ALTER TABLE "quotations" ADD COLUMN "number" varchar(20);--> statement-breakpoint

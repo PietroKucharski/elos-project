@@ -18,6 +18,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Param,
   Patch,
   Post,
@@ -36,7 +37,8 @@ import { NonConformitiesService } from './non-conformities.service'
 @Controller('companies/:cnpj/non-conformities')
 @UseGuards(AuthGuard)
 export class NonConformitiesController {
-  constructor(private readonly ncService: NonConformitiesService) {}
+  // @Inject explícito: tsx/esbuild não emite metadata de tipo para a DI.
+  constructor(@Inject(NonConformitiesService) private readonly ncService: NonConformitiesService) {}
 
   @Get()
   @ApiOperation({ summary: 'Listar não-conformidades' })

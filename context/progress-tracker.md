@@ -6,7 +6,7 @@ Atualize este arquivo após cada mudança de implementação relevante.
 
 ## Fase Atual
 
-**Fase 7 — Audit Log e Administração** · `Em andamento` (7.1, 7.2 e 7.3 concluídas) → próxima unidade: **7.4 — Dashboard UI**
+**Fase 7 — Audit Log e Administração** · `Concluída` (7.1, 7.2, 7.3 e 7.4 concluídas) → fase encerrada
 
 > **Fase 6 — Financeiro (NF + Pagamentos):** concluída (6.1, 6.2, 6.3, 6.4 e 6.5) → fase financeira encerrada.
 
@@ -1177,17 +1177,118 @@ bootstrap do servidor NestJS com Better-Auth e Supabase desde o primeiro commit.
     `changeSummary` extraídos p/ helper compartilhado (`lib/audit-log-labels.ts`) reusado por
     filtros, lista e detalhe
 
+- [x] **7.4 — Dashboard KPIs (API + UI)** — spec `39-dashboard-kpis-spec.md`
+  - Commit convencional esperado: `feat: add dashboard with role-based kpis and recent activity`
+  - **Backend** `apps/api/src/modules/dashboard/`: `dashboard.module.ts`, `dashboard.controller.ts`
+    (`GET /v1/companies/:cnpj/dashboard`, `@UseGuards(AuthGuard)`, sem CASL — todos os papéis
+    autenticados acessam o dashboard), `dashboard.service.ts` (`getDashboard` = `Promise.all` de
+    `getKpis` + `getRecentActivity`). `getKpis` dispara 8 queries agregadas paralelas escopadas a
+    `companyId` (COUNT+GROUP BY de cotações/POs/NFs/pagamentos/NCs/fornecedores por status, COUNT de
+    estoque baixo via `inventory ⋈ products` com `quantity < products.minStock`, e `totalPayable`/
+    `totalPaid` via `invoices ⋈ payments` LEFT JOIN com `SUM(CASE…)`); `getRecentActivity` retorna os
+    últimos 10 audit logs da empresa com `buildSummary` (frase PT-BR pronta — "Maria validou Nota
+    Fiscal"). `dashboard.service.spec.ts` (5 testes) + `dashboard.controller.spec.ts` (1 teste)
+  - `app.module.ts` — `DashboardModule` importado
+  - **Frontend:** `lib/api.ts` estendido com `getDashboardServer(cnpj)` (server-side, `sessionHeaders`
+    + `cache: 'no-store'`, 404 → null) + tipos `DashboardKpis`/`DashboardActivity`/`DashboardData`
+    (TS interfaces locais — o endpoint devolve resposta, não valida entrada, então sem schema Zod
+    novo em shared). `components/domain/`: `dashboard-kpi-card.tsx` (card com ícone lucide, título,
+    número grande `tabular-nums`, tom semântico `default|success|warning|destructive|info` e `<Link>`
+    para a página filtrada) e `dashboard-recent-activity.tsx` (lista de até 10 itens com avatar
+    inicial+cor gerada, frase do backend, timestamp relativo PT-BR; rodapé linka p/ audit log só p/
+    ADMIN_EMPRESA/SUPER_ADMIN). `(app)/[cnpj]/dashboard/page.tsx` substitui o placeholder de 1.4:
+    resolve papel via `getMyCompaniesServer`, busca o dashboard, filtra o catálogo de 17 cards por
+    papel (catálogo declara `roles` por card — o backend retorna todos os KPIs, o filtro é UI) e
+    renderiza grid responsivo + atividade recente
+  - **Verificado:** `vitest run` (273/273, +6 do dashboard), `pnpm type-check` (3 workspaces) verde;
+    `biome check` dos arquivos novos limpo (só warnings `noNonNullAssertion` — `companyId!`/`PALETTE[0]!`,
+    padrão do projeto); `pnpm --filter web build` **compila + checa tipos + gera as 9 rotas**
+    (`dashboard/page.js` confirmado em `.next/server/app`). Passo `output: 'standalone'` falha por
+    `EPERM` de symlink no Windows (mesma limitação de 0.5/1.4/…/7.3). Fluxo runtime (KPIs por papel,
+    atividade recente, links dos cards) não exercitado — requer API + banco vivos
+  - **Ajustes vs. spec:** import `lt` (drizzle-orm) removido do service — listado na spec mas não usado
+    (o estoque baixo usa `sql` puro), evitaria erro `noUnusedImports`; tipos da resposta do dashboard
+    como TS interfaces em `lib/api.ts` (a spec não previa arquivo de schema shared e o checklist não
+    espera testes de shared); papel resolvido via `getMyCompaniesServer` (não `session.user.role`),
+    no padrão das demais páginas do projeto; KPIs de POs `SENT` visíveis também a TRANSPORTADOR
+    conforme a tabela de papéis da spec
+
+- [x] **7.4b — Dashboard fiel ao Claude Design** — handoff `Elos.html` (bundle Claude Design)
+  - Decisão do usuário: telas fiéis ao protótipo Claude Design, **screen-by-screen** (Dashboard
+    primeiro), **design vence** conflitos com specs v1 (→ adicionar o gráfico que a 7.4 excluíra)
+  - Verificado que a **fundação já casa**: `styles.css` do protótipo é idêntico, token a token, ao
+    `globals.css` (ambos derivam de `ui-context.md`); shell (topbar 64px + sidebar 240↔64 + switcher)
+    igual ao já implementado. Trabalho de fidelidade = layout/detalhe por tela
+  - **Backend** `dashboard.service.ts` estendido: `getChart` (série de 6 meses de POs via
+    `to_char(date_trunc('month', created_at))` + GROUP BY, preenchendo meses zerados com rótulos
+    PT-BR) e `getDeadlines` (cotações `OPEN` por prazo asc, limit 5); `getDashboard` agora roda os 4
+    em `Promise.all` e devolve `{ kpis, recentActivity, chart, deadlines }`. Spec do service atualizada
+    (+1 teste de chart/deadlines) — **274 testes da API**
+  - **Frontend** redesenhado fiel ao protótipo: header + saudação por horário ("Bom dia/tarde/noite,
+    {nome} — panorama da {empresa}"); **4 KPI cards de destaque** (Pedidos em aberto, Cotações ativas,
+    Recebimentos pendentes, Pagamentos a vencer) derivados dos KPIs agregados, com caixa de ícone
+    indigo-soft + número 28px tabular + subtítulo real; linha **gráfico de área** (`dashboard-area-chart`,
+    SVG com gradiente, gridlines tracejadas, linha bezier com `drawLine`, pontos rotulados — escala
+    dinâmica ao maior valor real) + card **"Cotações próximas do prazo"** (`dashboard-deadlines`, com
+    `CountdownChip` vermelho < 2 dias); **atividade recente** restilizada (avatar tonalizado 32px,
+    nome em negrito + resumo, timestamp relativo, "Ver tudo" só p/ ADMIN/SUPER)
+  - `globals.css`: adicionados keyframe `drawLine` + `.chart-line`, helpers `.mono`/`.tnum` e tokens
+    crus `--chart-*` (triplos HSL sem `hsl()` para fills de SVG, já que os `--color-*` vêm embrulhados)
+  - **Decisão vs. spec 7.4:** os 4 KPIs de destaque do protótipo substituem o grid de 17 cards
+    filtrados por papel — o protótipo é single-persona e mostra os 4 a todos; **deltas (+12% etc.)
+    omitidos** porque o backend não tem série histórica de tendência (não fabricar métrica). Os 4 cards
+    (inclui "Pagamentos a vencer" = `totalPayable`) ficam visíveis a todos os papéis, como no design —
+    se a exposição do total financeiro a papéis não-financeiros for indesejada, gating é trivial de readicionar
+  - **Verificado:** `vitest run` API **274/274**, `pnpm --filter web type-check` verde, `biome check`
+    dos arquivos novos limpo (só warnings `noNonNullAssertion` padrão), `pnpm --filter web build`
+    **compila + 9/9 rotas** (standalone falha por `EPERM` no Windows, limitação ambiente). Próximas
+    telas fiéis (Suppliers list/detail → Quotations → Orders → Finance/Quality/Admin) pendentes
+  - **Hotfix de migration (drift do banco local):** o dashboard dava 500 (`quotations.number does not
+    exist`) porque o Postgres local (Docker, `elos-project-postgres-1`) só tinha a migration **0000**
+    aplicada — 0001–0006 estavam pendentes. A 0002 estava **quebrada**: definia `DEFAULT 'INVITED'`
+    (texto) em `quotation_suppliers.status` **antes** de converter a coluna para o enum
+    `quotation_supplier_status`, e o Postgres recusa (`default ... cannot be cast automatically`,
+    42804). Corrigido o ordenamento do DDL (`DROP DEFAULT` antes do cast, `SET DEFAULT` depois — padrão
+    Drizzle) em `0002_quotations_module_schema.sql`; `db:migrate` aplicou 0001–0006 (tabelas vazias →
+    sem risco de dados). Endpoint `GET /v1/companies/:cnpj/dashboard` confirmado **HTTP 200** (login
+    seed + curl). Snapshot/journal inalterados (mesmo estado final), `db:generate` futuro não acusa drift
+
+- [ ] **7.4c — Fidelidade Claude Design: primitivos + Suppliers** — bundle `lvmB8qpz7E0j4f0kIYm9OA`
+  - Decisão do usuário: **"everything, end to end"** — varrer todas as telas em ordem recomendada,
+    commitando progressivamente. Branch dedicada `feat/design-fidelity` (carrega o trabalho do
+    Dashboard 7.4b, antes não commitado, como primeiro commit). Confirmado de novo que **auth
+    (sign-in/up), sidebar, topbar e dashboard já casam pixel a pixel** com o protótipo — o app foi
+    construído a partir do mesmo design, então a fidelidade é correção pontual por tela, não rebuild
+  - **Badges unificados (toca todas as páginas):** novo `status-badge.tsx` replica o `Badge` do design
+    (pílula `rounded-full` + ponto colorido `bg-current` + borda tonal + peso 600 + tokens `-soft`/`-border`,
+    tamanhos md/lg). Os 8 componentes de badge (supplier, quotation, purchase-order, invoice, payment,
+    nc status+severity, bid, payment-method) passaram a delegar pra ele preservando seus tons/labels;
+    os que usavam `bg-*/10` migraram pros tokens `-soft`. Token `--color-critical` adicionado ao
+    `globals.css` (faltava; usado por severidade "Crítica"). Payment-method renderiza sem ponto (é etiqueta)
+  - **Suppliers list** (`suppliers-list-client.tsx`): linhas enriquecidas conforme o template do design —
+    célula nome com **tile de ícone** (building/user por tipo) + subtítulo `tipo · cidade` (de `address.city`),
+    coluna **Contato** (e-mail + telefone), coluna **Avaliação** com novo `stars.tsx` (de `rating`). Colunas
+    realinhadas (removida "Tipo" isolada, agora no tile). Filtro por abas mantido (já estilizado como o design)
+  - **Supplier detail** (`suppliers/[id]/page.tsx`): bloco de identidade fiel ao design — breadcrumb
+    (Fornecedores › nome), tile 48px indigo-soft, documento mono, `StatusBadge size="lg"` + `Stars`, e
+    métricas à direita (Cliente desde = `createdAt`, Tipo). Sem fabricar campos só-mock (fantasia, nº de pedidos)
+  - **Verificado:** `pnpm --filter web type-check` verde após cada etapa. `components/ui/*` **não tocado**
+    (regra #10). Pendentes: Quotations, Orders, Receipts, Non-Conformities, Invoices, Payments, Audit Log,
+    Users/Settings, Products/Warehouses, e paginação/filter-bar consistentes nas listagens
+
 ---
 
 ## Em Progresso
 
-- **Fase 7 — Audit Log e Administração** em andamento: 7.1 (Shared Schemas — schemas Zod de contrato
+- **Fase 7 — Audit Log e Administração** concluída: 7.1 (Shared Schemas — schemas Zod de contrato
   de API para o domínio de audit log e os DTOs de KPIs do dashboard em `packages/shared`), 7.2
   (Audit Logs Module API — consulta read-only de audit logs com filtros avançados, detalhe e
-  endpoints de entidades/ações distintas p/ dropdowns; restrita a ADMIN_EMPRESA/SUPER_ADMIN) e 7.3
+  endpoints de entidades/ações distintas p/ dropdowns; restrita a ADMIN_EMPRESA/SUPER_ADMIN), 7.3
   (Audit Logs UI — listagem filtrada com paginação server-side, busca por usuário client-side, diff
   viewer before/after com destaque por status e JSON tree expansível, guard de acesso `notFound()`
-  p/ papéis operacionais e item de sidebar) concluídas. Próxima unidade: **7.4 — Dashboard UI**.
+  p/ papéis operacionais e item de sidebar) e 7.4 (Dashboard KPIs — endpoint agregado com 8 queries
+  paralelas escopadas a `companyId` + atividade recente derivada do audit log, e UI com 17 cards de
+  KPI filtrados por papel substituindo o placeholder de 1.4) concluídas. Fase encerrada.
 
 - **Fase 6 — Financeiro (NF + Pagamentos)** concluída: 6.1 (Shared Schemas — schemas Zod de contrato
   de API para notas fiscais e pagamentos em `packages/shared`), 6.2 (Invoices Module API — CRUD,

@@ -50,6 +50,13 @@
       "when": 1780947365940,
       "tag": "0006_invoices_number_company_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781723938373,
+      "tag": "0007_sticky_human_torch",
+      "breakpoints": true
     }
   ]
 }
